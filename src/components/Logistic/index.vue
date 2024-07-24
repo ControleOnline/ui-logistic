@@ -5,8 +5,8 @@
 <script>
 
 import { mapActions, mapGetters } from "vuex";
-import DefaultTable from '@controleonline/quasar-default-ui/src/components/Default/DefaultTable.vue';
-import * as DefaultFiltersMethods from '@controleonline/quasar-default-ui/src/components/Default/Scripts/DefaultFiltersMethods';
+import DefaultTable from '@controleonline/ui-default/src/components/Default/DefaultTable.vue';
+import * as DefaultFiltersMethods from '@controleonline/ui-default/src/components/Default/Scripts/DefaultFiltersMethods';
 import Button from "@controleonline/ui-common/src/components/Categories/Button";
 
 export default {
