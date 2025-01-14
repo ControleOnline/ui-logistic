@@ -24,7 +24,7 @@ export default {
         },
       },
       {
-        externalFilter: true,
+        externalFilter: false,
         name: "order",
         label: "order",
         align: "center",
@@ -49,7 +49,7 @@ export default {
         },
       },
       {
-        externalFilter: true,
+        externalFilter: false,
         editable: false,
         name: "order.contract.id",
         label: "contract",
@@ -77,7 +77,7 @@ export default {
         label: "status",
         list: "status/getItems",
         searchParam: "status",
-        externalFilter: true,
+        externalFilter: false,
         format: function (value) {
           return translate("logistic", value?.status, "statuses");
         },
@@ -100,7 +100,7 @@ export default {
         label: "originType",
         list: "categories/getItems",
         searchParam: "name",
-        externalFilter: true,
+        externalFilter: false,
         format: function (value) {
           return value?.name;
         },
@@ -123,7 +123,7 @@ export default {
         label: "originCity",
         list: "city/getItems",
         searchParam: "city",
-        externalFilter: true,
+        externalFilter: false,
         format: function (value) {
           return value?.city + "/" + value?.state?.uf;
         },
@@ -145,7 +145,7 @@ export default {
         align: "center",
       },
       {
-        externalFilter: true,
+        externalFilter: false,
         name: "originProvider",
         label: "originProvider",
         align: "left",
@@ -167,7 +167,7 @@ export default {
         label: "destinationType",
         list: "categories/getItems",
         searchParam: "name",
-        externalFilter: true,
+        externalFilter: false,
         format: function (value) {
           return value?.name;
         },
@@ -190,7 +190,7 @@ export default {
         label: "destinationCity",
         list: "city/getItems",
         searchParam: "city",
-        externalFilter: true,
+        externalFilter: false,
         format: function (value) {
           return value?.city + "/" + value?.state?.uf;
         },
@@ -214,7 +214,7 @@ export default {
       },
 
       {
-        externalFilter: true,
+        externalFilter: false,
         name: "destinationProvider",
         label: "destinationProvider",
         align: "center",
@@ -282,7 +282,7 @@ export default {
         },
       },
       {
-        externalFilter: true,
+        externalFilter: false,
         inputType: "date-range",
         name: "estimatedShippingDate",
         label: "estimatedShippingDate",
@@ -293,7 +293,7 @@ export default {
         format: (val) => (val ? Formatter.formatDateYmdTodmY(val) : ""),
       },
       {
-        externalFilter: true,
+        externalFilter: false,
         inputType: "date-range",
         name: "shippingDate",
         label: "shippingDate",
@@ -304,7 +304,7 @@ export default {
         format: (val) => (val ? Formatter.formatDateYmdTodmY(val) : ""),
       },
       {
-        externalFilter: true,
+        externalFilter: false,
         inputType: "date-range",
         name: "estimatedArrivalDate",
         label: "estimatedArrivalDate",
@@ -315,7 +315,7 @@ export default {
         format: (val) => (val ? Formatter.formatDateYmdTodmY(val) : ""),
       },
       {
-        externalFilter: true,
+        externalFilter: false,
         inputType: "date-range",
         name: "arrivalDate",
         label: "arrivalDate",
