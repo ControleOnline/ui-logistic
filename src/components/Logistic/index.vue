@@ -27,7 +27,7 @@ export default {
       });
       this.addFilter("order", this.orderId);
 
-      this.$store.commit(this.configs.store + "/SET_COLUMNS", columns);
+      this.$store.dispatch(this.configs.store + "/SET_COLUMNS", columns);
     }
   },
   data() {
