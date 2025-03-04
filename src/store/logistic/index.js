@@ -7,6 +7,8 @@ import Formatter from "@controleonline/ui-common/src/utils/formatter.js";
 export default {
   namespaced: true,
   state: {
+ item:{},
+items:[],
     resourceEndpoint: "order_logistics",
     isLoading: false,
     error: "",
