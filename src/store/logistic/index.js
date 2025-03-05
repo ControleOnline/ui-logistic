@@ -32,12 +32,7 @@ items:[],
         align: "center",
         list: "salesOrder/getItems",
         searchParam: "id",
-        formatList(value) {
-          return {
-            label: "#" + value.id,
-            value: value.id,
-          };
-        },
+
         format(value) {
           return value ? "#" + value.id : "";
         },
@@ -83,13 +78,7 @@ items:[],
         format: function (value) {
           return translate("logistic", value?.status, "statuses");
         },
-        formatList: function (value) {
-          if (value)
-            return {
-              value: value["@id"].split("/").pop(),
-              label: translate("logistic", value.status, "statuses"),
-            };
-        },
+ 
         saveFormat: function (value) {
           return value ? "/statuses/" + (value.value || value) : null;
         },
@@ -109,14 +98,7 @@ items:[],
         saveFormat: function (value) {
           return value ? "/categories/" + (value.value || value) : null;
         },
-        formatList: function (value) {
-          return value
-            ? {
-                label: value?.name,
-                value: value?.id,
-              }
-            : null;
-        },
+
       },
       {
         sortable: true,
@@ -132,14 +114,7 @@ items:[],
         saveFormat: function (value) {
           return value ? "/cities/" + (value.value || value) : null;
         },
-        formatList: function (value) {
-          return value
-            ? {
-                label: value?.city + "/" + value?.state?.uf,
-                value: value?.id,
-              }
-            : null;
-        },
+
       },
       {
         name: "originAddress",
@@ -176,14 +151,7 @@ items:[],
         saveFormat: function (value) {
           return value ? "/categories/" + (value.value || value) : null;
         },
-        formatList: function (value) {
-          return value
-            ? {
-                label: value?.name,
-                value: value?.id,
-              }
-            : null;
-        },
+
       },
       {
         sortable: true,
@@ -199,14 +167,7 @@ items:[],
         saveFormat: function (value) {
           return value ? "/cities/" + (value.value || value) : null;
         },
-        formatList: function (value) {
-          return value
-            ? {
-                label: value?.city + "/" + value?.state?.uf,
-                value: value?.id,
-              }
-            : null;
-        },
+
       },
 
       {
