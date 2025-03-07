@@ -7,6 +7,8 @@ export const routes = [
       {
         name: "ChecklistDetails",
         path: "checklist/id/:id/:token_url",
+        meta: { isPublic: true },
+
         component: () => import("../pages/Surveys/Details.vue"),
       },
       {
