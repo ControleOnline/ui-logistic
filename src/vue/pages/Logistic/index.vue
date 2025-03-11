@@ -9,7 +9,7 @@
 </template>
 
 <script>
- import StretchSearching from '@controleonline/ui-logistic/src/components/Logistic';
+ import StretchSearching from '@controleonline/ui-logistic/src/vue/components/Logistic';
 
 export default {
   components: {
