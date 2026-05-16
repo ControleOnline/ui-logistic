@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   ActivityIndicator,
   Linking,
@@ -14,7 +14,9 @@ import {useStore} from '@store';
 import {api} from '@controleonline/ui-common/src/api';
 import Formatter from '@controleonline/ui-common/src/utils/formatter';
 import {useMessage} from '@controleonline/ui-common/src/react/components/MessageService';
-import {normalizeText as normalizeDisplayText, resolveAddressDisplayParts} from '@controleonline/ui-common/src/react/utils/entityDisplay';
+import {
+  normalizeText as normalizeDisplayText,
+} from '@controleonline/ui-common/src/react/utils/entityDisplay';
 import OrderStackedTopBar from '@controleonline/ui-orders/src/react/pages/orders/sales/components/OrderStackedTopBar';
 import useOrderDetailsVisuals from '@controleonline/ui-orders/src/react/pages/orders/sales/useOrderDetailsVisuals';
 import resolveOrderLogisticsSnapshot from './orderLogisticsPresentation';
@@ -38,6 +40,10 @@ const normalizeActionResult = response => {
 
   if (response?.result && typeof response.result === 'object') {
     return response.result;
+  }
+
+  if (response?.data && typeof response.data === 'object') {
+    return response.data;
   }
 
   return response || null;
@@ -67,14 +73,11 @@ const renderAddressLines = parts => {
   }
 
   const primary = normalizeDisplayText(parts.primary || parts.streetLine || parts.nickname);
-  const secondary = normalizeDisplayText(
-    [parts.district, parts.cityStateLine, parts.postalCode]
-      .filter(Boolean)
-      .join(' • '),
-  );
+  const secondary = normalizeDisplayText(parts.secondary);
   const complement = normalizeDisplayText(parts.complement);
+  const lines = [primary, secondary, complement].filter(Boolean);
 
-  return [primary, secondary, complement].filter(Boolean);
+  return lines.length ? lines : ['Endereco nao informado.'];
 };
 
 const renderContactLines = contact => {
@@ -86,18 +89,43 @@ const renderContactLines = contact => {
     normalizeDisplayText(contact.name),
     normalizeDisplayText(contact.phone),
     normalizeDisplayText(contact.email),
-  ];
+  ].filter(Boolean);
 
-  return lines.filter(Boolean).length ? lines.filter(Boolean) : ['Contato nao informado.'];
+  return lines.length ? lines : ['Contato nao informado.'];
 };
 
-const SectionCard = ({
-  styles,
-  title,
-  subtitle = '',
-  action = null,
-  children,
-}) => (
+const formatQuotePrice = price => {
+  if (price === null || price === undefined || price === '') {
+    return 'Aguardando valor';
+  }
+
+  const numeric = Number(price);
+  if (!Number.isFinite(numeric)) {
+    return 'Aguardando valor';
+  }
+
+  return Formatter.formatMoney(numeric);
+};
+
+const isRelevantOrdersMessage = (message, orderId, companyId) => {
+  if (!message || normalizeText(message.store) !== 'orders') {
+    return false;
+  }
+
+  const messageCompanyId = normalizeText(message.company?.id || message.companyId || message.company);
+  if (companyId && messageCompanyId && messageCompanyId !== companyId) {
+    return false;
+  }
+
+  const messageOrderId = normalizeOrderId(message.order ?? message.orderId ?? message.order_id);
+  const messageMainOrderId = normalizeOrderId(
+    message.mainOrderId ?? message.main_order_id ?? message.mainorderid,
+  );
+
+  return messageOrderId === orderId || messageMainOrderId === orderId;
+};
+
+const SectionCard = ({styles, title, subtitle = '', action = null, children}) => (
   <View style={styles.sectionCard}>
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle}>{title}</Text>
@@ -125,12 +153,21 @@ const FieldBlock = ({styles, label, value}) => (
   </View>
 );
 
-const Pill = ({styles, label, tone = 'default'}) => (
-  <View style={[styles.courierMetaPill, tone === 'accent' && styles.statusPill]}>
+const StatusPill = ({styles, label, tone = 'default'}) => (
+  <View
+    style={[
+      styles.statusPill,
+      tone === 'muted' && styles.statusPillMuted,
+      tone === 'success' && styles.statusPillSuccess,
+      tone === 'danger' && styles.statusPillDanger,
+    ]}
+  >
     <Text
       style={[
-        styles.courierMetaPillText,
-        tone === 'accent' && styles.statusPillText,
+        styles.statusPillText,
+        tone === 'muted' && styles.statusPillTextMuted,
+        tone === 'success' && styles.statusPillTextSuccess,
+        tone === 'danger' && styles.statusPillTextDanger,
       ]}
     >
       {label}
@@ -170,101 +207,78 @@ const ActionButton = ({
   </TouchableOpacity>
 );
 
-const CourierCard = ({
-  styles,
-  courier,
-  onRequest,
-  disabled,
-  requestLoading,
-}) => (
-  <View
-    style={[
-      styles.courierCard,
-      courier?.selected && styles.courierCardSelected,
-    ]}
-  >
-    <View style={styles.courierCardHeader}>
-      <Text style={styles.courierCardTitle}>{courier?.label || courier?.name || 'Entregador'}</Text>
-      <Text style={styles.courierCardSubtitle}>
-        {courier?.phone?.display || courier?.phone?.phone || courier?.email?.email || 'Sem contato informado'}
-      </Text>
-    </View>
-
-    <View style={styles.courierMetaRow}>
-      {courier?.selected ? <Pill styles={styles} tone="accent" label="Selecionado" /> : null}
-      {courier?.peopleType ? (
-        <Pill styles={styles} label={String(courier.peopleType).toUpperCase()} />
-      ) : null}
-    </View>
-
-    <ActionButton
-      styles={styles}
-      label={courier?.selected ? 'Solicitar novamente' : 'Solicitar entrega'}
-      icon={<MaterialCommunityIcons name="truck-fast-outline" size={18} color={courier?.selected ? '#FFFFFF' : '#0284C7'} />}
-      onPress={onRequest}
-      disabled={disabled || requestLoading}
-      primary={!courier?.selected}
-      secondary={courier?.selected}
-    />
-  </View>
-);
-
-const IntegrationCard = ({
-  styles,
-  integration,
-  onOpenTracking,
-  onRequest,
-  requestLoading,
-}) => {
-  const hasPrice = integration?.price !== null && integration?.price !== undefined;
-  const priceLabel = hasPrice
-    ? Formatter.formatMoney(integration.price)
-    : 'Cotacao indisponivel';
+const QuoteCard = ({styles, quote, onSelect, onOpenTracking, requestLoading}) => {
+  const selected = Boolean(quote?.selected);
+  const requestable = Boolean(quote?.requestable);
+  const available = Boolean(quote?.available);
 
   return (
     <View
       style={[
-        styles.integrationCard,
-        integration?.active && styles.integrationCardActive,
+        styles.quoteCard,
+        selected && styles.quoteCardSelected,
+        !available && styles.quoteCardUnavailable,
       ]}
     >
-      <View style={styles.integrationHeader}>
-        <View style={styles.integrationTitleWrap}>
-          <Text style={styles.integrationLabel}>{integration?.label || 'Integracao'}</Text>
-          <Text style={styles.integrationMeta}>
-            {integration?.summary || (integration?.request?.enabled ? 'Disponivel para solicitacao' : 'Consulta apenas')}
+      <View style={styles.quoteCardHeader}>
+        <View style={styles.quoteCardTitleWrap}>
+          <Text style={styles.quoteCardTitle}>{quote?.providerLabel || 'Integracao'}</Text>
+          <Text style={styles.quoteCardMeta}>
+            {normalizeText(quote?.providerKey || quote?.app || 'provider').toUpperCase()}
           </Text>
         </View>
 
-        {integration?.active ? <Pill styles={styles} tone="accent" label="Ativo" /> : null}
-      </View>
-
-      <View style={styles.integrationBody}>
-        <Text style={styles.integrationPrice}>{priceLabel}</Text>
-        {integration?.eta ? <Text style={styles.integrationEta}>{integration.eta}</Text> : null}
-        {integration?.status ? <Text style={styles.integrationStatus}>{integration.status}</Text> : null}
-      </View>
-
-      {integration?.trackingUrl ? (
-        <TouchableOpacity
-          onPress={onOpenTracking}
-          disabled={requestLoading || !integration?.trackingUrl}
-          style={styles.linkButton}
-        >
-          <Text style={styles.linkButtonText}>Abrir rastreio</Text>
-        </TouchableOpacity>
-      ) : null}
-
-      {integration?.request?.enabled ? (
-        <ActionButton
+        <StatusPill
           styles={styles}
-          label={`Solicitar via ${integration?.label || 'integracao'}`}
-          icon={<MaterialCommunityIcons name="send-clock-outline" size={18} color="#FFFFFF" />}
-          onPress={() => onRequest?.(integration)}
-          disabled={requestLoading}
-          primary
+          label={quote?.quoteStateLabel || 'Aguardando cotacao'}
+          tone={
+            selected
+              ? 'success'
+              : quote?.quoteState === 'error'
+                ? 'danger'
+                : quote?.quoteState === 'unavailable'
+                  ? 'muted'
+                  : 'default'
+          }
         />
-      ) : null}
+      </View>
+
+      <View style={styles.quoteCardBody}>
+        <Text style={styles.quotePrice}>{formatQuotePrice(quote?.price)}</Text>
+        {quote?.eta ? <Text style={styles.quoteEta}>{quote.eta}</Text> : null}
+        {quote?.summary ? <Text style={styles.quoteSummary}>{quote.summary}</Text> : null}
+        {quote?.quoteMessage ? <Text style={styles.quoteMessage}>{quote.quoteMessage}</Text> : null}
+      </View>
+
+      <View style={styles.quoteFooter}>
+        {quote?.trackingUrl ? (
+          <ActionButton
+            styles={styles}
+            label="Abrir rastreio"
+            icon={<MaterialCommunityIcons name="map-marker-path" size={18} color="#0EA5E9" />}
+            onPress={() => onOpenTracking?.(quote.trackingUrl)}
+            disabled={requestLoading}
+            secondary
+          />
+        ) : null}
+
+        {requestable ? (
+          <ActionButton
+            styles={styles}
+            label={selected ? 'Selecionada' : 'Escolher cotacao'}
+            icon={<MaterialCommunityIcons name="truck-fast-outline" size={18} color="#FFFFFF" />}
+            onPress={() => onSelect?.(quote)}
+            disabled={requestLoading || selected}
+            primary
+          />
+        ) : (
+          <StatusPill
+            styles={styles}
+            label={selected ? 'Cotacao selecionada' : quote?.quoteStateLabel || 'Pendente'}
+            tone={selected ? 'success' : 'muted'}
+          />
+        )}
+      </View>
     </View>
   );
 };
@@ -275,6 +289,8 @@ const OrderLogisticsPage = ({navigation, route}) => {
   const pageStyles = useMemo(() => createStyles(ppcColors), [ppcColors]);
   const insets = useSafeAreaInsets();
   const ordersStore = useStore('orders');
+  const websocketStore = useStore('websocket');
+  const peopleStore = useStore('people');
   const ordersActions = ordersStore.actions;
   const routeOrder = route?.params?.order || null;
   const order = ordersStore.getters.item || routeOrder;
@@ -282,10 +298,15 @@ const OrderLogisticsPage = ({navigation, route}) => {
     () => normalizeOrderId(route?.params?.id || order?.id),
     [order?.id, route?.params?.id],
   );
+  const websocketMessages = Array.isArray(websocketStore.getters.messages)
+    ? websocketStore.getters.messages
+    : [];
+  const currentCompanyId = normalizeText(peopleStore.getters.currentCompany?.id);
   const [payload, setPayload] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [requestLoading, setRequestLoading] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
+  const lastProcessedMessageCountRef = useRef(websocketMessages.length);
 
   const orderHeaderOrder = useMemo(
     () =>
@@ -302,7 +323,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
   );
 
   const refreshOrder = useCallback(async () => {
-    if (!orderId || !ordersActions?.get) {
+    if (!orderId || typeof ordersActions?.get !== 'function') {
       return null;
     }
 
@@ -322,6 +343,15 @@ const OrderLogisticsPage = ({navigation, route}) => {
     return normalized;
   }, [orderId]);
 
+  const loadPageData = useCallback(async () => {
+    if (!orderId) {
+      return null;
+    }
+
+    const [, logisticsResponse] = await Promise.all([refreshOrder(), refreshLogistics()]);
+    return logisticsResponse;
+  }, [orderId, refreshLogistics, refreshOrder]);
+
   const refreshAll = useCallback(async () => {
     if (!orderId) {
       return;
@@ -329,15 +359,16 @@ const OrderLogisticsPage = ({navigation, route}) => {
 
     setIsRefreshing(true);
     setLoadFailed(false);
+
     try {
-      await Promise.all([refreshOrder(), refreshLogistics()]);
+      await loadPageData();
     } catch (error) {
       setLoadFailed(true);
       throw error;
     } finally {
       setIsRefreshing(false);
     }
-  }, [orderId, refreshLogistics, refreshOrder]);
+  }, [loadPageData, orderId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -352,7 +383,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
       setIsRefreshing(true);
       setLoadFailed(false);
 
-      Promise.all([refreshOrder(), refreshLogistics()])
+      loadPageData()
         .catch(() => {
           if (active) {
             setLoadFailed(true);
@@ -367,11 +398,26 @@ const OrderLogisticsPage = ({navigation, route}) => {
       return () => {
         active = false;
       };
-    }, [orderId, refreshLogistics, refreshOrder]),
+    }, [loadPageData, orderId]),
   );
 
+  useEffect(() => {
+    if (!orderId || websocketMessages.length <= lastProcessedMessageCountRef.current) {
+      return;
+    }
+
+    const newMessages = websocketMessages.slice(lastProcessedMessageCountRef.current);
+    lastProcessedMessageCountRef.current = websocketMessages.length;
+
+    if (
+      newMessages.some(message => isRelevantOrdersMessage(message, orderId, currentCompanyId))
+    ) {
+      refreshAll().catch(() => {});
+    }
+  }, [currentCompanyId, orderId, refreshAll, websocketMessages]);
+
   const logistics = useMemo(
-    () => resolveOrderLogisticsSnapshot({order, ...payload}),
+    () => resolveOrderLogisticsSnapshot({order, ...(payload || {})}),
     [order, payload],
   );
 
@@ -392,93 +438,53 @@ const OrderLogisticsPage = ({navigation, route}) => {
     [logistics.dropoffContact],
   );
 
-  const requestDelivery = useCallback(
-    async ({type, deliveryPeopleId = null, integration = null}) => {
-      if (!orderId) {
-        return;
+  const quoteActionLabel = logistics.quotes.length > 0 ? 'Atualizar cotações' : 'Solicitar cotações';
+
+  const requestQuotes = useCallback(async () => {
+    if (!orderId) {
+      return;
+    }
+
+    try {
+      setRequestLoading(true);
+      const response = await api.fetch(`/marketplace/logistics/orders/${orderId}/quote`, {
+        method: 'POST',
+      });
+      const result = normalizeActionResult(response);
+      if (String(result?.errno ?? '0') !== '0') {
+        throw result || response;
       }
 
-      if (integration?.frontOnly) {
-        const requestedAt = new Date().toISOString();
-        setRequestLoading(true);
+      await refreshAll();
+      showSuccess?.('Cotacoes solicitadas com sucesso.');
+    } catch (error) {
+      showError?.(formatApiError(error));
+    } finally {
+      setRequestLoading(false);
+    }
+  }, [orderId, refreshAll, showError, showSuccess]);
 
-        try {
-          setPayload(previousPayload => {
-            if (!previousPayload || typeof previousPayload !== 'object') {
-              return previousPayload;
-            }
-
-            const updatedIntegrations = Array.isArray(previousPayload.integrations)
-              ? previousPayload.integrations.map(card => {
-                  if (card?.key !== integration.key) {
-                    return {
-                      ...card,
-                      active: false,
-                    };
-                  }
-
-                  return {
-                    ...card,
-                    active: true,
-                    status: 'Solicitada no front',
-                    summary: 'Solicitação registrada no front',
-                    frontOnly: true,
-                    request: {
-                      ...card.request,
-                      enabled: true,
-                    },
-                  };
-                })
-              : [];
-
-            const selectedIntegration =
-              updatedIntegrations.find(card => card?.key === integration.key) ||
-              integration;
-
-            return {
-              ...previousPayload,
-              integrations: updatedIntegrations,
-              currentIntegration: selectedIntegration,
-              delivery: {
-                ...(previousPayload.delivery || {}),
-                currentIntegrationKey: integration.key,
-                requestedAt,
-                status: 'Solicitada no front',
-                trackingUrl:
-                  selectedIntegration?.trackingUrl ||
-                  previousPayload.delivery?.trackingUrl ||
-                  null,
-              },
-            };
-          });
-
-          showSuccess?.('Solicitacao registrada no front.');
-        } catch (error) {
-          showError?.(formatApiError(error));
-        } finally {
-          setRequestLoading(false);
-        }
-
+  const selectQuote = useCallback(
+    async quote => {
+      if (!orderId || !quote?.id) {
         return;
       }
 
       try {
         setRequestLoading(true);
-        const response = await api.fetch(`/marketplace/logistics/orders/${orderId}/request`, {
-          method: 'POST',
-          body: {
-            type,
-            delivery_people_id: deliveryPeopleId,
+        const response = await api.fetch(
+          `/marketplace/logistics/orders/${orderId}/quotes/${quote.id}/select`,
+          {
+            method: 'POST',
           },
-        });
-
+        );
         const result = normalizeActionResult(response);
         if (String(result?.errno ?? '0') !== '0') {
           throw result || response;
         }
 
         await refreshAll();
-        showSuccess?.('Solicitacao enviada com sucesso.');
+        showSuccess?.('Entrega solicitada com sucesso.');
       } catch (error) {
         showError?.(formatApiError(error));
       } finally {
@@ -488,272 +494,236 @@ const OrderLogisticsPage = ({navigation, route}) => {
     [orderId, refreshAll, showError, showSuccess],
   );
 
-  const handleOpenTracking = useCallback(async url => {
-    if (!url) {
-      return;
-    }
+  const handleOpenTracking = useCallback(
+    async url => {
+      if (!url) {
+        return;
+      }
 
-    try {
-      await Linking.openURL(url);
-    } catch {
-      showError?.('Nao foi possivel abrir o rastreio.');
-    }
-  }, [showError]);
-
-  const handleCourierRegistration = useCallback(() => {
-    navigation.navigate('EmployeesIndex', {
-      context: ['courier'],
-      defaultContext: 'courier',
-      defaultPeopleType: 'F',
-      selectedContext: 'courier',
-    });
-  }, [navigation]);
-
-  const isStoreManaged = Boolean(
-    String(order?.app ?? '').trim().toUpperCase() === 'POS' ||
-      logistics.management?.managedByStore,
+      try {
+        await Linking.openURL(url);
+      } catch {
+        showError?.('Nao foi possivel abrir o rastreio.');
+      }
+    },
+    [showError],
   );
-  const currentIntegration = logistics.currentIntegration || null;
-  const integrations = Array.isArray(logistics.integrations) ? logistics.integrations : [];
-  const couriers = Array.isArray(logistics.couriers) ? logistics.couriers : [];
-  const trackingUrl = logistics.delivery?.trackingUrl || currentIntegration?.trackingUrl || null;
 
-  if (!orderId) {
-    return (
-      <SafeAreaView style={pageStyles.pageRoot}>
-        <View style={[pageStyles.loadingWrap, {paddingTop: insets.top + 24}]}>
-          <Text style={pageStyles.errorText}>Pedido nao identificado.</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const quoteSummary = logistics.quoteStatus || {};
+  const enabledProviders = logistics.providers.filter(
+    provider => provider?.connected && provider?.online !== false,
+  );
+  const selectedQuote =
+    logistics.quotes.find(
+      quote => normalizeOrderId(quote.id) === normalizeOrderId(logistics.selection.quoteOrderId),
+    ) ||
+    logistics.currentIntegration ||
+    null;
+  const showEmptyState = logistics.quotes.length === 0;
 
   return (
-    <SafeAreaView style={pageStyles.pageRoot}>
+    <SafeAreaView style={pageStyles.pageRoot} edges={['bottom']}>
+      <OrderStackedTopBar
+        navigation={navigation}
+        order={orderHeaderOrder}
+        isKds
+        showActions={false}
+      />
+
       <ScrollView
+        style={pageStyles.pageScroll}
         contentContainerStyle={[
           pageStyles.pageScrollContent,
-          {paddingBottom: Math.max(24, insets.bottom + 24)},
+          {paddingBottom: 24 + (insets.bottom || 0)},
         ]}
       >
         <View style={pageStyles.topBarWrap}>
-          <OrderStackedTopBar
-            order={orderHeaderOrder}
-            isKds
-            showActions={false}
-            showBackButton
-            onBackPress={() => navigation.goBack()}
-          />
-        </View>
+          <View style={pageStyles.heroCard}>
+            <View style={pageStyles.heroHeaderRow}>
+              <View style={pageStyles.heroTextWrap}>
+                <Text style={pageStyles.heroTitle}>Cotacoes logisticas</Text>
+                <Text style={pageStyles.heroSubtitle}>
+                  O backend cria uma ordem filha por provider conectado e online. A tela mostra
+                  apenas o que foi realmente cotado.
+                </Text>
+              </View>
 
-        {isRefreshing && !payload ? (
-          <View style={pageStyles.loadingWrap}>
-            <ActivityIndicator size="small" color={ppcColors?.accentInfo || '#0284C7'} />
-          </View>
-        ) : null}
-
-        {loadFailed ? (
-          <SectionCard
-            styles={pageStyles}
-            title="Falha ao carregar a logistica"
-            subtitle="Tente atualizar a pagina para recarregar o resumo da entrega."
-            action={(
-              <ActionButton
+              <StatusPill
                 styles={pageStyles}
-                label="Atualizar"
-                icon={<MaterialCommunityIcons name="refresh" size={18} color="#FFFFFF" />}
-                onPress={refreshAll}
-                primary
-              />
-            )}
-          >
-            <Text style={pageStyles.sectionHint}>
-              Nao foi possivel obter as informacoes da entrega neste momento.
-            </Text>
-          </SectionCard>
-        ) : null}
-
-        <View style={pageStyles.bodyStack}>
-          <SectionCard
-            styles={pageStyles}
-            title="Resumo da logistica"
-            subtitle="Visao curta do pedido, status e entrega."
-          >
-            <View style={pageStyles.summaryGrid}>
-              <FieldBlock
-                styles={pageStyles}
-                label="Modo"
-                value={logistics.management?.label || (isStoreManaged ? 'Gerenciada pela loja' : 'Gerenciada por integracao')}
-              />
-              <FieldBlock
-                styles={pageStyles}
-                label="Status"
-                value={
-                  logistics.delivery?.status ||
-                  currentIntegration?.status ||
-                  (isStoreManaged ? 'Cotacoes disponiveis' : 'Status indisponivel')
-                }
-              />
-              <FieldBlock
-                styles={pageStyles}
-                label="Entrega"
-                value={
-                  logistics.delivery?.deliveryPeople?.label ||
-                  currentIntegration?.label ||
-                  'Sem entregador selecionado'
-                }
+                label={loadFailed ? 'Falha ao atualizar' : isRefreshing ? 'Atualizando' : 'Online'}
+                tone={loadFailed ? 'danger' : isRefreshing ? 'muted' : 'success'}
               />
             </View>
 
-            {trackingUrl ? (
-              <View style={pageStyles.sectionActionRow}>
-                <ActionButton
-                  styles={pageStyles}
-                  label="Abrir rastreio"
-                  icon={<MaterialCommunityIcons name="map-marker-path" size={18} color="#0284C7" />}
-                  onPress={() => handleOpenTracking(trackingUrl)}
-                  secondary
-                />
+            <View style={pageStyles.summaryGrid}>
+              <FieldBlock
+                styles={pageStyles}
+                label="Pedido"
+                value={normalizeText(order?.id || orderId || '--')}
+              />
+              <FieldBlock
+                styles={pageStyles}
+                label="Integracoes"
+                value={`${quoteSummary.providers || 0} conectadas`}
+              />
+              <FieldBlock
+                styles={pageStyles}
+                label="Cotações"
+                value={`${quoteSummary.quotes || logistics.quotes.length || 0}`}
+              />
+              <FieldBlock
+                styles={pageStyles}
+                label="Selecionada"
+                value={selectedQuote?.providerLabel || logistics.selection.providerKey || 'Nenhuma'}
+              />
+            </View>
+
+            <View style={pageStyles.sectionActionRow}>
+              <ActionButton
+                styles={pageStyles}
+                label={quoteActionLabel}
+                icon={<MaterialCommunityIcons name="sync" size={18} color="#FFFFFF" />}
+                onPress={requestQuotes}
+                disabled={!logistics.canQuote || requestLoading}
+                primary
+              />
+              <ActionButton
+                styles={pageStyles}
+                label="Atualizar tela"
+                icon={<MaterialCommunityIcons name="reload" size={18} color="#0EA5E9" />}
+                onPress={refreshAll}
+                disabled={isRefreshing || requestLoading}
+                secondary
+              />
+            </View>
+
+            {enabledProviders.length > 0 ? (
+              <View style={pageStyles.providerChipRow}>
+                {enabledProviders.map(provider => (
+                  <View key={provider.key} style={pageStyles.providerChip}>
+                    <Text style={pageStyles.providerChipText}>
+                      {provider.label}
+                      {provider.online !== false ? ' • online' : ''}
+                    </Text>
+                  </View>
+                ))}
               </View>
             ) : null}
-          </SectionCard>
+          </View>
 
           <SectionCard
             styles={pageStyles}
             title="Rota"
-            subtitle="Coleta e entrega em um bloco compacto."
+            subtitle="Coleta da empresa e entrega do pedido principal."
           >
             <View style={pageStyles.routeGrid}>
-              <FieldBlock styles={pageStyles} label="Coleta" value={pickupAddressLines} />
-              <FieldBlock styles={pageStyles} label="Contato da coleta" value={pickupContactLines} />
-              <FieldBlock styles={pageStyles} label="Entrega" value={dropoffAddressLines} />
-              <FieldBlock styles={pageStyles} label="Contato da entrega" value={dropoffContactLines} />
+              <FieldBlock
+                styles={pageStyles}
+                label="Coleta"
+                value={pickupAddressLines}
+              />
+              <FieldBlock
+                styles={pageStyles}
+                label="Entrega"
+                value={dropoffAddressLines}
+              />
+            </View>
+
+            <View style={pageStyles.routeGrid}>
+              <FieldBlock
+                styles={pageStyles}
+                label="Contato da coleta"
+                value={pickupContactLines}
+              />
+              <FieldBlock
+                styles={pageStyles}
+                label="Contato da entrega"
+                value={dropoffContactLines}
+              />
             </View>
           </SectionCard>
 
-          {isStoreManaged ? (
+          {selectedQuote ? (
             <SectionCard
               styles={pageStyles}
-              title="Escolha da entrega"
-              subtitle="Entregadores da loja e cotações estimadas no front."
+              title="Cotação selecionada"
+              subtitle="O provider escolhido já foi convertido para entrega real."
             >
-              <View style={pageStyles.selectionGrid}>
-                <View style={pageStyles.selectionPanel}>
-                  <View style={pageStyles.selectionPanelHeader}>
-                    <View style={pageStyles.selectionPanelTitleWrap}>
-                      <Text style={pageStyles.selectionPanelTitle}>Entregadores da loja</Text>
-                      <Text style={pageStyles.selectionPanelSubtitle}>
-                        Use um cadastro local quando a loja ja tem motoboy.
-                      </Text>
-                    </View>
-
-                    <ActionButton
-                      styles={pageStyles}
-                      label="Novo entregador"
-                      icon={<MaterialCommunityIcons name="account-plus-outline" size={18} color="#0284C7" />}
-                      onPress={handleCourierRegistration}
-                      secondary
-                    />
+              <View style={pageStyles.selectionPanel}>
+                <View style={pageStyles.selectionPanelHeader}>
+                  <View style={pageStyles.selectionPanelTitleWrap}>
+                    <Text style={pageStyles.selectionPanelTitle}>
+                      {selectedQuote.providerLabel || 'Provider'}
+                    </Text>
+                    <Text style={pageStyles.selectionPanelSubtitle}>
+                      {selectedQuote.quoteStateLabel || 'Selecionada'}
+                    </Text>
                   </View>
-
-                  {couriers.length > 0 ? (
-                    <View style={pageStyles.compactList}>
-                      {couriers.map(courier => (
-                        <CourierCard
-                          key={courier.id || courier.peopleId}
-                          styles={pageStyles}
-                          courier={courier}
-                          onRequest={() =>
-                            requestDelivery({
-                              type: 'courier',
-                              deliveryPeopleId: courier.peopleId,
-                            })
-                          }
-                          disabled={!courier?.peopleId}
-                          requestLoading={requestLoading}
-                        />
-                      ))}
-                    </View>
-                  ) : (
-                    <View style={pageStyles.emptyState}>
-                      <Text style={pageStyles.emptyStateTitle}>Nenhum entregador cadastrado</Text>
-                      <Text style={pageStyles.emptyStateText}>
-                        Cadastre um entregador para solicitar a entrega sem depender das integrações.
-                      </Text>
-                    </View>
-                  )}
+                  <StatusPill styles={pageStyles} label="Selecionada" tone="success" />
                 </View>
 
-                <View style={pageStyles.selectionPanel}>
-                  <View style={pageStyles.selectionPanelHeader}>
-                    <View style={pageStyles.selectionPanelTitleWrap}>
-                      <Text style={pageStyles.selectionPanelTitle}>Marketplace</Text>
-                      <Text style={pageStyles.selectionPanelSubtitle}>
-                        Cotacoes estimadas no front para Uber, iFood e 99 Food.
-                      </Text>
-                    </View>
-                  </View>
-
-                  {integrations.length > 0 ? (
-                    <View style={pageStyles.compactList}>
-                      {integrations.map(integration => (
-                        <IntegrationCard
-                          key={integration.key}
-                          styles={pageStyles}
-                          integration={integration}
-                          onOpenTracking={() => handleOpenTracking(integration?.trackingUrl)}
-                          onRequest={selectedIntegration =>
-                            selectedIntegration?.frontOnly
-                              ? requestDelivery({
-                                type: selectedIntegration.key,
-                                integration: selectedIntegration,
-                              })
-                              : selectedIntegration?.request?.enabled
-                                ? requestDelivery({
-                                  type: selectedIntegration.key,
-                                  integration: selectedIntegration,
-                                })
-                                : handleOpenTracking(selectedIntegration?.trackingUrl)
-                          }
-                          requestLoading={requestLoading}
-                        />
-                      ))}
-                    </View>
-                  ) : (
-                    <View style={pageStyles.emptyState}>
-                      <Text style={pageStyles.emptyStateTitle}>Nenhuma integracao disponivel</Text>
-                      <Text style={pageStyles.emptyStateText}>
-                        Assim que os providers forem configurados, as cotacoes aparecem aqui.
-                      </Text>
-                    </View>
-                  )}
-                </View>
+                <Text style={pageStyles.quotePrice}>{formatQuotePrice(selectedQuote.price)}</Text>
+                {selectedQuote.eta ? <Text style={pageStyles.quoteEta}>{selectedQuote.eta}</Text> : null}
+                {selectedQuote.trackingUrl ? (
+                  <ActionButton
+                    styles={pageStyles}
+                    label="Abrir rastreio"
+                    icon={<MaterialCommunityIcons name="map-marker-path" size={18} color="#0EA5E9" />}
+                    onPress={() => handleOpenTracking(selectedQuote.trackingUrl)}
+                    secondary
+                  />
+                ) : null}
               </View>
             </SectionCard>
-          ) : (
-            <SectionCard
-              styles={pageStyles}
-              title="Entrega gerenciada pela plataforma"
-              subtitle="Mostramos somente o provider atual e o rastreio."
-            >
-              {currentIntegration ? (
-                <IntegrationCard
-                  styles={pageStyles}
-                  integration={currentIntegration}
-                  onOpenTracking={() => handleOpenTracking(currentIntegration?.trackingUrl)}
-                  onRequest={() => handleOpenTracking(currentIntegration?.trackingUrl)}
-                  requestLoading={requestLoading}
-                />
-              ) : (
-                <View style={pageStyles.emptyState}>
-                  <Text style={pageStyles.emptyStateTitle}>Sem rastreio ativo</Text>
+          ) : null}
+
+          <SectionCard
+            styles={pageStyles}
+            title="Cotações"
+            subtitle="Cada card abaixo é uma ordem delivery filha vinculada ao pedido principal."
+          >
+            {showEmptyState ? (
+              <View style={pageStyles.emptyState}>
+                <Text style={pageStyles.emptyStateTitle}>Nenhuma cotacao ainda</Text>
+                <Text style={pageStyles.emptyStateText}>
+                  Toque em solicitar cotações para disparar iFood, Uber e 99 Food que estiverem
+                  conectados e online.
+                </Text>
+                {enabledProviders.length > 0 ? (
                   <Text style={pageStyles.emptyStateText}>
-                    O pedido ainda nao possui informacoes de entrega da plataforma.
+                    Integracoes disponiveis: {enabledProviders.map(item => item.label).join(', ')}.
                   </Text>
-                </View>
-              )}
-            </SectionCard>
-          )}
+                ) : null}
+              </View>
+            ) : (
+              <View style={pageStyles.quoteGrid}>
+                {logistics.quotes.map(quote => (
+                  <QuoteCard
+                    key={quote.id}
+                    styles={pageStyles}
+                    quote={quote}
+                    onSelect={selectQuote}
+                    onOpenTracking={handleOpenTracking}
+                    requestLoading={requestLoading}
+                  />
+                ))}
+              </View>
+            )}
+          </SectionCard>
+
+          {loadFailed ? (
+            <View style={pageStyles.errorBanner}>
+              <Text style={pageStyles.errorText}>
+                Nao foi possivel atualizar as cotacoes. Tente novamente.
+              </Text>
+            </View>
+          ) : null}
+
+          {isRefreshing ? (
+            <View style={pageStyles.loadingWrap}>
+              <ActivityIndicator color="#0EA5E9" />
+            </View>
+          ) : null}
         </View>
       </ScrollView>
     </SafeAreaView>
