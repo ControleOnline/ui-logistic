@@ -281,6 +281,53 @@ const normalizeQuoteCard = (quote, providerMap) => {
   };
 };
 
+const quoteProviderPriority = providerKey => {
+  switch (normalizeIntegrationKey(providerKey)) {
+    case 'ifood':
+      return 0;
+    case 'uber':
+      return 1;
+    case 'food99':
+      return 2;
+    default:
+      return 999;
+  }
+};
+
+const hasNumericPrice = value =>
+  value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value));
+
+const compareQuoteCards = (left, right) => {
+  const leftHasPrice = hasNumericPrice(left?.price);
+  const rightHasPrice = hasNumericPrice(right?.price);
+
+  if (leftHasPrice !== rightHasPrice) {
+    return leftHasPrice ? -1 : 1;
+  }
+
+  if (leftHasPrice && rightHasPrice) {
+    const leftPrice = Number(left.price);
+    const rightPrice = Number(right.price);
+    if (leftPrice !== rightPrice) {
+      return leftPrice - rightPrice;
+    }
+  }
+
+  const leftPriority = quoteProviderPriority(left?.providerKey);
+  const rightPriority = quoteProviderPriority(right?.providerKey);
+  if (leftPriority !== rightPriority) {
+    return leftPriority - rightPriority;
+  }
+
+  const leftId = Number(normalizeReferenceId(left?.id) || 0);
+  const rightId = Number(normalizeReferenceId(right?.id) || 0);
+  if (leftId !== rightId) {
+    return leftId - rightId;
+  }
+
+  return 0;
+};
+
 const buildQuoteStatusSummary = (providers, quotes) => {
   const summary = {
     providers: Array.isArray(providers) ? providers.length : 0,
@@ -340,6 +387,8 @@ const buildQuoteSnapshot = source => {
       }
     });
   }
+
+  quotes.sort(compareQuoteCards);
 
   const selection = normalizeQuoteSelection(payload.selection || {});
   const selectedQuote =
@@ -407,9 +456,7 @@ const buildQuoteSnapshot = source => {
       selectedAt: selection.selectedAt || '',
     },
     quoteStatus,
-    canQuote: Array.from(providerMap.values()).some(
-      provider => provider.connected && (provider.online !== false),
-    ),
+    canQuote: Array.from(providerMap.values()).some(provider => provider.connected),
     pickupAddressParts,
     dropoffAddressParts,
     pickupContact: pickupContactInfo,

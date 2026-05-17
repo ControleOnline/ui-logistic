@@ -510,9 +510,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
   );
 
   const quoteSummary = logistics.quoteStatus || {};
-  const enabledProviders = logistics.providers.filter(
-    provider => provider?.connected && provider?.online !== false,
-  );
+  const enabledProviders = logistics.providers.filter(provider => provider?.connected);
   const selectedQuote =
     logistics.quotes.find(
       quote => normalizeOrderId(quote.id) === normalizeOrderId(logistics.selection.quoteOrderId),
@@ -543,8 +541,8 @@ const OrderLogisticsPage = ({navigation, route}) => {
               <View style={pageStyles.heroTextWrap}>
                 <Text style={pageStyles.heroTitle}>Cotacoes logisticas</Text>
                 <Text style={pageStyles.heroSubtitle}>
-                  O backend cria uma ordem filha por provider conectado e online. A tela mostra
-                  apenas o que foi realmente cotado.
+                  O backend cria uma ordem filha por integracao conectada da empresa. A tela
+                  mostra apenas o que foi realmente cotado.
                 </Text>
               </View>
 
@@ -584,7 +582,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
                 label={quoteActionLabel}
                 icon={<MaterialCommunityIcons name="sync" size={18} color="#FFFFFF" />}
                 onPress={requestQuotes}
-                disabled={!logistics.canQuote || requestLoading}
+                disabled={!orderId || requestLoading}
                 primary
               />
               <ActionButton
@@ -603,7 +601,11 @@ const OrderLogisticsPage = ({navigation, route}) => {
                   <View key={provider.key} style={pageStyles.providerChip}>
                     <Text style={pageStyles.providerChipText}>
                       {provider.label}
-                      {provider.online !== false ? ' • online' : ''}
+                      {provider.online === false
+                        ? ' • offline'
+                        : provider.online === true
+                          ? ' • online'
+                          : ''}
                     </Text>
                   </View>
                 ))}
@@ -685,10 +687,10 @@ const OrderLogisticsPage = ({navigation, route}) => {
             {showEmptyState ? (
               <View style={pageStyles.emptyState}>
                 <Text style={pageStyles.emptyStateTitle}>Nenhuma cotacao ainda</Text>
-                <Text style={pageStyles.emptyStateText}>
-                  Toque em solicitar cotações para disparar iFood, Uber e 99 Food que estiverem
-                  conectados e online.
-                </Text>
+                  <Text style={pageStyles.emptyStateText}>
+                    Toque em solicitar cotações para disparar iFood, Uber e 99 Food conectados na
+                    empresa.
+                  </Text>
                 {enabledProviders.length > 0 ? (
                   <Text style={pageStyles.emptyStateText}>
                     Integracoes disponiveis: {enabledProviders.map(item => item.label).join(', ')}.
