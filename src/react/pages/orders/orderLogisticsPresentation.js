@@ -551,6 +551,8 @@ const buildLegacySnapshot = order => {
   const dropoffAddress = orderData?.addressDestination || null;
   const pickupContact = orderData?.retrieveContact || orderData?.provider || null;
   const dropoffContact = orderData?.deliveryContact || orderData?.client || null;
+  const courierContact = orderData?.deliveryPeople || null;
+  const courierContactInfo = normalizePeopleContact(courierContact);
   const pickupAddressParts = pickupAddress ? resolveAddressDisplayParts(pickupAddress) : null;
   const dropoffAddressParts = dropoffAddress ? resolveAddressDisplayParts(dropoffAddress) : null;
   const couriers = [];
@@ -566,6 +568,15 @@ const buildLegacySnapshot = order => {
     dropoffAddressParts,
     pickupContact: normalizePeopleContact(pickupContact),
     dropoffContact: normalizePeopleContact(dropoffContact),
+    route: {
+      pickupAddress,
+      dropoffAddress,
+      pickupAddressParts,
+      dropoffAddressParts,
+      pickupContact: normalizePeopleContact(pickupContact),
+      dropoffContact: normalizePeopleContact(dropoffContact),
+      courierContact: courierContactInfo,
+    },
     managedByStore,
     managedByStoreLabel: managedByStore ? 'Gerenciada pela loja' : 'Nao gerenciada pela loja',
     canRequestDriver: Boolean(
@@ -578,12 +589,16 @@ const buildLegacySnapshot = order => {
       uberState?.delivery_id ||
         uberState?.rider_name ||
         uberState?.rider_phone ||
-        uberState?.tracking_url,
+        uberState?.tracking_url ||
+        courierContactInfo.name ||
+        courierContactInfo.phone ||
+        courierContactInfo.email,
     ),
     uberState,
     couriers,
     delivery: {
       deliveryPeopleId: orderData?.deliveryPeople?.id || orderData?.deliveryPeopleId || null,
+      deliveryPeople: courierContactInfo,
       trackingUrl: uberState?.tracking_url || null,
       requestedAt: uberState?.requested_at || null,
       status: uberState?.status || uberState?.order_status || uberState?.delivery_status || null,

@@ -448,6 +448,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
     () => renderContactLines(logistics.delivery?.deliveryPeople || logistics.route?.courierContact),
     [logistics.delivery?.deliveryPeople, logistics.route?.courierContact],
   );
+  const hasCourierContact = courierContactLines.some(line => line !== 'Contato nao informado.');
 
   const hasDeliveryOrder = Boolean(
     logistics.hasDeliveryOrder ||
@@ -700,6 +701,21 @@ const OrderLogisticsPage = ({navigation, route}) => {
                 value={dropoffContactLines}
               />
             </View>
+
+            {hasCourierContact ? (
+              <View style={pageStyles.routeGrid}>
+                <FieldBlock
+                  styles={pageStyles}
+                  label="Entregador"
+                  value={courierContactLines}
+                />
+                <FieldBlock
+                  styles={pageStyles}
+                  label="Status da entrega"
+                  value={normalizeText(logistics.delivery?.status || 'Entrega definida')}
+                />
+              </View>
+            ) : null}
           </SectionCard>
 
           {hasDeliveryOrder ? (
