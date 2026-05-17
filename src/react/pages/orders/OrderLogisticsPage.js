@@ -207,7 +207,14 @@ const ActionButton = ({
   </TouchableOpacity>
 );
 
-const QuoteCard = ({styles, quote, onSelect, onOpenTracking, requestLoading}) => {
+const QuoteCard = ({
+  styles,
+  quote,
+  onSelect,
+  onOpenTracking,
+  requestLoading,
+  allowSelectionActions = true,
+}) => {
   const selected = Boolean(quote?.selected);
   const requestable = Boolean(quote?.requestable);
   const available = Boolean(quote?.available);
@@ -232,7 +239,7 @@ const QuoteCard = ({styles, quote, onSelect, onOpenTracking, requestLoading}) =>
           styles={styles}
           label={quote?.quoteStateLabel || 'Aguardando cotacao'}
           tone={
-            selected
+            selected || quote?.quoteState === 'closed'
               ? 'success'
               : quote?.quoteState === 'error'
                 ? 'danger'
@@ -262,7 +269,7 @@ const QuoteCard = ({styles, quote, onSelect, onOpenTracking, requestLoading}) =>
           />
         ) : null}
 
-        {requestable ? (
+        {requestable && allowSelectionActions ? (
           <ActionButton
             styles={styles}
             label={selected ? 'Selecionada' : 'Escolher cotacao'}
@@ -275,7 +282,7 @@ const QuoteCard = ({styles, quote, onSelect, onOpenTracking, requestLoading}) =>
           <StatusPill
             styles={styles}
             label={selected ? 'Cotacao selecionada' : quote?.quoteStateLabel || 'Pendente'}
-            tone={selected ? 'success' : 'muted'}
+            tone={selected || quote?.quoteState === 'closed' ? 'success' : 'muted'}
           />
         )}
       </View>
@@ -437,8 +444,76 @@ const OrderLogisticsPage = ({navigation, route}) => {
     () => renderContactLines(logistics.dropoffContact),
     [logistics.dropoffContact],
   );
+  const courierContactLines = useMemo(
+    () => renderContactLines(logistics.delivery?.deliveryPeople || logistics.route?.courierContact),
+    [logistics.delivery?.deliveryPeople, logistics.route?.courierContact],
+  );
+
+  const hasDeliveryOrder = Boolean(
+    logistics.hasDeliveryOrder ||
+      logistics.delivery?.deliveryPeopleId ||
+      logistics.delivery?.deliveryPeople?.name ||
+      logistics.route?.courierContact?.name,
+  );
+  const isClosedOrder = Boolean(logistics.isClosedOrder);
+  const showIntegrationSection = logistics.showIntegrationSection ?? !isClosedOrder;
+  const hasQuoteEntries = Boolean(
+    logistics.quotes.length > 0 ||
+      logistics.currentIntegration ||
+      logistics.selection?.quoteOrderId,
+  );
+  const showRequestActions = showIntegrationSection && logistics.canQuote && !hasDeliveryOrder;
+  const showQuoteSection = hasQuoteEntries || (!isClosedOrder && !hasDeliveryOrder);
+  const quoteSummary = logistics.quoteStatus || {};
+  const selectedQuote =
+    logistics.quotes.find(
+      quote => normalizeOrderId(quote.id) === normalizeOrderId(logistics.selection.quoteOrderId),
+    ) ||
+    logistics.currentIntegration ||
+    null;
 
   const quoteActionLabel = logistics.quotes.length > 0 ? 'Atualizar cotações' : 'Solicitar cotações';
+  const heroTitle = hasDeliveryOrder ? 'Entrega definida' : 'Cotações logísticas';
+  const heroSubtitle = hasDeliveryOrder
+    ? 'A entrega já foi vinculada ao pedido pela integracao. A tela mostra apenas os dados pertinentes.'
+    : 'O backend cria uma ordem filha por integracao conectada da empresa. A tela mostra apenas o que foi realmente cotado.';
+  const summaryCards = hasDeliveryOrder
+    ? [
+        {
+          label: 'Pedido',
+          value: normalizeText(order?.id || orderId || '--'),
+        },
+        {
+          label: 'Integracoes',
+          value: `${quoteSummary.providers || 0} conectadas`,
+        },
+        {
+          label: 'Entrega',
+          value: normalizeText(logistics.delivery?.status || 'Entrega definida'),
+        },
+        {
+          label: 'Motoboy',
+          value: courierContactLines.length > 0 ? courierContactLines : ['Motoboy nao informado.'],
+        },
+      ]
+    : [
+        {
+          label: 'Pedido',
+          value: normalizeText(order?.id || orderId || '--'),
+        },
+        {
+          label: 'Integracoes',
+          value: `${quoteSummary.providers || 0} conectadas`,
+        },
+        {
+          label: 'Cotações',
+          value: `${quoteSummary.quotes || logistics.quotes.length || 0}`,
+        },
+        {
+          label: 'Selecionada',
+          value: selectedQuote?.providerLabel || logistics.selection.providerKey || 'Nenhuma',
+        },
+      ];
 
   const requestQuotes = useCallback(async () => {
     if (!orderId) {
@@ -509,14 +584,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
     [showError],
   );
 
-  const quoteSummary = logistics.quoteStatus || {};
   const enabledProviders = logistics.providers.filter(provider => provider?.connected);
-  const selectedQuote =
-    logistics.quotes.find(
-      quote => normalizeOrderId(quote.id) === normalizeOrderId(logistics.selection.quoteOrderId),
-    ) ||
-    logistics.currentIntegration ||
-    null;
   const showEmptyState = logistics.quotes.length === 0;
 
   return (
@@ -536,82 +604,71 @@ const OrderLogisticsPage = ({navigation, route}) => {
         ]}
       >
         <View style={pageStyles.topBarWrap}>
-          <View style={pageStyles.heroCard}>
-            <View style={pageStyles.heroHeaderRow}>
-              <View style={pageStyles.heroTextWrap}>
-                <Text style={pageStyles.heroTitle}>Cotacoes logisticas</Text>
-                <Text style={pageStyles.heroSubtitle}>
-                  O backend cria uma ordem filha por integracao conectada da empresa. A tela
-                  mostra apenas o que foi realmente cotado.
-                </Text>
+          {showIntegrationSection ? (
+            <View style={pageStyles.heroCard}>
+              <View style={pageStyles.heroHeaderRow}>
+                <View style={pageStyles.heroTextWrap}>
+                  <Text style={pageStyles.heroTitle}>{heroTitle}</Text>
+                  <Text style={pageStyles.heroSubtitle}>{heroSubtitle}</Text>
+                </View>
+
+                <StatusPill
+                  styles={pageStyles}
+                  label={loadFailed ? 'Falha ao atualizar' : isRefreshing ? 'Atualizando' : 'Online'}
+                  tone={loadFailed ? 'danger' : isRefreshing ? 'muted' : 'success'}
+                />
               </View>
 
-              <StatusPill
-                styles={pageStyles}
-                label={loadFailed ? 'Falha ao atualizar' : isRefreshing ? 'Atualizando' : 'Online'}
-                tone={loadFailed ? 'danger' : isRefreshing ? 'muted' : 'success'}
-              />
-            </View>
-
-            <View style={pageStyles.summaryGrid}>
-              <FieldBlock
-                styles={pageStyles}
-                label="Pedido"
-                value={normalizeText(order?.id || orderId || '--')}
-              />
-              <FieldBlock
-                styles={pageStyles}
-                label="Integracoes"
-                value={`${quoteSummary.providers || 0} conectadas`}
-              />
-              <FieldBlock
-                styles={pageStyles}
-                label="Cotações"
-                value={`${quoteSummary.quotes || logistics.quotes.length || 0}`}
-              />
-              <FieldBlock
-                styles={pageStyles}
-                label="Selecionada"
-                value={selectedQuote?.providerLabel || logistics.selection.providerKey || 'Nenhuma'}
-              />
-            </View>
-
-            <View style={pageStyles.sectionActionRow}>
-              <ActionButton
-                styles={pageStyles}
-                label={quoteActionLabel}
-                icon={<MaterialCommunityIcons name="sync" size={18} color="#FFFFFF" />}
-                onPress={requestQuotes}
-                disabled={!orderId || requestLoading}
-                primary
-              />
-              <ActionButton
-                styles={pageStyles}
-                label="Atualizar tela"
-                icon={<MaterialCommunityIcons name="reload" size={18} color="#0EA5E9" />}
-                onPress={refreshAll}
-                disabled={isRefreshing || requestLoading}
-                secondary
-              />
-            </View>
-
-            {enabledProviders.length > 0 ? (
-              <View style={pageStyles.providerChipRow}>
-                {enabledProviders.map(provider => (
-                  <View key={provider.key} style={pageStyles.providerChip}>
-                    <Text style={pageStyles.providerChipText}>
-                      {provider.label}
-                      {provider.online === false
-                        ? ' • offline'
-                        : provider.online === true
-                          ? ' • online'
-                          : ''}
-                    </Text>
-                  </View>
+              <View style={pageStyles.summaryGrid}>
+                {summaryCards.map(card => (
+                  <FieldBlock
+                    key={card.label}
+                    styles={pageStyles}
+                    label={card.label}
+                    value={card.value}
+                  />
                 ))}
               </View>
-            ) : null}
-          </View>
+
+              <View style={pageStyles.sectionActionRow}>
+                {showRequestActions ? (
+                  <ActionButton
+                    styles={pageStyles}
+                    label={quoteActionLabel}
+                    icon={<MaterialCommunityIcons name="sync" size={18} color="#FFFFFF" />}
+                    onPress={requestQuotes}
+                    disabled={!orderId || requestLoading}
+                    primary
+                  />
+                ) : null}
+                <ActionButton
+                  styles={pageStyles}
+                  label="Atualizar tela"
+                  icon={<MaterialCommunityIcons name="reload" size={18} color="#0EA5E9" />}
+                  onPress={refreshAll}
+                  disabled={isRefreshing || requestLoading}
+                  secondary
+                />
+              </View>
+
+              {showRequestActions && enabledProviders.length > 0 ? (
+                <View style={pageStyles.providerChipRow}>
+                  {enabledProviders.map(provider => (
+                    <View key={provider.key} style={pageStyles.providerChip}>
+                      <Text style={pageStyles.providerChipText}>
+                        {provider.label}
+                        {provider.online === false
+                          ? ' • offline'
+                          : provider.online === true
+                            ? ' • online'
+                            : ''}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+            </View>
+          ) : null}
 
           <SectionCard
             styles={pageStyles}
@@ -645,7 +702,49 @@ const OrderLogisticsPage = ({navigation, route}) => {
             </View>
           </SectionCard>
 
-          {selectedQuote ? (
+          {hasDeliveryOrder ? (
+            <SectionCard
+              styles={pageStyles}
+              title="Entrega definida"
+              subtitle="Entrega gerenciada pela 99 Food."
+            >
+              <View style={pageStyles.routeGrid}>
+                <FieldBlock
+                  styles={pageStyles}
+                  label="Motoboy"
+                  value={courierContactLines}
+                />
+                <FieldBlock
+                  styles={pageStyles}
+                  label="Status"
+                  value={normalizeText(logistics.delivery?.status || 'Entrega definida')}
+                />
+              </View>
+
+              <View style={pageStyles.routeGrid}>
+                <FieldBlock
+                  styles={pageStyles}
+                  label="Contato do motoboy"
+                  value={courierContactLines}
+                />
+                <FieldBlock
+                  styles={pageStyles}
+                  label="Integracao"
+                  value={normalizeText(logistics.delivery?.currentIntegrationKey || order?.app || '99 Food')}
+                />
+              </View>
+
+              {logistics.delivery?.trackingUrl ? (
+                <ActionButton
+                  styles={pageStyles}
+                  label="Abrir rastreio"
+                  icon={<MaterialCommunityIcons name="map-marker-path" size={18} color="#0EA5E9" />}
+                  onPress={() => handleOpenTracking(logistics.delivery.trackingUrl)}
+                  secondary
+                />
+              ) : null}
+            </SectionCard>
+          ) : selectedQuote ? (
             <SectionCard
               styles={pageStyles}
               title="Cotação selecionada"
@@ -679,39 +778,42 @@ const OrderLogisticsPage = ({navigation, route}) => {
             </SectionCard>
           ) : null}
 
-          <SectionCard
-            styles={pageStyles}
-            title="Cotações"
-            subtitle="Cada card abaixo é uma ordem delivery filha vinculada ao pedido principal."
-          >
-            {showEmptyState ? (
-              <View style={pageStyles.emptyState}>
-                <Text style={pageStyles.emptyStateTitle}>Nenhuma cotacao ainda</Text>
-                  <Text style={pageStyles.emptyStateText}>
-                    Toque em solicitar cotações para disparar iFood, Uber e 99 Food conectados na
-                    empresa.
-                  </Text>
-                {enabledProviders.length > 0 ? (
-                  <Text style={pageStyles.emptyStateText}>
-                    Integracoes disponiveis: {enabledProviders.map(item => item.label).join(', ')}.
-                  </Text>
-                ) : null}
-              </View>
-            ) : (
-              <View style={pageStyles.quoteGrid}>
-                {logistics.quotes.map(quote => (
-                  <QuoteCard
-                    key={quote.id}
-                    styles={pageStyles}
-                    quote={quote}
-                    onSelect={selectQuote}
-                    onOpenTracking={handleOpenTracking}
-                    requestLoading={requestLoading}
-                  />
-                ))}
-              </View>
-            )}
-          </SectionCard>
+          {showQuoteSection ? (
+            <SectionCard
+              styles={pageStyles}
+              title="Cotações"
+              subtitle="Cada card abaixo é uma ordem delivery filha vinculada ao pedido principal."
+            >
+              {showEmptyState ? (
+                <View style={pageStyles.emptyState}>
+                  <Text style={pageStyles.emptyStateTitle}>Nenhuma cotacao ainda</Text>
+                    <Text style={pageStyles.emptyStateText}>
+                      Toque em solicitar cotações para disparar iFood, Uber e 99 Food conectados na
+                      empresa.
+                    </Text>
+                  {enabledProviders.length > 0 ? (
+                    <Text style={pageStyles.emptyStateText}>
+                      Integracoes disponiveis: {enabledProviders.map(item => item.label).join(', ')}.
+                    </Text>
+                  ) : null}
+                </View>
+              ) : (
+                <View style={pageStyles.quoteGrid}>
+                  {logistics.quotes.map(quote => (
+                    <QuoteCard
+                      key={quote.id}
+                      styles={pageStyles}
+                      quote={quote}
+                      onSelect={selectQuote}
+                      onOpenTracking={handleOpenTracking}
+                      requestLoading={requestLoading}
+                      allowSelectionActions={!isClosedOrder && !hasDeliveryOrder}
+                    />
+                  ))}
+                </View>
+              )}
+            </SectionCard>
+          ) : null}
 
           {loadFailed ? (
             <View style={pageStyles.errorBanner}>

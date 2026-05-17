@@ -139,6 +139,10 @@ const resolveQuoteStateLabel = (quoteState, price) => {
     case 'selected':
     case 'requested':
       return 'Entrega solicitada';
+    case 'closed':
+    case 'delivered':
+    case 'finished':
+      return 'Entrega definida';
     case 'unavailable':
       return 'Cotacao indisponivel';
     case 'error':
@@ -153,6 +157,10 @@ const resolveQuoteSummary = (quoteState, price, eta, trackingUrl) => {
 
   if (normalizedState === 'selected' || normalizedState === 'requested') {
     return 'Entrega solicitada';
+  }
+
+  if (normalizedState === 'closed' || normalizedState === 'delivered' || normalizedState === 'finished') {
+    return 'Entrega definida';
   }
 
   if (normalizedState === 'ready' && price !== null) {
@@ -280,6 +288,24 @@ const normalizeQuoteCard = (quote, providerMap) => {
     providerState: provider && typeof provider === 'object' ? provider : {},
   };
 };
+
+const normalizeOrderStatusKey = status => {
+  if (!status) {
+    return '';
+  }
+
+  if (typeof status === 'string') {
+    return normalizeKey(status);
+  }
+
+  if (typeof status === 'object') {
+    return normalizeKey(status.realStatus || status.status || status.name || '');
+  }
+
+  return normalizeKey(status);
+};
+
+const isClosedOrderStatus = status => normalizeOrderStatusKey(status) === 'closed';
 
 const quoteProviderPriority = providerKey => {
   switch (normalizeIntegrationKey(providerKey)) {
@@ -409,6 +435,21 @@ const buildQuoteSnapshot = source => {
   const selectedProviderKey = selection.providerKey || selectedQuote?.providerKey || '';
   const selectedTrackingUrl = selection.trackingUrl || selectedQuote?.trackingUrl || null;
   const selectedPrice = selection.price !== null ? selection.price : selectedQuote?.price ?? null;
+  const courierContact = route.courierContact || order?.deliveryPeople || null;
+  const courierContactInfo = normalizePeopleContact(courierContact);
+  const deliveryPeopleId =
+    order?.deliveryPeopleId ??
+    order?.deliveryPeople?.id ??
+    route.courierContact?.id ??
+    null;
+  const hasDeliveryOrder = Boolean(
+    deliveryPeopleId ||
+      courierContactInfo.name ||
+      courierContactInfo.phone ||
+      courierContactInfo.email,
+  );
+  const isClosedOrder = isClosedOrderStatus(order?.status);
+  const showIntegrationSection = !isClosedOrder;
 
   return {
     order: {
@@ -425,6 +466,8 @@ const buildQuoteSnapshot = source => {
       addressDestination: dropoffAddress,
       retrieveContact: pickupContact,
       deliveryContact: dropoffContact,
+      deliveryPeopleId,
+      deliveryPeople: courierContact,
       comments: normalizeText(order?.comments || ''),
       otherInformations: order?.otherInformations || {},
     },
@@ -435,14 +478,16 @@ const buildQuoteSnapshot = source => {
       dropoffAddressParts,
       pickupContact: pickupContactInfo,
       dropoffContact: dropoffContactInfo,
+      courierContact: courierContactInfo,
     },
     management: {
-      mode: managementMode || 'quote',
-      managedByStore:
-        typeof management.managedByStore === 'boolean'
+      mode: hasDeliveryOrder ? 'integration' : managementMode || 'quote',
+      managedByStore: hasDeliveryOrder
+        ? false
+        : typeof management.managedByStore === 'boolean'
           ? management.managedByStore
           : managementMode === 'quote' || normalizeKey(order?.app) === 'pos',
-      label: management.label || 'Cotacoes da loja',
+      label: hasDeliveryOrder ? 'Entrega gerenciada pela integracao' : management.label || 'Cotacoes da loja',
       source: normalizeText(management.source || order?.app || ''),
       mainOrderId: management.mainOrderId ?? order?.id ?? null,
     },
@@ -456,7 +501,13 @@ const buildQuoteSnapshot = source => {
       selectedAt: selection.selectedAt || '',
     },
     quoteStatus,
-    canQuote: Array.from(providerMap.values()).some(provider => provider.connected),
+    canQuote: showIntegrationSection
+      && !hasDeliveryOrder
+      && Array.from(providerMap.values()).some(provider => provider.connected),
+    hasDeliveryOrder,
+    isClosedOrder,
+    showIntegrationSection,
+    showQuotesSection: Boolean(selectedQuote) || quotes.length > 0 || (!isClosedOrder && !hasDeliveryOrder),
     pickupAddressParts,
     dropoffAddressParts,
     pickupContact: pickupContactInfo,
@@ -465,10 +516,14 @@ const buildQuoteSnapshot = source => {
     integrations: quotes,
     currentIntegration: selectedQuote,
     delivery: {
+      deliveryPeopleId,
+      deliveryPeople: courierContactInfo,
       trackingUrl: selectedTrackingUrl,
       requestedAt: selection.selectedAt || '',
-      status: selectedQuote?.quoteStateLabel || '',
-      currentIntegrationKey: selectedProviderKey || selectedQuote?.providerKey || '',
+      status: hasDeliveryOrder
+        ? 'Entrega definida'
+        : selectedQuote?.quoteStateLabel || '',
+      currentIntegrationKey: selectedProviderKey || selectedQuote?.providerKey || (hasDeliveryOrder ? normalizeIntegrationKey(order?.app) || '' : ''),
     },
   };
 };
@@ -632,6 +687,7 @@ const buildPayloadSnapshot = source => {
   const dropoffAddressParts = dropoffAddress ? resolveAddressDisplayParts(dropoffAddress) : null;
   const courierSelected = delivery?.deliveryPeople || order?.deliveryPeople || null;
   const uberState = mergedIntegrations.find(card => card?.key === 'uber')?.state || {};
+  const isClosedOrder = isClosedOrderStatus(order?.status);
 
   return {
     pickupAddressParts,
@@ -671,6 +727,8 @@ const buildPayloadSnapshot = source => {
       source: management.source || resolveText(order?.app),
     },
     currentIntegration,
+    isClosedOrder,
+    showIntegrationSection: !isClosedOrder,
   };
 };
 
