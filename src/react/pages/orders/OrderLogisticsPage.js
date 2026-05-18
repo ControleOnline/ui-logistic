@@ -32,6 +32,75 @@ const normalizeOrderId = value =>
 
 const normalizeText = value => String(value ?? '').trim();
 
+const extractErrorMessage = error => {
+  const seen = new Set();
+  const queue = [error];
+  const genericMessages = new Set(['request failed', 'failed to fetch', 'network request failed']);
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current || typeof current !== 'object' || seen.has(current)) {
+      continue;
+    }
+
+    seen.add(current);
+
+    const directValue =
+      current.message ||
+      current.description ||
+      current.detail ||
+      current.errmsg ||
+      current.error ||
+      current.title;
+
+    if (typeof directValue === 'string' && directValue.trim()) {
+      const normalizedDirect = directValue.trim();
+      if (!genericMessages.has(normalizedDirect.toLowerCase())) {
+        return normalizedDirect;
+      }
+    }
+
+    if (Array.isArray(current.message)) {
+      const message = current.message
+        .map(item => item?.message || item?.title || String(item))
+        .filter(Boolean)
+        .join('\n')
+        .trim();
+      if (message) {
+        return message;
+      }
+    }
+
+    if (Array.isArray(current.errors)) {
+      const message = current.errors
+        .map(item => item?.message || item?.title || String(item))
+        .filter(Boolean)
+        .join('\n')
+        .trim();
+      if (message) {
+        return message;
+      }
+    }
+
+    if (current.body && typeof current.body === 'object') {
+      queue.push(current.body);
+    }
+
+    if (current.response && typeof current.response === 'object') {
+      queue.push(current.response);
+      if (current.response.data && typeof current.response.data === 'object') {
+        queue.push(current.response.data);
+      }
+    }
+
+    if (current.data && typeof current.data === 'object') {
+      queue.push(current.data);
+    }
+  }
+
+  return '';
+};
+
 const normalizeActionResult = response => {
   if (Array.isArray(response?.member)) {
     return response.member[0] || null;
@@ -52,22 +121,10 @@ const normalizeActionResult = response => {
   return response || null;
 };
 
-const formatApiError = error => {
+export const formatApiError = error => {
   if (!error) return 'Nao foi possivel concluir a solicitacao.';
   if (typeof error === 'string') return error;
-  if (Array.isArray(error?.message)) {
-    return error.message
-      .map(item => item?.message || item?.title || String(item))
-      .filter(Boolean)
-      .join('\n');
-  }
-
-  return (
-    error?.message ||
-    error?.description ||
-    error?.errmsg ||
-    'Nao foi possivel concluir a solicitacao.'
-  );
+  return extractErrorMessage(error) || 'Nao foi possivel concluir a solicitacao.';
 };
 
 const resolveProviderLabel = quote => {
@@ -122,7 +179,6 @@ const resolveQuoteStatusLabel = quote => {
     quote?.status?.status ||
     quote?.status?.realStatus ||
     quote?.status?.name ||
-    quote?.quoteStateLabel ||
     quote?.quoteState ||
     '';
 
@@ -594,6 +650,10 @@ const OrderLogisticsPage = ({navigation, route}) => {
     () => renderContactLines(logistics.dropoffContact),
     [logistics.dropoffContact],
   );
+  const hasDeliveryAddress = useMemo(
+    () => dropoffAddressLines.some(line => line !== 'Endereco nao informado.'),
+    [dropoffAddressLines],
+  );
 
   const isClosedOrder = Boolean(logistics.isClosedOrder);
   const hasDeliveryOrder = Boolean(
@@ -608,7 +668,9 @@ const OrderLogisticsPage = ({navigation, route}) => {
     ) ||
     logistics.currentIntegration ||
     null;
-  const canRequestQuotes = Boolean(logistics.canQuote && !hasDeliveryOrder && !isClosedOrder);
+  const canRequestQuotes = Boolean(
+    logistics.canQuote && !hasDeliveryOrder && !isClosedOrder && hasDeliveryAddress,
+  );
   const quoteActionLabel = logistics.quotes.length > 0 ? 'Atualizar cotações' : 'Solicitar cotações';
   const headerStatusLabel = loadFailed ? 'Falha ao atualizar' : isRefreshing ? 'Atualizando' : isClosedOrder ? 'Fechado' : 'Online';
   const helpMessage = useMemo(
@@ -620,6 +682,9 @@ const OrderLogisticsPage = ({navigation, route}) => {
       ],
     [],
   );
+  const emptyStateMessage = hasDeliveryAddress
+    ? 'Solicite cotações para exibir as opções vinculadas.'
+    : 'Informe um endereço de entrega válido para solicitar cotações.';
   const displayQuotes = useMemo(() => {
     if (logistics.quotes.length > 0) {
       return logistics.quotes;
@@ -849,11 +914,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
             ) : (
               <View style={pageStyles.emptyState}>
                 <Text style={pageStyles.emptyStateTitle}>Nenhuma cotacao ainda</Text>
-                <Text style={pageStyles.emptyStateText}>
-                  {canRequestQuotes
-                    ? 'Solicite cotações para exibir as opções vinculadas.'
-                    : 'A entrega ainda não possui cotações vinculadas.'}
-                </Text>
+                <Text style={pageStyles.emptyStateText}>{emptyStateMessage}</Text>
               </View>
             )}
             </SectionCard>
