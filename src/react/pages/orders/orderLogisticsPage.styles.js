@@ -17,45 +17,6 @@ const createStyles = palette =>
     topBarWrap: {
       gap: 10,
     },
-    heroCard: {
-      borderRadius: 16,
-      borderWidth: 1,
-      borderColor: palette?.borderSoft || '#D6E4F0',
-      backgroundColor: palette?.cardBg || '#FFFFFF',
-      padding: 14,
-      gap: 10,
-      shadowColor: '#0F172A',
-      shadowOpacity: 0.04,
-      shadowRadius: 10,
-      shadowOffset: {width: 0, height: 4},
-      elevation: 1,
-    },
-    heroHeaderRow: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      justifyContent: 'space-between',
-      gap: 12,
-    },
-    heroTextWrap: {
-      flex: 1,
-      gap: 4,
-    },
-    heroTitle: {
-      color: palette?.textPrimary || '#0F172A',
-      fontSize: 18,
-      fontWeight: '900',
-    },
-    heroSubtitle: {
-      color: palette?.textSecondary || '#475569',
-      fontSize: 11,
-      fontWeight: '700',
-      lineHeight: 15,
-    },
-    summaryGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 8,
-    },
     sectionCard: {
       borderRadius: 16,
       borderWidth: 1,
@@ -64,8 +25,25 @@ const createStyles = palette =>
       padding: 12,
       gap: 8,
     },
-    sectionHeader: {
+    sectionHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      gap: 10,
+    },
+    sectionHeaderText: {
+      flex: 1,
       gap: 2,
+    },
+    sectionHeaderAction: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    sectionHeaderRightGroup: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
     },
     sectionTitle: {
       color: palette?.textPrimary || '#0F172A',
@@ -108,12 +86,6 @@ const createStyles = palette =>
       fontSize: 12,
       fontWeight: '800',
       lineHeight: 15,
-    },
-    sectionHint: {
-      color: palette?.textSecondary || '#64748B',
-      fontSize: 11,
-      fontWeight: '600',
-      lineHeight: 14,
     },
     statusPill: {
       alignSelf: 'flex-start',
@@ -187,64 +159,20 @@ const createStyles = palette =>
     actionButtonTextSecondary: {
       color: palette?.accentInfo || '#0284C7',
     },
-    providerChipRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 8,
-    },
-    providerChip: {
-      borderRadius: 999,
-      borderWidth: 1,
-      borderColor: palette?.borderSoft || '#D6E4F0',
-      backgroundColor: palette?.cardBgSoft || '#F8FBFF',
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-    },
-    providerChipText: {
-      color: palette?.textSecondary || '#475569',
-      fontSize: 10,
-      fontWeight: '800',
-      textTransform: 'uppercase',
-      letterSpacing: 0.2,
-    },
     routeGrid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 8,
     },
-    selectionPanel: {
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: palette?.borderSoft || '#D6E4F0',
-      backgroundColor: palette?.cardBgSoft || '#F8FBFF',
-      padding: 10,
-      gap: 8,
-    },
-    selectionPanelHeader: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      justifyContent: 'space-between',
-      gap: 8,
-    },
-    selectionPanelTitleWrap: {
-      flex: 1,
-      gap: 2,
-    },
-    selectionPanelTitle: {
-      color: palette?.textPrimary || '#0F172A',
-      fontSize: 13,
-      fontWeight: '900',
-    },
-    selectionPanelSubtitle: {
-      color: palette?.textSecondary || '#64748B',
-      fontSize: 11,
-      fontWeight: '700',
-      lineHeight: 14,
-    },
     quoteGrid: {
-      gap: 10,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
     },
     quoteCard: {
+      flexGrow: 1,
+      flexBasis: 250,
+      minWidth: 220,
       borderRadius: 14,
       borderWidth: 1,
       borderColor: palette?.borderSoft || '#D6E4F0',
@@ -273,6 +201,15 @@ const createStyles = palette =>
     },
     quoteCardTitleWrap: {
       flex: 1,
+      gap: 4,
+    },
+    quoteBrandRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    quoteBrandTextWrap: {
+      flex: 1,
       gap: 2,
     },
     quoteCardTitle: {
@@ -288,17 +225,71 @@ const createStyles = palette =>
       letterSpacing: 0.15,
     },
     quoteCardBody: {
-      gap: 4,
+      gap: 6,
     },
-    quotePrice: {
-      color: palette?.textPrimary || '#0F172A',
-      fontSize: 18,
+    quoteInfoRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+    },
+    providerBadge: {
+      width: 28,
+      height: 28,
+      borderRadius: 9,
+      borderWidth: 1,
+      borderColor: palette?.borderSoft || '#D6E4F0',
+      backgroundColor: '#FFFFFF',
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
+    },
+    providerBadgeImage: {
+      width: 20,
+      height: 20,
+    },
+    providerBadgeText: {
+      color: palette?.accentInfo || '#0284C7',
+      fontSize: 10,
       fontWeight: '900',
+      letterSpacing: 0.1,
     },
-    quoteEta: {
+    compactChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: palette?.borderSoft || '#D6E4F0',
+      backgroundColor: '#FFFFFF',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+    },
+    compactChipSuccess: {
+      borderColor: '#86EFAC',
+      backgroundColor: '#F0FDF4',
+    },
+    compactChipDanger: {
+      borderColor: '#FCA5A5',
+      backgroundColor: '#FEF2F2',
+    },
+    compactChipMuted: {
+      borderColor: palette?.borderSoft || '#D6E4F0',
+      backgroundColor: '#F8FAFC',
+    },
+    compactChipText: {
+      color: palette?.textPrimary || '#0F172A',
+      fontSize: 10,
+      fontWeight: '800',
+      lineHeight: 12,
+    },
+    compactChipTextSuccess: {
+      color: '#166534',
+    },
+    compactChipTextDanger: {
+      color: '#B91C1C',
+    },
+    compactChipTextMuted: {
       color: palette?.textSecondary || '#64748B',
-      fontSize: 11,
-      fontWeight: '700',
     },
     quoteSummary: {
       color: palette?.accentInfo || '#0284C7',
@@ -309,9 +300,9 @@ const createStyles = palette =>
     },
     quoteMessage: {
       color: palette?.textSecondary || '#475569',
-      fontSize: 11,
+      fontSize: 10,
       fontWeight: '600',
-      lineHeight: 14,
+      lineHeight: 13,
     },
     quoteFooter: {
       flexDirection: 'row',

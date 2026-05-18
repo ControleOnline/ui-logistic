@@ -6,6 +6,7 @@
 - Este modulo tem implementacao ativa em `src/react` para a superficie canonica de logistica de pedidos.
 - `src/vue` continua legado e so deve ser tocado quando o fluxo antigo for explicitamente o alvo.
 - A tela `OrderLogisticsPage`, o marketplace de entregadores e o contrato de solicitacao de entrega pertencem a este modulo.
+- `OrderLogisticsPage` nao deve usar hero, subtitulo explicativo fixo ou bloco solto de orientacao. Informacao contextual extra, quando realmente precisar, deve aparecer por meio do componente de ajuda parametrizado de `ui-common` acionado por `?`.
 
 ## Quando usar
 - Prompts sobre quote, cotacao, logistic e telas antigas dessa operacao.
