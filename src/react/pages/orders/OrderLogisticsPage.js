@@ -3,8 +3,10 @@ import {
   ActivityIndicator,
   Image,
   Linking,
+  Modal,
   ScrollView,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -15,10 +17,17 @@ import {useStore} from '@store';
 import {api} from '@controleonline/ui-common/src/api';
 import Formatter from '@controleonline/ui-common/src/utils/formatter';
 import {useMessage} from '@controleonline/ui-common/src/react/components/MessageService';
+import AddCompanyModal from '@controleonline/ui-people/src/react/components/AddCompanyModal';
 import resolveSystemErrorMessage from '@controleonline/ui-common/src/react/utils/systemErrorMessage';
 import {
+  buildAddressOptionSummary,
+  buildCustomerSearchMeta,
+  createEmptyAddressForm,
+  normalizePostalCodeInput,
   normalizeText as normalizeDisplayText,
+  resolveAddressDisplayParts,
 } from '@controleonline/ui-common/src/react/utils/entityDisplay';
+import {normalizeEntityId, toEntityIri} from '@controleonline/ui-common/src/react/utils/commercialDocumentOrders';
 import {getOrderChannelLabel, getOrderChannelLogo} from '@assets/ppc/channels';
 import OrderStackedTopBar from '@controleonline/ui-orders/src/react/pages/orders/sales/components/OrderStackedTopBar';
 import useOrderDetailsVisuals from '@controleonline/ui-orders/src/react/pages/orders/sales/useOrderDetailsVisuals';
@@ -65,6 +74,22 @@ const normalizeActionResult = response => {
   }
 
   return response || null;
+};
+
+const extractCollectionItems = response => {
+  if (Array.isArray(response)) {
+    return response;
+  }
+
+  if (Array.isArray(response?.member)) {
+    return response.member;
+  }
+
+  if (Array.isArray(response?.['hydra:member'])) {
+    return response['hydra:member'];
+  }
+
+  return [];
 };
 
 export const formatApiError = error => {
@@ -442,6 +467,412 @@ const QuoteCard = ({
   );
 };
 
+const CustomerAssignmentModal = ({
+  styles,
+  visible,
+  onClose,
+  customerSearch,
+  onCustomerSearchChange,
+  customerSearchLoading,
+  customerSearchResults,
+  selectedOrderClientIri,
+  customerLinkingId,
+  onSelectCustomer,
+  onCreateCustomer,
+}) => {
+  const normalizedSearch = normalizeText(customerSearch);
+
+  return (
+    <Modal
+      transparent
+      animationType="slide"
+      visible={visible}
+      onRequestClose={onClose}
+      statusBarTranslucent
+      presentationStyle="overFullScreen"
+    >
+      <View style={styles.modalSheetRoot}>
+        <TouchableOpacity
+          activeOpacity={1}
+          style={styles.modalSheetBackdrop}
+          onPress={customerLinkingId ? undefined : onClose}
+        />
+        <View style={styles.modalSheetWrap}>
+          <View style={styles.assignmentModalCard}>
+            <View style={styles.deliveryCodeHeader}>
+              <Text style={styles.deliveryCodeStepBadge}>Cliente</Text>
+              <TouchableOpacity
+                onPress={onClose}
+                disabled={!!customerLinkingId}
+                style={styles.deliveryCodeCloseButton}
+              >
+                <MaterialCommunityIcons name="close" size={20} color="#475569" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.deliveryCodeModalTitle}>
+              {selectedOrderClientIri ? 'Trocar cliente do pedido' : 'Vincular cliente ao pedido'}
+            </Text>
+
+            <ScrollView
+              style={styles.deliveryCodeScroll}
+              contentContainerStyle={styles.deliveryCodeScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.assignmentSearchBox}>
+                <MaterialCommunityIcons name="magnify" size={18} color="#475569" />
+                <TextInput
+                  value={customerSearch}
+                  onChangeText={onCustomerSearchChange}
+                  editable={!customerLinkingId}
+                  placeholder="Buscar cliente"
+                  placeholderTextColor="#64748B"
+                  autoCapitalize="none"
+                  style={styles.assignmentSearchInput}
+                />
+                {customerSearchLoading ? (
+                  <ActivityIndicator size="small" color="#0EA5E9" />
+                ) : null}
+              </View>
+
+              {!normalizedSearch ? (
+                <View style={styles.assignmentEmptyState}>
+                  <Text style={styles.assignmentEmptyStateTitle}>Digite para buscar</Text>
+                  <Text style={styles.assignmentEmptyStateText}>
+                    Busque por nome, documento, telefone ou email.
+                  </Text>
+                </View>
+              ) : customerSearchLoading ? (
+                <View style={styles.assignmentEmptyState}>
+                  <ActivityIndicator size="small" color="#0EA5E9" />
+                  <Text style={styles.assignmentEmptyStateText}>Buscando clientes...</Text>
+                </View>
+              ) : customerSearchResults.length > 0 ? (
+                customerSearchResults.map(customer => {
+                  const customerId = String(normalizeEntityId(customer) || '')
+                  const customerIri = toEntityIri(customer, 'people')
+                  const customerTitle =
+                    normalizeDisplayText(customer?.alias || customer?.name) ||
+                    `Cliente #${customerId || '--'}`
+                  const customerMeta = buildCustomerSearchMeta(customer)
+                  const isCurrent = customerIri === selectedOrderClientIri
+                  const isSaving = customerLinkingId === customerId
+
+                  return (
+                    <TouchableOpacity
+                      key={customerIri || customerId || customerTitle}
+                      onPress={() => onSelectCustomer?.(customer)}
+                      disabled={!!customerLinkingId}
+                      style={[
+                        styles.assignmentOptionCard,
+                        isCurrent && styles.assignmentOptionCardSelected,
+                      ]}
+                    >
+                      <View style={styles.assignmentOptionTextWrap}>
+                        <Text style={styles.assignmentOptionTitle}>{customerTitle}</Text>
+                        {customerMeta ? (
+                          <Text style={styles.assignmentOptionMeta}>{customerMeta}</Text>
+                        ) : null}
+                      </View>
+
+                      {isSaving ? (
+                        <ActivityIndicator size="small" color="#0EA5E9" />
+                      ) : isCurrent ? (
+                        <Text style={styles.assignmentOptionBadge}>Atual</Text>
+                      ) : (
+                        <MaterialCommunityIcons
+                          name="chevron-right"
+                          size={20}
+                          color="#64748B"
+                        />
+                      )}
+                    </TouchableOpacity>
+                  )
+                })
+              ) : (
+                <View style={styles.assignmentEmptyState}>
+                  <Text style={styles.assignmentEmptyStateTitle}>Nenhum cliente encontrado</Text>
+                  <Text style={styles.assignmentEmptyStateText}>
+                    Use o cadastro rapido para criar e vincular um novo cliente.
+                  </Text>
+                </View>
+              )}
+
+              <TouchableOpacity
+                onPress={onCreateCustomer}
+                disabled={!!customerLinkingId}
+                style={styles.assignmentQuickActionCard}
+              >
+                <View style={styles.assignmentQuickActionHeader}>
+                  <MaterialCommunityIcons name="account-plus" size={18} color="#0EA5E9" />
+                  <Text style={styles.assignmentQuickActionTitle}>
+                    Cadastro rapido de cliente
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </ScrollView>
+
+            <View style={styles.sectionActionRow}>
+              <ActionButton
+                styles={styles}
+                label="Fechar"
+                onPress={onClose}
+                disabled={!!customerLinkingId}
+                secondary
+              />
+            </View>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
+const AddressAssignmentModal = ({
+  styles,
+  visible,
+  onClose,
+  selectedOrderClientIri,
+  selectedOrderClient,
+  selectedOrderAddressIri,
+  addressOptionsLoading,
+  addressOptions,
+  addressSelectingId,
+  addressSaveLoading,
+  addressModalMode,
+  addressForm,
+  onOpenCreateMode,
+  onAddressFormFieldChange,
+  onSelectAddress,
+  onCreateAddress,
+}) => {
+  const customerTitle = normalizeDisplayText(
+    selectedOrderClient?.alias || selectedOrderClient?.name,
+  );
+
+  return (
+    <Modal
+      transparent
+      animationType="slide"
+      visible={visible}
+      onRequestClose={onClose}
+      statusBarTranslucent
+      presentationStyle="overFullScreen"
+    >
+      <View style={styles.modalSheetRoot}>
+        <TouchableOpacity
+          activeOpacity={1}
+          style={styles.modalSheetBackdrop}
+          onPress={addressSaveLoading || addressSelectingId ? undefined : onClose}
+        />
+        <View style={styles.modalSheetWrap}>
+          <View style={styles.assignmentModalCard}>
+            <View style={styles.deliveryCodeHeader}>
+              <Text style={styles.deliveryCodeStepBadge}>Entrega</Text>
+              <TouchableOpacity
+                onPress={onClose}
+                disabled={addressSaveLoading || !!addressSelectingId}
+                style={styles.deliveryCodeCloseButton}
+              >
+                <MaterialCommunityIcons name="close" size={20} color="#475569" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.deliveryCodeModalTitle}>
+              Selecionar endereco de entrega
+            </Text>
+
+            <ScrollView
+              style={styles.deliveryCodeScroll}
+              contentContainerStyle={styles.deliveryCodeScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {!!selectedOrderClientIri && customerTitle ? (
+                <View style={styles.assignmentContextCard}>
+                  <MaterialCommunityIcons name="account" size={16} color="#0EA5E9" />
+                  <Text style={styles.assignmentContextText}>
+                    Cliente selecionado: {customerTitle}
+                  </Text>
+                </View>
+              ) : null}
+
+              {addressOptionsLoading ? (
+                <View style={styles.assignmentEmptyState}>
+                  <ActivityIndicator size="small" color="#0EA5E9" />
+                  <Text style={styles.assignmentEmptyStateText}>Carregando enderecos...</Text>
+                </View>
+              ) : addressOptions.length > 0 ? (
+                addressOptions.map(address => {
+                  const addressId = String(normalizeEntityId(address) || '')
+                  const addressIri = toEntityIri(address, 'addresses')
+                  const summary = buildAddressOptionSummary(address)
+                  const isCurrent = addressIri === selectedOrderAddressIri
+                  const isSaving = addressSelectingId === addressId
+
+                  return (
+                    <TouchableOpacity
+                      key={addressIri || addressId || summary.primary}
+                      onPress={() => onSelectAddress?.(address)}
+                      disabled={!!addressSelectingId || addressSaveLoading}
+                      style={[
+                        styles.assignmentOptionCard,
+                        isCurrent && styles.assignmentOptionCardSelected,
+                      ]}
+                    >
+                      <View style={styles.assignmentOptionTextWrap}>
+                        <Text style={styles.assignmentOptionTitle}>
+                          {summary.primary || `Endereco #${addressId || '--'}`}
+                        </Text>
+                        {summary.secondary ? (
+                          <Text style={styles.assignmentOptionMeta}>{summary.secondary}</Text>
+                        ) : null}
+                      </View>
+
+                      {isSaving ? (
+                        <ActivityIndicator size="small" color="#0EA5E9" />
+                      ) : isCurrent ? (
+                        <Text style={styles.assignmentOptionBadge}>Atual</Text>
+                      ) : (
+                        <MaterialCommunityIcons
+                          name="chevron-right"
+                          size={20}
+                          color="#64748B"
+                        />
+                      )}
+                    </TouchableOpacity>
+                  )
+                })
+              ) : (
+                <View style={styles.assignmentEmptyState}>
+                  <Text style={styles.assignmentEmptyStateTitle}>Nenhum endereco encontrado</Text>
+                  <Text style={styles.assignmentEmptyStateText}>
+                    Cadastre um novo endereco para este cliente.
+                  </Text>
+                </View>
+              )}
+
+              <TouchableOpacity
+                onPress={onOpenCreateMode}
+                disabled={addressSaveLoading || !!addressSelectingId}
+                style={styles.assignmentQuickActionCard}
+              >
+                <View style={styles.assignmentQuickActionHeader}>
+                  <MaterialCommunityIcons name="map-marker-plus" size={18} color="#0EA5E9" />
+                  <Text style={styles.assignmentQuickActionTitle}>
+                    Cadastro rapido de endereco
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              {addressModalMode === 'create' ? (
+                <>
+                  <TextInput
+                    value={addressForm.nickname}
+                    onChangeText={value => onAddressFormFieldChange('nickname', value)}
+                    editable={!addressSaveLoading}
+                    placeholder="Referencia ou apelido"
+                    placeholderTextColor="#64748B"
+                    style={styles.assignmentFormInput}
+                  />
+                  <View style={styles.assignmentFormRow}>
+                    <TextInput
+                      value={addressForm.cep}
+                      onChangeText={value => onAddressFormFieldChange('cep', value)}
+                      editable={!addressSaveLoading}
+                      placeholder="CEP"
+                      placeholderTextColor="#64748B"
+                      keyboardType="number-pad"
+                      style={[styles.assignmentFormInput, styles.assignmentFormHalf]}
+                    />
+                    <TextInput
+                      value={addressForm.number}
+                      onChangeText={value => onAddressFormFieldChange('number', value)}
+                      editable={!addressSaveLoading}
+                      placeholder="Numero"
+                      placeholderTextColor="#64748B"
+                      keyboardType="number-pad"
+                      style={[styles.assignmentFormInput, styles.assignmentFormHalf]}
+                    />
+                  </View>
+                  <TextInput
+                    value={addressForm.street}
+                    onChangeText={value => onAddressFormFieldChange('street', value)}
+                    editable={!addressSaveLoading}
+                    placeholder="Rua"
+                    placeholderTextColor="#64748B"
+                    style={styles.assignmentFormInput}
+                  />
+                  <TextInput
+                    value={addressForm.complement}
+                    onChangeText={value => onAddressFormFieldChange('complement', value)}
+                    editable={!addressSaveLoading}
+                    placeholder="Complemento"
+                    placeholderTextColor="#64748B"
+                    style={styles.assignmentFormInput}
+                  />
+                  <TextInput
+                    value={addressForm.district}
+                    onChangeText={value => onAddressFormFieldChange('district', value)}
+                    editable={!addressSaveLoading}
+                    placeholder="Bairro"
+                    placeholderTextColor="#64748B"
+                    style={styles.assignmentFormInput}
+                  />
+                  <TextInput
+                    value={addressForm.city}
+                    onChangeText={value => onAddressFormFieldChange('city', value)}
+                    editable={!addressSaveLoading}
+                    placeholder="Cidade"
+                    placeholderTextColor="#64748B"
+                    style={styles.assignmentFormInput}
+                  />
+                  <View style={styles.assignmentFormRow}>
+                    <TextInput
+                      value={addressForm.state}
+                      onChangeText={value => onAddressFormFieldChange('state', value)}
+                      editable={!addressSaveLoading}
+                      placeholder="Estado"
+                      placeholderTextColor="#64748B"
+                      style={[styles.assignmentFormInput, styles.assignmentFormHalf]}
+                    />
+                    <TextInput
+                      value={addressForm.country}
+                      onChangeText={value => onAddressFormFieldChange('country', value)}
+                      editable={!addressSaveLoading}
+                      placeholder="Pais"
+                      placeholderTextColor="#64748B"
+                      style={[styles.assignmentFormInput, styles.assignmentFormHalf]}
+                    />
+                  </View>
+                </>
+              ) : null}
+            </ScrollView>
+
+            <View style={styles.sectionActionRow}>
+              <ActionButton
+                styles={styles}
+                label="Fechar"
+                onPress={onClose}
+                disabled={addressSaveLoading || !!addressSelectingId}
+                secondary
+              />
+              {addressModalMode === 'create' ? (
+                <ActionButton
+                  styles={styles}
+                  label={addressSaveLoading ? 'Salvando' : 'Salvar endereco'}
+                  onPress={onCreateAddress}
+                  disabled={addressSaveLoading || !!addressSelectingId}
+                  primary
+                />
+              ) : null}
+            </View>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
 const OrderLogisticsPage = ({navigation, route}) => {
   const {showError, showSuccess} = useMessage() || {};
   const {ppcColors} = useOrderDetailsVisuals();
@@ -450,7 +881,10 @@ const OrderLogisticsPage = ({navigation, route}) => {
   const ordersStore = useStore('orders');
   const websocketStore = useStore('websocket');
   const peopleStore = useStore('people');
+  const addressStore = useStore('address');
   const ordersActions = ordersStore.actions;
+  const addressActions = addressStore?.actions || {};
+  const peopleActions = peopleStore?.actions || {};
   const routeOrder = route?.params?.order || null;
   const order = ordersStore.getters.item || routeOrder;
   const orderId = useMemo(
@@ -460,11 +894,27 @@ const OrderLogisticsPage = ({navigation, route}) => {
   const websocketMessages = Array.isArray(websocketStore.getters.messages)
     ? websocketStore.getters.messages
     : [];
-  const currentCompanyId = normalizeText(peopleStore.getters.currentCompany?.id);
+  const peopleGetters = peopleStore?.getters || {};
+  const currentCompany = peopleGetters.currentCompany || null;
+  const defaultCompany = peopleGetters.defaultCompany || null;
+  const currentCompanyId = normalizeText(currentCompany?.id);
   const [payload, setPayload] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [requestLoading, setRequestLoading] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [customerModalVisible, setCustomerModalVisible] = useState(false);
+  const [customerCreateModalVisible, setCustomerCreateModalVisible] = useState(false);
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [customerSearchResults, setCustomerSearchResults] = useState([]);
+  const [customerSearchLoading, setCustomerSearchLoading] = useState(false);
+  const [customerLinkingId, setCustomerLinkingId] = useState('');
+  const [addressModalVisible, setAddressModalVisible] = useState(false);
+  const [addressModalMode, setAddressModalMode] = useState('select');
+  const [addressOptions, setAddressOptions] = useState([]);
+  const [addressOptionsLoading, setAddressOptionsLoading] = useState(false);
+  const [addressForm, setAddressForm] = useState(createEmptyAddressForm());
+  const [addressSaveLoading, setAddressSaveLoading] = useState(false);
+  const [addressSelectingId, setAddressSelectingId] = useState('');
   const lastProcessedMessageCountRef = useRef(websocketMessages.length);
 
   const orderHeaderOrder = useMemo(
@@ -600,6 +1050,392 @@ const OrderLogisticsPage = ({navigation, route}) => {
     () => dropoffAddressLines.some(line => line !== 'Endereco nao informado.'),
     [dropoffAddressLines],
   );
+  const localOrderClient = logistics.order?.client || null;
+  const localOrderAddress = logistics.order?.addressDestination || null;
+  const selectedOrderClientIri = useMemo(
+    () => toEntityIri(localOrderClient, 'people'),
+    [localOrderClient],
+  );
+  const selectedOrderAddressIri = useMemo(
+    () => toEntityIri(localOrderAddress, 'addresses'),
+    [localOrderAddress],
+  );
+  const orderCompanyIri = useMemo(
+    () => toEntityIri(logistics.order?.provider || currentCompany || defaultCompany, 'people'),
+    [currentCompany, defaultCompany, logistics.order?.provider],
+  );
+  const clientContactLines = useMemo(
+    () =>
+      renderContactLines(
+        logistics.route?.dropoffContact || logistics.dropoffContact || localOrderClient,
+      ),
+    [localOrderClient, logistics.dropoffContact, logistics.route?.dropoffContact],
+  );
+  const clientAddressLines = useMemo(
+    () =>
+      renderAddressLines(
+        logistics.route?.dropoffAddressParts ||
+          logistics.dropoffAddressParts ||
+          resolveAddressDisplayParts(localOrderAddress),
+      ),
+    [localOrderAddress, logistics.dropoffAddressParts, logistics.route?.dropoffAddressParts],
+  );
+  const clientSummaryLines = useMemo(() => {
+    const summarySource =
+      localOrderClient && typeof localOrderClient === 'object'
+        ? localOrderClient
+        : logistics.route?.dropoffContact || logistics.dropoffContact || null;
+    const title = normalizeDisplayText(summarySource?.alias || summarySource?.name);
+    const meta = buildCustomerSearchMeta(summarySource);
+    const lines = [title, meta].filter(Boolean);
+
+    return lines.length ? lines : ['Cliente nao informado.'];
+  }, [localOrderClient, logistics.dropoffContact, logistics.route?.dropoffContact]);
+
+  const buildOrderUpdatePayload = useCallback(
+    changes => {
+      const baseOrder = logistics.order || order;
+      const baseOrderId = normalizeEntityId(baseOrder);
+
+      if (!baseOrderId) {
+        throw new Error('Nao foi possivel identificar o pedido para atualizar.');
+      }
+
+      const providerIri = toEntityIri(baseOrder?.provider || currentCompany || defaultCompany, 'people');
+      const statusIri = toEntityIri(baseOrder?.status, 'statuses');
+      const orderType = normalizeText(baseOrder?.orderType || order?.orderType);
+
+      return {
+        id: Number(baseOrderId),
+        app: normalizeText(baseOrder?.app || order?.app || 'POS') || 'POS',
+        ...(orderType ? {orderType} : {}),
+        ...(providerIri ? {provider: providerIri} : {}),
+        ...(statusIri ? {status: statusIri} : {}),
+        ...changes,
+      };
+    },
+    [currentCompany, defaultCompany, logistics.order, order],
+  );
+
+  const updateCurrentOrder = useCallback(
+    async changes => {
+      const savedOrder = normalizeActionResult(
+        await ordersActions.save(buildOrderUpdatePayload(changes)),
+      );
+
+      if (savedOrder && typeof ordersActions.syncOrder === 'function') {
+        ordersActions.syncOrder(savedOrder);
+      } else if (savedOrder) {
+        ordersActions.setItem(savedOrder);
+      }
+
+      await loadPageData();
+
+      return savedOrder;
+    },
+    [buildOrderUpdatePayload, loadPageData, ordersActions],
+  );
+
+  const closeCustomerModal = useCallback(() => {
+    if (customerLinkingId) {
+      return;
+    }
+
+    setCustomerModalVisible(false);
+    setCustomerSearch('');
+    setCustomerSearchResults([]);
+  }, [customerLinkingId]);
+
+  const openCustomerModal = useCallback(() => {
+    setCustomerModalVisible(true);
+  }, []);
+
+  const openCustomerCreateModal = useCallback(() => {
+    setCustomerCreateModalVisible(true);
+  }, []);
+
+  const closeAddressModal = useCallback(() => {
+    if (addressSaveLoading || addressSelectingId) {
+      return;
+    }
+
+    setAddressModalVisible(false);
+    setAddressModalMode('select');
+    setAddressOptions([]);
+    setAddressForm(createEmptyAddressForm());
+  }, [addressSaveLoading, addressSelectingId]);
+
+  const loadAddressOptions = useCallback(
+    async customer => {
+      const customerIri = toEntityIri(customer, 'people');
+
+      if (!customerIri) {
+        setAddressOptions([]);
+        return [];
+      }
+
+      try {
+        setAddressOptionsLoading(true);
+        const response = await addressActions.getItems({
+          people: customerIri,
+          itemsPerPage: 50,
+        });
+        const items = extractCollectionItems(response);
+
+        setAddressOptions(items);
+        return items;
+      } catch (addressError) {
+        setAddressOptions([]);
+        showError(formatApiError(addressError));
+        return [];
+      } finally {
+        setAddressOptionsLoading(false);
+      }
+    },
+    [addressActions, showError],
+  );
+
+  const openAddressCreateMode = useCallback(() => {
+    setAddressForm(createEmptyAddressForm());
+    setAddressModalMode('create');
+    setAddressModalVisible(true);
+  }, []);
+
+  const openAddressModal = useCallback(async () => {
+    setAddressModalVisible(true);
+
+    if (!selectedOrderClientIri) {
+      setAddressOptions([]);
+      setAddressModalMode('create');
+      return;
+    }
+
+    setAddressModalMode('select');
+    await loadAddressOptions(localOrderClient);
+  }, [loadAddressOptions, localOrderClient, selectedOrderClientIri]);
+
+  const handleAddressFormFieldChange = useCallback((field, value) => {
+    setAddressForm(previousForm => ({
+      ...previousForm,
+      [field]:
+        field === 'cep'
+          ? normalizePostalCodeInput(value)
+          : field === 'number'
+            ? String(value ?? '').replace(/\D+/g, '')
+            : value,
+    }));
+  }, []);
+
+  const handleSelectCustomer = useCallback(
+    async customer => {
+      const nextCustomerIri = toEntityIri(customer, 'people');
+      const nextCustomerId = normalizeEntityId(customer);
+
+      if (!nextCustomerIri) {
+        showError('Nao foi possivel identificar o cliente selecionado.');
+        return;
+      }
+
+      if (selectedOrderClientIri === nextCustomerIri) {
+        closeCustomerModal();
+        return;
+      }
+
+      try {
+        setCustomerLinkingId(nextCustomerId);
+        await updateCurrentOrder({client: nextCustomerIri});
+        closeCustomerModal();
+        showSuccess(
+          selectedOrderClientIri
+            ? 'Cliente do pedido atualizado com sucesso.'
+            : 'Cliente vinculado ao pedido com sucesso.',
+        );
+
+        if (!selectedOrderAddressIri) {
+          setAddressModalVisible(true);
+          setAddressModalMode('select');
+          await loadAddressOptions(customer);
+        }
+      } catch (updateError) {
+        showError(formatApiError(updateError));
+      } finally {
+        setCustomerLinkingId('');
+      }
+    },
+    [
+      closeCustomerModal,
+      loadAddressOptions,
+      selectedOrderAddressIri,
+      selectedOrderClientIri,
+      showError,
+      showSuccess,
+      updateCurrentOrder,
+    ],
+  );
+
+  const handleCustomerCreated = useCallback(
+    async savedCustomer => {
+      setCustomerCreateModalVisible(false);
+
+      if (!savedCustomer) {
+        return;
+      }
+
+      await handleSelectCustomer(savedCustomer);
+    },
+    [handleSelectCustomer],
+  );
+
+  const handleSelectAddress = useCallback(
+    async address => {
+      const nextAddressIri = toEntityIri(address, 'addresses');
+      const nextAddressId = normalizeEntityId(address);
+
+      if (!nextAddressIri) {
+        showError('Nao foi possivel identificar o endereco selecionado.');
+        return;
+      }
+
+      if (selectedOrderAddressIri === nextAddressIri) {
+        closeAddressModal();
+        return;
+      }
+
+      try {
+        setAddressSelectingId(nextAddressId);
+        await updateCurrentOrder({addressDestination: nextAddressIri});
+        closeAddressModal();
+        showSuccess('Endereco de entrega atualizado com sucesso.');
+      } catch (updateError) {
+        showError(formatApiError(updateError));
+      } finally {
+        setAddressSelectingId('');
+      }
+    },
+    [
+      closeAddressModal,
+      selectedOrderAddressIri,
+      showError,
+      showSuccess,
+      updateCurrentOrder,
+    ],
+  );
+
+  const handleCreateAddress = useCallback(async () => {
+    if (!selectedOrderClientIri) {
+      showError('Vincule um cliente antes de cadastrar o endereco.');
+      return;
+    }
+
+    const street = normalizeText(addressForm.street);
+    const district = normalizeText(addressForm.district);
+    const city = normalizeText(addressForm.city);
+    const state = normalizeText(addressForm.state);
+    const country = normalizeText(addressForm.country);
+    const number = String(addressForm.number ?? '').replace(/\D+/g, '').trim();
+    const cep = normalizePostalCodeInput(addressForm.cep);
+    const complement = normalizeText(addressForm.complement);
+    const nickname = normalizeText(addressForm.nickname) || 'Entrega';
+
+    if (!street || !district || !city || !state || !country || !number || !cep) {
+      showError('Rua, numero, bairro, cidade, estado, pais e CEP sao obrigatorios.');
+      return;
+    }
+
+    try {
+      setAddressSaveLoading(true);
+
+      const payload = {
+        street,
+        district,
+        city,
+        state,
+        country,
+        number: Number(number),
+        cep,
+        nickname,
+        complement,
+        people: selectedOrderClientIri,
+      };
+
+      const savedAddress = normalizeActionResult(await addressActions.save(payload));
+      const savedAddressIri = toEntityIri(savedAddress, 'addresses');
+
+      if (!savedAddressIri) {
+        throw new Error('Endereco criado sem identificador valido.');
+      }
+
+      await updateCurrentOrder({addressDestination: savedAddressIri});
+      closeAddressModal();
+      showSuccess('Endereco de entrega atualizado com sucesso.');
+    } catch (saveError) {
+      showError(formatApiError(saveError));
+    } finally {
+      setAddressSaveLoading(false);
+    }
+  }, [
+    addressActions,
+    addressForm.cep,
+    addressForm.city,
+    addressForm.complement,
+    addressForm.country,
+    addressForm.district,
+    addressForm.nickname,
+    addressForm.number,
+    addressForm.state,
+    addressForm.street,
+    closeAddressModal,
+    selectedOrderClientIri,
+    showError,
+    showSuccess,
+    updateCurrentOrder,
+  ]);
+
+  useEffect(() => {
+    if (!customerModalVisible) {
+      return undefined;
+    }
+
+    const normalizedSearch = String(customerSearch || '').trim();
+
+    if (!normalizedSearch || !orderCompanyIri) {
+      setCustomerSearchResults([]);
+      setCustomerSearchLoading(false);
+      return undefined;
+    }
+
+    let isMounted = true;
+    const timeoutId = setTimeout(async () => {
+      try {
+        setCustomerSearchLoading(true);
+        const response = await peopleActions.getItems({
+          'link.company': orderCompanyIri,
+          'link.linkType': 'client',
+          search: normalizedSearch,
+          itemsPerPage: 20,
+        });
+
+        if (!isMounted) {
+          return;
+        }
+
+        setCustomerSearchResults(extractCollectionItems(response));
+      } catch {
+        if (isMounted) {
+          setCustomerSearchResults([]);
+        }
+      } finally {
+        if (isMounted) {
+          setCustomerSearchLoading(false);
+        }
+      }
+    }, 250);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
+    };
+  }, [customerModalVisible, customerSearch, orderCompanyIri, peopleActions]);
 
   const isClosedOrder = Boolean(logistics.isClosedOrder);
   const hasDeliveryOrder = Boolean(
@@ -814,6 +1650,46 @@ const OrderLogisticsPage = ({navigation, route}) => {
             }
           >
             <View style={pageStyles.routeGrid}>
+              <FieldBlock styles={pageStyles} label="Cliente do pedido" value={clientSummaryLines} />
+              <FieldBlock
+                styles={pageStyles}
+                label="Contato do cliente"
+                value={clientContactLines}
+              />
+            </View>
+            <View style={pageStyles.routeGrid}>
+              <FieldBlock
+                styles={pageStyles}
+                label="Endereco de entrega"
+                value={clientAddressLines}
+              />
+              <FieldBlock
+                styles={pageStyles}
+                label="Status do vinculo"
+                value={selectedOrderClientIri ? ['Cliente vinculado'] : ['Sem cliente']}
+              />
+            </View>
+
+            <View style={pageStyles.sectionActionRow}>
+              <ActionButton
+                styles={pageStyles}
+                label={selectedOrderClientIri ? 'Trocar cliente' : 'Vincular cliente'}
+                icon={<MaterialCommunityIcons name="account" size={18} color="#FFFFFF" />}
+                onPress={openCustomerModal}
+                primary
+              />
+              {selectedOrderClientIri ? (
+                <ActionButton
+                  styles={pageStyles}
+                  label="Alterar endereco"
+                  icon={<MaterialCommunityIcons name="map-marker-outline" size={18} color="#0EA5E9" />}
+                  onPress={openAddressModal}
+                  secondary
+                />
+              ) : null}
+            </View>
+
+            <View style={pageStyles.routeGrid}>
               <FieldBlock styles={pageStyles} label="Origem" value={pickupAddressLines} />
               <FieldBlock styles={pageStyles} label="Destino" value={dropoffAddressLines} />
             </View>
@@ -880,6 +1756,45 @@ const OrderLogisticsPage = ({navigation, route}) => {
           ) : null}
         </View>
       </ScrollView>
+      <CustomerAssignmentModal
+        styles={pageStyles}
+        visible={customerModalVisible}
+        onClose={closeCustomerModal}
+        customerSearch={customerSearch}
+        onCustomerSearchChange={setCustomerSearch}
+        customerSearchLoading={customerSearchLoading}
+        customerSearchResults={customerSearchResults}
+        selectedOrderClientIri={selectedOrderClientIri}
+        customerLinkingId={customerLinkingId}
+        onSelectCustomer={handleSelectCustomer}
+        onCreateCustomer={openCustomerCreateModal}
+      />
+      <AddCompanyModal
+        visible={customerCreateModalVisible}
+        onClose={() => setCustomerCreateModalVisible(false)}
+        context={{context: 'client'}}
+        onSuccess={savedCustomer => {
+          void handleCustomerCreated(savedCustomer)
+        }}
+      />
+      <AddressAssignmentModal
+        styles={pageStyles}
+        visible={addressModalVisible}
+        onClose={closeAddressModal}
+        selectedOrderClientIri={selectedOrderClientIri}
+        selectedOrderClient={localOrderClient}
+        selectedOrderAddressIri={selectedOrderAddressIri}
+        addressOptionsLoading={addressOptionsLoading}
+        addressOptions={addressOptions}
+        addressSelectingId={addressSelectingId}
+        addressSaveLoading={addressSaveLoading}
+        addressModalMode={addressModalMode}
+        addressForm={addressForm}
+        onOpenCreateMode={openAddressCreateMode}
+        onAddressFormFieldChange={handleAddressFormFieldChange}
+        onSelectAddress={handleSelectAddress}
+        onCreateAddress={handleCreateAddress}
+      />
     </SafeAreaView>
   );
 };
