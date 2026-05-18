@@ -15,6 +15,7 @@ import {useStore} from '@store';
 import {api} from '@controleonline/ui-common/src/api';
 import Formatter from '@controleonline/ui-common/src/utils/formatter';
 import {useMessage} from '@controleonline/ui-common/src/react/components/MessageService';
+import resolveSystemErrorMessage from '@controleonline/ui-common/src/react/utils/systemErrorMessage';
 import {
   normalizeText as normalizeDisplayText,
 } from '@controleonline/ui-common/src/react/utils/entityDisplay';
@@ -31,74 +32,19 @@ const normalizeOrderId = value =>
     .trim();
 
 const normalizeText = value => String(value ?? '').trim();
+const GENERIC_ERROR_MESSAGES = new Set([
+  'request failed',
+  'failed to fetch',
+  'network request failed',
+]);
 
 const extractErrorMessage = error => {
-  const seen = new Set();
-  const queue = [error];
-  const genericMessages = new Set(['request failed', 'failed to fetch', 'network request failed']);
-
-  while (queue.length > 0) {
-    const current = queue.shift();
-    if (!current || typeof current !== 'object' || seen.has(current)) {
-      continue;
-    }
-
-    seen.add(current);
-
-    const directValue =
-      current.message ||
-      current.description ||
-      current.detail ||
-      current.errmsg ||
-      current.error ||
-      current.title;
-
-    if (typeof directValue === 'string' && directValue.trim()) {
-      const normalizedDirect = directValue.trim();
-      if (!genericMessages.has(normalizedDirect.toLowerCase())) {
-        return normalizedDirect;
-      }
-    }
-
-    if (Array.isArray(current.message)) {
-      const message = current.message
-        .map(item => item?.message || item?.title || String(item))
-        .filter(Boolean)
-        .join('\n')
-        .trim();
-      if (message) {
-        return message;
-      }
-    }
-
-    if (Array.isArray(current.errors)) {
-      const message = current.errors
-        .map(item => item?.message || item?.title || String(item))
-        .filter(Boolean)
-        .join('\n')
-        .trim();
-      if (message) {
-        return message;
-      }
-    }
-
-    if (current.body && typeof current.body === 'object') {
-      queue.push(current.body);
-    }
-
-    if (current.response && typeof current.response === 'object') {
-      queue.push(current.response);
-      if (current.response.data && typeof current.response.data === 'object') {
-        queue.push(current.response.data);
-      }
-    }
-
-    if (current.data && typeof current.data === 'object') {
-      queue.push(current.data);
-    }
+  const message = resolveSystemErrorMessage(error);
+  if (!message) {
+    return '';
   }
 
-  return '';
+  return GENERIC_ERROR_MESSAGES.has(message.toLowerCase()) ? '' : message;
 };
 
 const normalizeActionResult = response => {
