@@ -59,7 +59,7 @@ const shouldExposeIntegration = (integration, statusMap) => {
   return isConnectedValue(status.connected);
 };
 
-const resolveManagedByStore = (order, management = {}, uberState = {}, delivery = {}) => {
+const resolveManagedByStore = (order, management = {}, delivery = {}) => {
   if (normalizeKey(order?.app) === 'pos') {
     return true;
   }
@@ -79,13 +79,7 @@ const resolveManagedByStore = (order, management = {}, uberState = {}, delivery 
   return Boolean(
     delivery?.deliveryPeopleId ||
       delivery?.requestedAt ||
-      delivery?.trackingUrl ||
-      uberState?.managed_by_store ||
-      uberState?.managedByStore ||
-      uberState?.requested_at ||
-      uberState?.delivery_id ||
-      uberState?.estimate_id ||
-      uberState?.store_id,
+      delivery?.trackingUrl,
   );
 };
 
@@ -528,25 +522,8 @@ const buildQuoteSnapshot = source => {
   };
 };
 
-const resolveUberState = order => {
-  const otherInformations = order?.otherInformations;
-
-  if (!otherInformations || typeof otherInformations !== 'object') {
-    return {};
-  }
-
-  if (otherInformations.Uber && typeof otherInformations.Uber === 'object') {
-    return otherInformations.Uber;
-  }
-
-  return otherInformations.uber && typeof otherInformations.uber === 'object'
-    ? otherInformations.uber
-    : {};
-};
-
 const buildLegacySnapshot = order => {
   const orderData = order?.order || order;
-  const uberState = resolveUberState(orderData);
   const pickupAddress = orderData?.addressOrigin || orderData?.provider?.address?.[0] || null;
   const dropoffAddress = orderData?.addressDestination || null;
   const pickupContact = orderData?.retrieveContact || orderData?.provider || null;
@@ -557,10 +534,9 @@ const buildLegacySnapshot = order => {
   const dropoffAddressParts = dropoffAddress ? resolveAddressDisplayParts(dropoffAddress) : null;
   const couriers = [];
   const integrations = [];
-  const managedByStore = resolveManagedByStore(orderData, {}, uberState, {
-    trackingUrl: uberState?.tracking_url,
-    requestedAt: uberState?.requested_at,
-    deliveryPeopleId: orderData?.deliveryPeople?.id || orderData?.deliveryPeopleId || null,
+  const deliveryPeopleId = orderData?.deliveryPeople?.id || orderData?.deliveryPeopleId || null;
+  const managedByStore = resolveManagedByStore(orderData, {}, {
+    deliveryPeopleId,
   });
 
   return {
@@ -580,28 +556,22 @@ const buildLegacySnapshot = order => {
     managedByStore,
     managedByStoreLabel: managedByStore ? 'Gerenciada pela loja' : 'Nao gerenciada pela loja',
     canRequestDriver: Boolean(
-      !uberState?.delivery_id &&
-        !uberState?.estimate_id &&
-        !uberState?.requested_at &&
-        (couriers.length > 0 || integrations.some(card => Boolean(card?.request?.enabled || card?.requestable))),
+      couriers.length > 0 ||
+        integrations.some(card => Boolean(card?.request?.enabled || card?.requestable)),
     ),
     hasDriver: Boolean(
-      uberState?.delivery_id ||
-        uberState?.rider_name ||
-        uberState?.rider_phone ||
-        uberState?.tracking_url ||
+      deliveryPeopleId ||
         courierContactInfo.name ||
         courierContactInfo.phone ||
         courierContactInfo.email,
     ),
-    uberState,
     couriers,
     delivery: {
-      deliveryPeopleId: orderData?.deliveryPeople?.id || orderData?.deliveryPeopleId || null,
+      deliveryPeopleId,
       deliveryPeople: courierContactInfo,
-      trackingUrl: uberState?.tracking_url || null,
-      requestedAt: uberState?.requested_at || null,
-      status: uberState?.status || uberState?.order_status || uberState?.delivery_status || null,
+      trackingUrl: null,
+      requestedAt: null,
+      status: null,
     },
     management: {
       mode: managedByStore ? 'store' : 'integration',
@@ -673,7 +643,7 @@ const buildPayloadSnapshot = source => {
   const management = payload.management || {};
   const delivery = payload.delivery || {};
   const couriers = Array.isArray(payload.couriers) ? payload.couriers : [];
-  const managedByStore = resolveManagedByStore(order, management, resolveUberState(order), delivery);
+  const managedByStore = resolveManagedByStore(order, management, delivery);
   const rawIntegrations = Array.isArray(payload.integrations) ? payload.integrations : [];
   const integrationStatusesSource = payload.integrationStatuses ?? payload.companyIntegrations ?? null;
   const integrationStatuses = Array.isArray(integrationStatusesSource)
@@ -701,7 +671,6 @@ const buildPayloadSnapshot = source => {
   const pickupAddressParts = pickupAddress ? resolveAddressDisplayParts(pickupAddress) : null;
   const dropoffAddressParts = dropoffAddress ? resolveAddressDisplayParts(dropoffAddress) : null;
   const courierSelected = delivery?.deliveryPeople || order?.deliveryPeople || null;
-  const uberState = mergedIntegrations.find(card => card?.key === 'uber')?.state || {};
   const isClosedOrder = isClosedOrderStatus(order?.status);
 
   return {
@@ -724,7 +693,6 @@ const buildPayloadSnapshot = source => {
         currentIntegration?.trackingUrl ||
         currentIntegration?.active,
     ),
-    uberState,
     couriers,
     integrations,
     delivery: {
