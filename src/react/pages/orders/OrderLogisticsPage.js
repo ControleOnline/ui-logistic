@@ -1,3 +1,16 @@
+/*
+ * Contract imported from AGENTS.md
+ * ## Escopo
+ * - `ui-logistic` e o modulo React de operacao e visualizacao logisticas.
+ * - Esta pagina e a referencia ativa de status, roteamento e detalhes operacionais do pedido.
+ *
+ * ## Estado
+ * - Se existir `src/vue`, ela e apenas legado e nao deve receber este contrato.
+ *
+ * ## Limites
+ * - Consumir o payload materializado do backend como fonte de verdade.
+ * - Nao mover a responsabilidade de apresentacao logistica para outro modulo.
+ */
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   ActivityIndicator,
