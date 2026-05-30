@@ -883,6 +883,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
   const peopleStore = useStore('people');
   const addressStore = useStore('address');
   const ordersActions = ordersStore.actions;
+  const ordersActionsRef = useRef(ordersActions);
   const addressActions = addressStore?.actions || {};
   const peopleActions = peopleStore?.actions || {};
   const routeOrder = route?.params?.order || null;
@@ -917,6 +918,10 @@ const OrderLogisticsPage = ({navigation, route}) => {
   const [addressSelectingId, setAddressSelectingId] = useState('');
   const lastProcessedMessageCountRef = useRef(websocketMessages.length);
 
+  useEffect(() => {
+    ordersActionsRef.current = ordersActions;
+  }, [ordersActions]);
+
   const orderHeaderOrder = useMemo(
     () =>
       order
@@ -932,12 +937,14 @@ const OrderLogisticsPage = ({navigation, route}) => {
   );
 
   const refreshOrder = useCallback(async () => {
-    if (!orderId || typeof ordersActions?.get !== 'function') {
+    const currentOrdersActions = ordersActionsRef.current;
+
+    if (!orderId || typeof currentOrdersActions?.get !== 'function') {
       return null;
     }
 
-    return ordersActions.get(orderId);
-  }, [orderId, ordersActions]);
+    return currentOrdersActions.get(orderId);
+  }, [orderId]);
 
   const refreshLogistics = useCallback(async () => {
     if (!orderId) {
