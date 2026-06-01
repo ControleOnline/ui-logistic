@@ -1,0 +1,115 @@
+import {StyleSheet} from 'react-native';
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  content: {
+    flex: 1,
+    minHeight: 0,
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    paddingBottom: 18,
+    gap: 10,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+  },
+  heroCard: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#D6E4F0',
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 14,
+    shadowColor: '#0F172A',
+    shadowOffset: {width: 0, height: 6},
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 2,
+  },
+  heroHeaderRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'space-between',
+  },
+  heroTextWrap: {
+    flex: 1,
+    gap: 4,
+  },
+  heroTag: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#EFF6FF',
+    borderRadius: 999,
+    color: '#2563EB',
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.2,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    textTransform: 'uppercase',
+  },
+  heroTitle: {
+    color: '#0F172A',
+    fontSize: 20,
+    fontWeight: '900',
+    letterSpacing: -0.3,
+  },
+  heroSubtitle: {
+    color: '#64748B',
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  heroCounterPill: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  heroCounterText: {
+    fontSize: 11,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  centerState: {
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    gap: 8,
+    padding: 20,
+  },
+  centerStateTitle: {
+    color: '#0F172A',
+    fontSize: 16,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  centerStateText: {
+    color: '#64748B',
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
+  },
+  tableWrap: {
+    flex: 1,
+    minHeight: 0,
+  },
+  orderCard: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
+    borderRadius: 20,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    shadowColor: '#0F172A',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+});
+
+export default styles;
