@@ -303,7 +303,7 @@ const ActionButton = ({
   </TouchableOpacity>
 );
 
-const CompactInfoChip = ({styles, icon, label, tone = 'default'}) => (
+const CompactInfoChip = ({styles, icon, label, tone = 'default', ppcColors}) => (
   <View
     style={[
       styles.compactChip,
@@ -317,12 +317,12 @@ const CompactInfoChip = ({styles, icon, label, tone = 'default'}) => (
       size={12}
       color={
         tone === 'success'
-          ? '#16A34A'
+          ? styles.iconColorSuccess.color
           : tone === 'danger'
-            ? '#DC2626'
+            ? styles.iconColorDanger.color
             : tone === 'muted'
-              ? '#64748B'
-              : '#0284C7'
+              ? ppcColors?.textSecondary
+              : ppcColors?.accentInfo
       }
     />
     <Text
@@ -382,6 +382,7 @@ const QuoteCard = ({
   requestLoading,
   allowSelectionActions = true,
   delivery = null,
+  ppcColors,
 }) => {
   const selected = Boolean(quote?.selected);
   const requestable = Boolean(quote?.requestable);
@@ -426,9 +427,9 @@ const QuoteCard = ({
 
       <View style={styles.quoteCardBody}>
         <View style={styles.quoteInfoRow}>
-          <CompactInfoChip styles={styles} icon="cash" label={formatQuotePrice(quote?.price)} />
+          <CompactInfoChip styles={styles} icon="cash" label={formatQuotePrice(quote?.price)} ppcColors={ppcColors} />
           {quote?.eta ? (
-            <CompactInfoChip styles={styles} icon="clock-outline" label={quote.eta} />
+            <CompactInfoChip styles={styles} icon="clock-outline" label={quote.eta} ppcColors={ppcColors} />
           ) : null}
           {showDeliveryDetails ? (
             <CompactInfoChip
@@ -436,10 +437,11 @@ const QuoteCard = ({
               icon="motorbike"
               label={deliveryName || 'Motoboy nao informado'}
               tone="success"
+              ppcColors={ppcColors}
             />
           ) : null}
           {showDeliveryDetails && deliveryPhone ? (
-            <CompactInfoChip styles={styles} icon="phone-outline" label={deliveryPhone} />
+            <CompactInfoChip styles={styles} icon="phone-outline" label={deliveryPhone} ppcColors={ppcColors} />
           ) : null}
           {showDeliveryDetails && deliveryStatus ? (
             <CompactInfoChip
@@ -447,6 +449,7 @@ const QuoteCard = ({
               icon="check-circle-outline"
               label={deliveryStatus}
               tone="success"
+              ppcColors={ppcColors}
             />
           ) : null}
         </View>
@@ -458,7 +461,7 @@ const QuoteCard = ({
           <ActionButton
             styles={styles}
             label="Abrir rastreio"
-            icon={<MaterialCommunityIcons name="map-marker-path" size={18} color="#0EA5E9" />}
+            icon={<MaterialCommunityIcons name="map-marker-path" size={18} color={ppcColors?.accentInfo} />}
             onPress={() => onOpenTracking?.(openTrackingUrl)}
             disabled={requestLoading}
             secondary
@@ -469,7 +472,7 @@ const QuoteCard = ({
           <ActionButton
             styles={styles}
             label={selected ? 'Selecionada' : 'Escolher cotacao'}
-            icon={<MaterialCommunityIcons name="truck-fast-outline" size={18} color="#FFFFFF" />}
+            icon={<MaterialCommunityIcons name="truck-fast-outline" size={18} color={styles.iconColorWhite.color} />}
             onPress={() => onSelect?.(quote)}
             disabled={requestLoading || selected}
             primary
@@ -492,6 +495,7 @@ const CustomerAssignmentModal = ({
   customerLinkingId,
   onSelectCustomer,
   onCreateCustomer,
+  ppcColors,
 }) => {
   const normalizedSearch = normalizeText(customerSearch);
 
@@ -519,7 +523,7 @@ const CustomerAssignmentModal = ({
                 disabled={!!customerLinkingId}
                 style={styles.deliveryCodeCloseButton}
               >
-                <MaterialCommunityIcons name="close" size={20} color="#475569" />
+                <MaterialCommunityIcons name="close" size={20} color={ppcColors?.textSecondary} />
               </TouchableOpacity>
             </View>
 
@@ -533,18 +537,18 @@ const CustomerAssignmentModal = ({
               showsVerticalScrollIndicator={false}
             >
               <View style={styles.assignmentSearchBox}>
-                <MaterialCommunityIcons name="magnify" size={18} color="#475569" />
+                <MaterialCommunityIcons name="magnify" size={18} color={ppcColors?.textSecondary} />
                 <TextInput
                   value={customerSearch}
                   onChangeText={onCustomerSearchChange}
                   editable={!customerLinkingId}
                   placeholder="Buscar cliente"
-                  placeholderTextColor="#64748B"
+                  placeholderTextColor={ppcColors?.textSecondary}
                   autoCapitalize="none"
                   style={styles.assignmentSearchInput}
                 />
                 {customerSearchLoading ? (
-                  <ActivityIndicator size="small" color="#0EA5E9" />
+                  <ActivityIndicator size="small" color={ppcColors?.accentInfo} />
                 ) : null}
               </View>
 
@@ -557,7 +561,7 @@ const CustomerAssignmentModal = ({
                 </View>
               ) : customerSearchLoading ? (
                 <View style={styles.assignmentEmptyState}>
-                  <ActivityIndicator size="small" color="#0EA5E9" />
+                  <ActivityIndicator size="small" color={ppcColors?.accentInfo} />
                   <Text style={styles.assignmentEmptyStateText}>Buscando clientes...</Text>
                 </View>
               ) : customerSearchResults.length > 0 ? (
@@ -589,14 +593,14 @@ const CustomerAssignmentModal = ({
                       </View>
 
                       {isSaving ? (
-                        <ActivityIndicator size="small" color="#0EA5E9" />
+                        <ActivityIndicator size="small" color={ppcColors?.accentInfo} />
                       ) : isCurrent ? (
                         <Text style={styles.assignmentOptionBadge}>Atual</Text>
                       ) : (
                         <MaterialCommunityIcons
                           name="chevron-right"
                           size={20}
-                          color="#64748B"
+                          color={ppcColors?.textSecondary}
                         />
                       )}
                     </TouchableOpacity>
@@ -617,7 +621,7 @@ const CustomerAssignmentModal = ({
                 style={styles.assignmentQuickActionCard}
               >
                 <View style={styles.assignmentQuickActionHeader}>
-                  <MaterialCommunityIcons name="account-plus" size={18} color="#0EA5E9" />
+                  <MaterialCommunityIcons name="account-plus" size={18} color={ppcColors?.accentInfo} />
                   <Text style={styles.assignmentQuickActionTitle}>
                     Cadastro rapido de cliente
                   </Text>
@@ -658,6 +662,7 @@ const AddressAssignmentModal = ({
   onAddressFormFieldChange,
   onSelectAddress,
   onCreateAddress,
+  ppcColors,
 }) => {
   const customerTitle = normalizeDisplayText(
     selectedOrderClient?.alias || selectedOrderClient?.name,
@@ -687,7 +692,7 @@ const AddressAssignmentModal = ({
                 disabled={addressSaveLoading || !!addressSelectingId}
                 style={styles.deliveryCodeCloseButton}
               >
-                <MaterialCommunityIcons name="close" size={20} color="#475569" />
+                <MaterialCommunityIcons name="close" size={20} color={ppcColors?.textSecondary} />
               </TouchableOpacity>
             </View>
 
@@ -702,7 +707,7 @@ const AddressAssignmentModal = ({
             >
               {!!selectedOrderClientIri && customerTitle ? (
                 <View style={styles.assignmentContextCard}>
-                  <MaterialCommunityIcons name="account" size={16} color="#0EA5E9" />
+                  <MaterialCommunityIcons name="account" size={16} color={ppcColors?.accentInfo} />
                   <Text style={styles.assignmentContextText}>
                     Cliente selecionado: {customerTitle}
                   </Text>
@@ -711,7 +716,7 @@ const AddressAssignmentModal = ({
 
               {addressOptionsLoading ? (
                 <View style={styles.assignmentEmptyState}>
-                  <ActivityIndicator size="small" color="#0EA5E9" />
+                  <ActivityIndicator size="small" color={ppcColors?.accentInfo} />
                   <Text style={styles.assignmentEmptyStateText}>Carregando enderecos...</Text>
                 </View>
               ) : addressOptions.length > 0 ? (
@@ -742,14 +747,14 @@ const AddressAssignmentModal = ({
                       </View>
 
                       {isSaving ? (
-                        <ActivityIndicator size="small" color="#0EA5E9" />
+                        <ActivityIndicator size="small" color={ppcColors?.accentInfo} />
                       ) : isCurrent ? (
                         <Text style={styles.assignmentOptionBadge}>Atual</Text>
                       ) : (
                         <MaterialCommunityIcons
                           name="chevron-right"
                           size={20}
-                          color="#64748B"
+                          color={ppcColors?.textSecondary}
                         />
                       )}
                     </TouchableOpacity>
@@ -770,7 +775,7 @@ const AddressAssignmentModal = ({
                 style={styles.assignmentQuickActionCard}
               >
                 <View style={styles.assignmentQuickActionHeader}>
-                  <MaterialCommunityIcons name="map-marker-plus" size={18} color="#0EA5E9" />
+                  <MaterialCommunityIcons name="map-marker-plus" size={18} color={ppcColors?.accentInfo} />
                   <Text style={styles.assignmentQuickActionTitle}>
                     Cadastro rapido de endereco
                   </Text>
@@ -784,7 +789,7 @@ const AddressAssignmentModal = ({
                     onChangeText={value => onAddressFormFieldChange('nickname', value)}
                     editable={!addressSaveLoading}
                     placeholder="Referencia ou apelido"
-                    placeholderTextColor="#64748B"
+                    placeholderTextColor={ppcColors?.textSecondary}
                     style={styles.assignmentFormInput}
                   />
                   <View style={styles.assignmentFormRow}>
@@ -793,7 +798,7 @@ const AddressAssignmentModal = ({
                       onChangeText={value => onAddressFormFieldChange('cep', value)}
                       editable={!addressSaveLoading}
                       placeholder="CEP"
-                      placeholderTextColor="#64748B"
+                      placeholderTextColor={ppcColors?.textSecondary}
                       keyboardType="number-pad"
                       style={[styles.assignmentFormInput, styles.assignmentFormHalf]}
                     />
@@ -802,7 +807,7 @@ const AddressAssignmentModal = ({
                       onChangeText={value => onAddressFormFieldChange('number', value)}
                       editable={!addressSaveLoading}
                       placeholder="Numero"
-                      placeholderTextColor="#64748B"
+                      placeholderTextColor={ppcColors?.textSecondary}
                       keyboardType="number-pad"
                       style={[styles.assignmentFormInput, styles.assignmentFormHalf]}
                     />
@@ -812,7 +817,7 @@ const AddressAssignmentModal = ({
                     onChangeText={value => onAddressFormFieldChange('street', value)}
                     editable={!addressSaveLoading}
                     placeholder="Rua"
-                    placeholderTextColor="#64748B"
+                    placeholderTextColor={ppcColors?.textSecondary}
                     style={styles.assignmentFormInput}
                   />
                   <TextInput
@@ -820,7 +825,7 @@ const AddressAssignmentModal = ({
                     onChangeText={value => onAddressFormFieldChange('complement', value)}
                     editable={!addressSaveLoading}
                     placeholder="Complemento"
-                    placeholderTextColor="#64748B"
+                    placeholderTextColor={ppcColors?.textSecondary}
                     style={styles.assignmentFormInput}
                   />
                   <TextInput
@@ -828,7 +833,7 @@ const AddressAssignmentModal = ({
                     onChangeText={value => onAddressFormFieldChange('district', value)}
                     editable={!addressSaveLoading}
                     placeholder="Bairro"
-                    placeholderTextColor="#64748B"
+                    placeholderTextColor={ppcColors?.textSecondary}
                     style={styles.assignmentFormInput}
                   />
                   <TextInput
@@ -836,7 +841,7 @@ const AddressAssignmentModal = ({
                     onChangeText={value => onAddressFormFieldChange('city', value)}
                     editable={!addressSaveLoading}
                     placeholder="Cidade"
-                    placeholderTextColor="#64748B"
+                    placeholderTextColor={ppcColors?.textSecondary}
                     style={styles.assignmentFormInput}
                   />
                   <View style={styles.assignmentFormRow}>
@@ -845,7 +850,7 @@ const AddressAssignmentModal = ({
                       onChangeText={value => onAddressFormFieldChange('state', value)}
                       editable={!addressSaveLoading}
                       placeholder="Estado"
-                      placeholderTextColor="#64748B"
+                      placeholderTextColor={ppcColors?.textSecondary}
                       style={[styles.assignmentFormInput, styles.assignmentFormHalf]}
                     />
                     <TextInput
@@ -853,7 +858,7 @@ const AddressAssignmentModal = ({
                       onChangeText={value => onAddressFormFieldChange('country', value)}
                       editable={!addressSaveLoading}
                       placeholder="Pais"
-                      placeholderTextColor="#64748B"
+                      placeholderTextColor={ppcColors?.textSecondary}
                       style={[styles.assignmentFormInput, styles.assignmentFormHalf]}
                     />
                   </View>
@@ -942,7 +947,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
             ...order,
             status: {
               ...(order?.status || {}),
-              color: normalizeText(order?.status?.color) || '#0EA5E9',
+              color: normalizeText(order?.status?.color) || ppcColors?.accentInfo,
             },
           }
         : null,
@@ -1652,7 +1657,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
                   <ActionButton
                     styles={pageStyles}
                     label={quoteActionLabel}
-                    icon={<MaterialCommunityIcons name="sync" size={18} color="#FFFFFF" />}
+                    icon={<MaterialCommunityIcons name="sync" size={18} color={ppcColors?.textPrimary} />}
                     onPress={requestQuotes}
                     disabled={!orderId || requestLoading}
                     primary
@@ -1661,7 +1666,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
                 <ActionButton
                   styles={pageStyles}
                   label="Atualizar tela"
-                  icon={<MaterialCommunityIcons name="reload" size={18} color="#0EA5E9" />}
+                  icon={<MaterialCommunityIcons name="reload" size={18} color={ppcColors?.accentInfo} />}
                   onPress={refreshAll}
                   disabled={isRefreshing || requestLoading}
                   secondary
@@ -1694,7 +1699,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
               <ActionButton
                 styles={pageStyles}
                 label={selectedOrderClientIri ? 'Trocar cliente' : 'Vincular cliente'}
-                icon={<MaterialCommunityIcons name="account" size={18} color="#FFFFFF" />}
+                icon={<MaterialCommunityIcons name="account" size={18} color={ppcColors?.textPrimary} />}
                 onPress={openCustomerModal}
                 primary
               />
@@ -1702,7 +1707,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
                 <ActionButton
                   styles={pageStyles}
                   label="Alterar endereco"
-                  icon={<MaterialCommunityIcons name="map-marker-outline" size={18} color="#0EA5E9" />}
+                  icon={<MaterialCommunityIcons name="map-marker-outline" size={18} color={ppcColors?.accentInfo} />}
                   onPress={openAddressModal}
                   secondary
                 />
@@ -1771,7 +1776,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
 
           {isRefreshing ? (
             <View style={pageStyles.loadingWrap}>
-              <ActivityIndicator color="#0EA5E9" />
+              <ActivityIndicator color={ppcColors?.accentInfo} />
             </View>
           ) : null}
         </View>
@@ -1788,6 +1793,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
         customerLinkingId={customerLinkingId}
         onSelectCustomer={handleSelectCustomer}
         onCreateCustomer={openCustomerCreateModal}
+        ppcColors={ppcColors}
       />
       <AddCompanyModal
         visible={customerCreateModalVisible}
@@ -1808,6 +1814,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
         addressOptions={addressOptions}
         addressSelectingId={addressSelectingId}
         addressSaveLoading={addressSaveLoading}
+        ppcColors={ppcColors}
         addressModalMode={addressModalMode}
         addressForm={addressForm}
         onOpenCreateMode={openAddressCreateMode}

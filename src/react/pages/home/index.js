@@ -299,7 +299,7 @@ export default function DeliveryHomePage({navigation}) {
   );
 
   const orderCount = totalOrders > 0 ? totalOrders : orders.length;
-  const primaryColor = brandColors.primary || '#2563EB';
+  const primaryColor = brandColors.primary;
   const hasCurrentCompany =
     !!currentCompany && Object.entries(currentCompany).length > 0;
   const isBootstrapReady =
@@ -328,7 +328,7 @@ export default function DeliveryHomePage({navigation}) {
 
   return (
     <SafeAreaView
-      style={[styles.container, {backgroundColor: brandColors.background || '#F8FAFC'}]}
+      style={[styles.container, {backgroundColor: brandColors.background}]}
       edges={['bottom']}
     >
       <View style={styles.content}>
