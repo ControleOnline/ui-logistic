@@ -1,5 +1,9 @@
+/* eslint-disable no-unused-vars */
 import React from 'react';
 import OrderLogisticsPage from '@controleonline/ui-logistic/src/react/pages/orders/OrderLogisticsPage';
+import DeliveryOrdersPage from '@controleonline/ui-logistic/src/react/pages/orders/index';
+import DeliveryReceivablesPage from '@controleonline/ui-logistic/src/react/pages/receivables/index';
+import DeliveryCompaniesPage from '@controleonline/ui-logistic/src/react/pages/companies/index';
 
 export const WrappedOrderLogistics = ({navigation, route}) => {
   React.useEffect(() => {
@@ -25,6 +29,42 @@ const logisticRoutes = [
     },
     path: 'order-logistics-page',
     initialParams: {store: 'orders'},
+  },
+  {
+    name: 'DeliveryOrdersPage',
+    component: DeliveryOrdersPage,
+    options: {
+      headerShown: true,
+      showBottomCart: false,
+      showBottomToolBar: false,
+      showCompanyFilter: false,
+      title: global.t?.t('orders', 'title', 'deliveryOrders') || 'Pedidos de entrega',
+    },
+    path: 'delivery/orders',
+  },
+  {
+    name: 'DeliveryReceivablesPage',
+    component: DeliveryReceivablesPage,
+    options: {
+      headerShown: true,
+      showBottomCart: false,
+      showBottomToolBar: false,
+      showCompanyFilter: false,
+      title: global.t?.t('invoice', 'title', 'deliveryReceivables') || 'Recebiveis',
+    },
+    path: 'delivery/receivables',
+  },
+  {
+    name: 'DeliveryCompaniesPage',
+    component: DeliveryCompaniesPage,
+    options: {
+      headerShown: true,
+      showBottomCart: false,
+      showBottomToolBar: false,
+      showCompanyFilter: false,
+      title: global.t?.t('people', 'title', 'deliveryCompanies') || 'Empresas homologadas',
+    },
+    path: 'delivery/companies',
   },
 ];
 
