@@ -5,7 +5,6 @@
  * - Esta pagina e a referencia ativa de status, roteamento e detalhes operacionais do pedido.
  *
  * ## Estado
- * - Se existir `src/vue`, ela e apenas legado e nao deve receber este contrato.
  *
  * ## Limites
  * - Consumir o payload materializado do backend como fonte de verdade.
