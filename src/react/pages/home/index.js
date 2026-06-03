@@ -35,7 +35,7 @@ export default function DeliveryHomePage({navigation}) {
 
   return (
     <SafeAreaView
-      style={[styles.container, {backgroundColor: brandColors.background || '#F8FAFC'}]}
+      style={[styles.container, {backgroundColor: brandColors.background}]}
       edges={['bottom']}
     >
       <ScrollView
