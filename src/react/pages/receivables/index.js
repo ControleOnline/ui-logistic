@@ -52,7 +52,6 @@ const RECEIVABLE_COLUMNS = [
     format: value => (value ? String(value).slice(0, 10).split('-').reverse().join('/') : '-'),
   },
   {
-    translate: true,
     sortable: true,
     name: 'status',
     editable: false,

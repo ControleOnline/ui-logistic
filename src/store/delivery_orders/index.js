@@ -91,7 +91,6 @@ export default {
         },
       },
       {
-        translate: true,
         sortable: true,
         name: "status",
         editable: false,
