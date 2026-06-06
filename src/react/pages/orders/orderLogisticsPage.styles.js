@@ -305,7 +305,7 @@ const createStyles = palette =>
       backgroundColor: '#F0FDF4',
     },
     statusPillDanger: {
-      borderColor: '#EF4444',
+      borderColor: '#c10015',
       backgroundColor: '#FEF2F2',
     },
     statusPillText: {
@@ -322,7 +322,7 @@ const createStyles = palette =>
       color: '#16A34A',
     },
     statusPillTextDanger: {
-      color: '#EF4444',
+      color: '#c10015',
     },
     actionButton: {
       minHeight: 36,
