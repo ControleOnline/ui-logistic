@@ -8,6 +8,10 @@ import DeliveryVehicleSetupPage from '@controleonline/ui-logistic/src/react/page
 import DeliveryRateTablesPage from '@controleonline/ui-logistic/src/react/pages/delivery-rates/DeliveryRateTablesPage';
 import DeliveryRateTableFormPage from '@controleonline/ui-logistic/src/react/pages/delivery-rates/DeliveryRateTableFormPage';
 import DeliveryRateTableCompaniesPage from '@controleonline/ui-logistic/src/react/pages/delivery-rates/DeliveryRateTableCompaniesPage';
+import DeliveryCourierSchedulesPage from '@controleonline/ui-logistic/src/react/pages/presence/DeliveryCourierSchedulesPage';
+import DeliveryCourierScheduleFormPage from '@controleonline/ui-logistic/src/react/pages/presence/DeliveryCourierScheduleFormPage';
+import DeliveryCourierPresencePage from '@controleonline/ui-logistic/src/react/pages/presence/DeliveryCourierPresencePage';
+import DeliveryCourierPresenceHistoryPage from '@controleonline/ui-logistic/src/react/pages/presence/DeliveryCourierPresenceHistoryPage';
 
 export const WrappedOrderLogistics = ({navigation, route}) => {
   React.useEffect(() => {
@@ -117,6 +121,54 @@ const logisticRoutes = [
       title: 'Associar empresas',
     },
     path: 'delivery/rates/companies',
+  },
+  {
+    name: 'DeliveryCourierSchedulesPage',
+    component: DeliveryCourierSchedulesPage,
+    options: {
+      headerShown: true,
+      showBottomCart: false,
+      showBottomToolBar: false,
+      showCompanyFilter: false,
+      title: 'Horarios do motoboy',
+    },
+    path: 'delivery/presence/schedules',
+  },
+  {
+    name: 'DeliveryCourierScheduleFormPage',
+    component: DeliveryCourierScheduleFormPage,
+    options: {
+      headerShown: true,
+      showBottomCart: false,
+      showBottomToolBar: false,
+      showCompanyFilter: false,
+      title: 'Horario do motoboy',
+    },
+    path: 'delivery/presence/schedule-form',
+  },
+  {
+    name: 'DeliveryCourierPresencePage',
+    component: DeliveryCourierPresencePage,
+    options: {
+      headerShown: true,
+      showBottomCart: false,
+      showBottomToolBar: false,
+      showCompanyFilter: false,
+      title: 'Presenca por empresa',
+    },
+    path: 'delivery/presence/detail',
+  },
+  {
+    name: 'DeliveryCourierPresenceHistoryPage',
+    component: DeliveryCourierPresenceHistoryPage,
+    options: {
+      headerShown: true,
+      showBottomCart: false,
+      showBottomToolBar: false,
+      showCompanyFilter: false,
+      title: 'Historico da presenca',
+    },
+    path: 'delivery/presence/history',
   },
 ];
 
