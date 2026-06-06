@@ -24,7 +24,6 @@ import {useStore} from '@store';
 import {resolveThemePalette} from '@controleonline/../../src/styles/branding';
 import {colors} from '@controleonline/../../src/styles/colors';
 import {
-  DELIVERY_PRESENCE_AVAILABILITY_MODES,
   buildScheduleWindowLabel,
   formatDateValue,
   formatWeekdayLabel,

@@ -84,7 +84,7 @@ const logisticRoutes = [
       showCompanyFilter: false,
       title: 'Cadastro do veículo',
     },
-    path: 'delivery/rates/setup',
+    path: 'delivery/courier/rates/setup',
   },
   {
     name: 'DeliveryRateTablesPage',
@@ -96,7 +96,7 @@ const logisticRoutes = [
       showCompanyFilter: false,
       title: 'Minhas tabelas',
     },
-    path: 'delivery/rates',
+    path: 'delivery/courier/rates',
   },
   {
     name: 'DeliveryRateTableFormPage',
@@ -108,7 +108,7 @@ const logisticRoutes = [
       showCompanyFilter: false,
       title: 'Nova tabela',
     },
-    path: 'delivery/rates/form',
+    path: 'delivery/courier/rates/form',
   },
   {
     name: 'DeliveryRateTableCompaniesPage',
@@ -120,7 +120,7 @@ const logisticRoutes = [
       showCompanyFilter: false,
       title: 'Associar empresas',
     },
-    path: 'delivery/rates/companies',
+    path: 'delivery/courier/rates/companies',
   },
   {
     name: 'DeliveryCourierSchedulesPage',
@@ -132,7 +132,7 @@ const logisticRoutes = [
       showCompanyFilter: false,
       title: 'Horarios do motoboy',
     },
-    path: 'delivery/presence/schedules',
+    path: 'delivery/courier/presence/schedules',
   },
   {
     name: 'DeliveryCourierScheduleFormPage',
@@ -144,7 +144,7 @@ const logisticRoutes = [
       showCompanyFilter: false,
       title: 'Horario do motoboy',
     },
-    path: 'delivery/presence/schedule-form',
+    path: 'delivery/courier/presence/schedule-form',
   },
   {
     name: 'DeliveryCourierPresencePage',
@@ -156,7 +156,7 @@ const logisticRoutes = [
       showCompanyFilter: false,
       title: 'Presenca por empresa',
     },
-    path: 'delivery/presence/detail',
+    path: 'delivery/courier/presence/detail',
   },
   {
     name: 'DeliveryCourierPresenceHistoryPage',
@@ -168,7 +168,7 @@ const logisticRoutes = [
       showCompanyFilter: false,
       title: 'Historico da presenca',
     },
-    path: 'delivery/presence/history',
+    path: 'delivery/courier/presence/history',
   },
 ];
 
