@@ -4,6 +4,10 @@ import OrderLogisticsPage from '@controleonline/ui-logistic/src/react/pages/orde
 import DeliveryOrdersPage from '@controleonline/ui-logistic/src/react/pages/orders/index';
 import DeliveryReceivablesPage from '@controleonline/ui-logistic/src/react/pages/receivables/index';
 import DeliveryCompaniesPage from '@controleonline/ui-logistic/src/react/pages/companies/index';
+import DeliveryVehicleSetupPage from '@controleonline/ui-logistic/src/react/pages/delivery-rates/DeliveryVehicleSetupPage';
+import DeliveryRateTablesPage from '@controleonline/ui-logistic/src/react/pages/delivery-rates/DeliveryRateTablesPage';
+import DeliveryRateTableFormPage from '@controleonline/ui-logistic/src/react/pages/delivery-rates/DeliveryRateTableFormPage';
+import DeliveryRateTableCompaniesPage from '@controleonline/ui-logistic/src/react/pages/delivery-rates/DeliveryRateTableCompaniesPage';
 
 export const WrappedOrderLogistics = ({navigation, route}) => {
   React.useEffect(() => {
@@ -65,6 +69,54 @@ const logisticRoutes = [
       title: () => global.t?.t('people', 'title', 'deliveryCompanies') || 'Empresas homologadas',
     },
     path: 'delivery/companies',
+  },
+  {
+    name: 'DeliveryVehicleSetupPage',
+    component: DeliveryVehicleSetupPage,
+    options: {
+      headerShown: true,
+      showBottomCart: false,
+      showBottomToolBar: false,
+      showCompanyFilter: false,
+      title: 'Cadastro do veículo',
+    },
+    path: 'delivery/rates/setup',
+  },
+  {
+    name: 'DeliveryRateTablesPage',
+    component: DeliveryRateTablesPage,
+    options: {
+      headerShown: true,
+      showBottomCart: false,
+      showBottomToolBar: false,
+      showCompanyFilter: false,
+      title: 'Minhas tabelas',
+    },
+    path: 'delivery/rates',
+  },
+  {
+    name: 'DeliveryRateTableFormPage',
+    component: DeliveryRateTableFormPage,
+    options: {
+      headerShown: true,
+      showBottomCart: false,
+      showBottomToolBar: false,
+      showCompanyFilter: false,
+      title: 'Nova tabela',
+    },
+    path: 'delivery/rates/form',
+  },
+  {
+    name: 'DeliveryRateTableCompaniesPage',
+    component: DeliveryRateTableCompaniesPage,
+    options: {
+      headerShown: true,
+      showBottomCart: false,
+      showBottomToolBar: false,
+      showCompanyFilter: false,
+      title: 'Associar empresas',
+    },
+    path: 'delivery/rates/companies',
   },
 ];
 
