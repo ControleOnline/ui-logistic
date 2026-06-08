@@ -1,10 +1,9 @@
 /*
  * Contract imported from MODOS_OPERACAO.md
  * - Courier rate versions are immutable and listed by courier ownership.
+ * - Vehicle onboarding happens on a dedicated screen; this screen only manages rate tables.
  * - This screen is the operational entry point after onboarding is complete.
  */
-
-/* eslint-disable no-unused-vars */
 
 import React, {useMemo, useState} from 'react';
 import {ActivityIndicator, Text, TouchableOpacity, View} from 'react-native';
@@ -18,7 +17,11 @@ import {
   resolveCompanyLabel,
   sortDeliveryRateGroups,
 } from '@controleonline/ui-logistic/src/shared/deliveryTaxGroups';
-import {useDeliveryRateGroupsCollection} from './hooks';
+import {
+  isDeliveryCourierVehicleComplete,
+  useDeliveryCourierVehiclesCollection,
+  useDeliveryRateGroupsCollection,
+} from './hooks';
 import styles from './styles';
 
 const normalizePeopleId = user =>
@@ -41,6 +44,15 @@ export default function DeliveryRateTablesPage() {
 
   const {items, isLoading, error, reload} = useDeliveryRateGroupsCollection(
     useMemo(() => ({ courier: currentPeopleIri, itemsPerPage: 100 }), [currentPeopleIri]),
+    Boolean(currentPeopleIri),
+  );
+  const {
+    items: vehicles,
+    isLoading: isVehicleLoading,
+    error: vehicleError,
+    reload: reloadVehicles,
+  } = useDeliveryCourierVehiclesCollection(
+    useMemo(() => ({ courier: currentPeopleIri, itemsPerPage: 20 }), [currentPeopleIri]),
     Boolean(currentPeopleIri),
   );
 
@@ -66,9 +78,11 @@ export default function DeliveryRateTablesPage() {
     [filteredGroups, sortState],
   );
 
-  const hasVehicleVersion = useMemo(
-    () => items.some(group => Boolean(group?.vehicleType)),
-    [items],
+  const combinedError = error || vehicleError;
+
+  const hasRegisteredVehicle = useMemo(
+    () => vehicles.some(vehicle => isDeliveryCourierVehicleComplete(vehicle)),
+    [vehicles],
   );
 
   const openSetup = () => navigation.navigate('DeliveryVehicleSetupPage');
@@ -86,9 +100,9 @@ export default function DeliveryRateTablesPage() {
       <SafeAreaView style={styles.container} edges={['bottom']}>
         <View style={styles.scrollContent}>
           <View style={styles.emptyState}>
-            <Text style={styles.emptyStateTitle}>Motoboy não identificado</Text>
+            <Text style={styles.emptyStateTitle}>Usuário não identificado</Text>
             <Text style={styles.emptyStateText}>
-              A lista de tabelas depende do vínculo `people_link` do tipo `courier`.
+              O acesso ao delivery depende do usuário autenticado carregar a sessão corretamente.
             </Text>
           </View>
         </View>
@@ -111,7 +125,7 @@ export default function DeliveryRateTablesPage() {
             </View>
             <View style={styles.heroPill}>
               <Text style={styles.heroPillText}>
-                {hasVehicleVersion ? 'Veículo liberado' : 'Veículo pendente'}
+                {hasRegisteredVehicle ? 'Veículo liberado' : 'Veículo pendente'}
               </Text>
             </View>
             <View style={styles.heroPill}>
@@ -122,10 +136,10 @@ export default function DeliveryRateTablesPage() {
           </View>
         </View>
 
-        {error ? (
+        {combinedError ? (
           <View style={styles.errorCard}>
             <Text style={styles.errorTitle}>Falha ao carregar</Text>
-            <Text style={styles.errorText}>{error}</Text>
+            <Text style={styles.errorText}>{combinedError}</Text>
           </View>
         ) : null}
 
@@ -140,12 +154,12 @@ export default function DeliveryRateTablesPage() {
           <View style={styles.tableWrap}>
             <DefaultTable
               accentColor="#0EA5E9"
-              add={!error}
+              add={!combinedError}
               columns={columns}
               data={visibleGroups}
               initialViewMode="table"
-              isLoading={isLoading}
-              onAdd={() => (hasVehicleVersion ? navigation.navigate('DeliveryRateTableFormPage') : openSetup())}
+              isLoading={isLoading || isVehicleLoading}
+              onAdd={() => (hasRegisteredVehicle ? navigation.navigate('DeliveryRateTableFormPage') : openSetup())}
               onEditRow={row => navigation.navigate('DeliveryRateTableFormPage', { id: String(row?.id || '').replace(/\D+/g, '') })}
               onRowPress={row => navigation.navigate('DeliveryRateVersionPage', { id: String(row?.id || '').replace(/\D+/g, '') })}
               searchProps={{
@@ -165,8 +179,18 @@ export default function DeliveryRateTablesPage() {
         </View>
 
         <View style={styles.buttonRow}>
-          <TouchableOpacity activeOpacity={0.86} style={styles.primaryButton} onPress={reload}>
+          <TouchableOpacity
+            activeOpacity={0.86}
+            style={styles.primaryButton}
+            onPress={() => {
+              reload();
+              reloadVehicles();
+            }}
+          >
             <Text style={styles.primaryButtonText}>Atualizar</Text>
+          </TouchableOpacity>
+          <TouchableOpacity activeOpacity={0.86} style={styles.primaryButton} onPress={reloadVehicles}>
+            <Text style={styles.primaryButtonText}>Atualizar veículo</Text>
           </TouchableOpacity>
         </View>
       </View>

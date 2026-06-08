@@ -1,10 +1,8 @@
 /*
  * Contract imported from MODOS_OPERACAO.md
- * - DELIVERY is the courier app shell and must block entry until the first vehicle-linked rate version exists.
- * - The home menu only appears after the courier has a moto or bike version saved.
+ * - DELIVERY is the courier app shell and must block entry until the first courier vehicle exists.
+ * - The home menu only appears after the courier has a moto or bike registered in the dedicated vehicle table.
  */
-
-/* eslint-disable no-unused-vars */
 
 import React, {useEffect, useMemo} from 'react';
 import {ActivityIndicator, ScrollView, Text as NativeText, TouchableOpacity, View} from 'react-native';
@@ -15,7 +13,10 @@ import {resolveThemePalette} from '@controleonline/../../src/styles/branding';
 import {colors} from '@controleonline/../../src/styles/colors';
 import AppMenuGrid from '@controleonline/ui-layout/src/react/components/AppMenuGrid';
 import {normalizeEntityId} from '@controleonline/ui-logistic/src/shared/deliveryTaxGroups';
-import {useDeliveryRateGroupsCollection} from '@controleonline/ui-logistic/src/react/pages/delivery-rates/hooks';
+import {
+  isDeliveryCourierVehicleComplete,
+  useDeliveryCourierVehiclesCollection,
+} from '@controleonline/ui-logistic/src/react/pages/delivery-rates/hooks';
 import styles from './index.styles';
 
 const normalizePeopleId = user =>
@@ -49,29 +50,29 @@ export default function DeliveryHomePage({navigation}) {
     Boolean(themeColors);
 
   const {
-    items: deliveryRateGroups,
-    isLoading: isDeliveryRateLoading,
-    error: deliveryRateError,
-    reload: reloadDeliveryRates,
-  } = useDeliveryRateGroupsCollection(
-    useMemo(() => ({ courier: currentPeopleIri, itemsPerPage: 50 }), [currentPeopleIri]),
+    items: courierVehicles,
+    isLoading: isCourierVehicleLoading,
+    error: courierVehicleError,
+    reload: reloadCourierVehicles,
+  } = useDeliveryCourierVehiclesCollection(
+    useMemo(() => ({ courier: currentPeopleIri, itemsPerPage: 20 }), [currentPeopleIri]),
     Boolean(bootstrapReady && currentPeopleIri),
   );
 
-  const hasVehicleVersion = useMemo(
-    () => deliveryRateGroups.some(group => Boolean(group?.vehicleType)),
-    [deliveryRateGroups],
+  const hasRegisteredVehicle = useMemo(
+    () => courierVehicles.some(vehicle => isDeliveryCourierVehicleComplete(vehicle)),
+    [courierVehicles],
   );
 
   useEffect(() => {
-    if (!bootstrapReady || !currentPeopleIri || isDeliveryRateLoading || deliveryRateError) {
+    if (!bootstrapReady || !currentPeopleIri || isCourierVehicleLoading || courierVehicleError) {
       return;
     }
 
-    if (!hasVehicleVersion) {
+    if (!hasRegisteredVehicle) {
       navigation.replace('DeliveryVehicleSetupPage');
     }
-  }, [bootstrapReady, currentPeopleIri, deliveryRateError, hasVehicleVersion, isDeliveryRateLoading, navigation]);
+  }, [bootstrapReady, currentPeopleIri, courierVehicleError, hasRegisteredVehicle, isCourierVehicleLoading, navigation]);
 
   if (!bootstrapReady) {
     return (
@@ -99,7 +100,7 @@ export default function DeliveryHomePage({navigation}) {
     );
   }
 
-  if (deliveryRateError) {
+  if (courierVehicleError) {
     return (
       <SafeAreaView
         style={[styles.container, {backgroundColor: brandColors.background}]}
@@ -122,11 +123,11 @@ export default function DeliveryHomePage({navigation}) {
               Falha ao carregar o delivery
             </NativeText>
             <NativeText style={{color: '#B91C1C', fontSize: 13, lineHeight: 18}}>
-              {deliveryRateError}
+              {courierVehicleError}
             </NativeText>
             <TouchableOpacity
               activeOpacity={0.86}
-              onPress={reloadDeliveryRates}
+              onPress={reloadCourierVehicles}
               style={{
                 alignItems: 'center',
                 alignSelf: 'flex-start',
@@ -147,7 +148,7 @@ export default function DeliveryHomePage({navigation}) {
     );
   }
 
-  if (isDeliveryRateLoading || !hasVehicleVersion) {
+  if (isCourierVehicleLoading || !hasRegisteredVehicle) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator color={brandColors.primary || '#2563EB'} size="large" />

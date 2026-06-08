@@ -1,26 +1,43 @@
 /*
  * Contract imported from MODOS_OPERACAO.md
- * - This screen blocks DELIVERY entry until the courier registers the first vehicle-linked rate version.
- * - The first save creates the immutable base version for moto or bike.
+ * - This screen only registers the courier vehicle in its own dedicated table.
+ * - The vehicle record stores a rich identity snapshot with brand, model, year, plate, and optional color.
+ * - The first vehicle can be saved before any company courier link exists.
+ * - Delivery-rate versions live on a separate screen and are not edited here.
  */
 
-/* eslint-disable no-unused-vars */
-
-import React, {useEffect, useMemo} from 'react';
-import {ActivityIndicator, Text, TouchableOpacity, View} from 'react-native';
+import React, {useEffect, useMemo, useState} from 'react';
+import {ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import {useMessage} from '@controleonline/ui-common/src/react/components/MessageService';
 import {api} from '@controleonline/ui-common/src/api';
 import {useStore} from '@store';
+import {unwrapHydratorItem} from '@controleonline/ui-logistic/src/shared/deliveryTaxGroups';
 import {
-  createEmptyTableDraft,
-  unwrapHydratorItem,
-  normalizeText,
-} from '@controleonline/ui-logistic/src/shared/deliveryTaxGroups';
-import {useDeliveryRateGroupsCollection} from './hooks';
-import DeliveryRateTableEditor from './DeliveryRateTableEditor';
+  isDeliveryCourierVehicleComplete,
+  normalizeDeliveryCourierVehicle,
+  useDeliveryCourierVehiclesCollection,
+} from './hooks';
 import styles from './styles';
+
+const VEHICLE_OPTIONS = [
+  { value: 'moto', label: 'Moto' },
+  { value: 'bike', label: 'Bicicleta' },
+];
+
+const createVehicleDraft = vehicle => {
+  const normalizedVehicle = normalizeDeliveryCourierVehicle(vehicle);
+
+  return {
+    vehicleType: normalizedVehicle.vehicleType || 'moto',
+    brand: normalizedVehicle.brand || '',
+    model: normalizedVehicle.model || '',
+    plate: normalizedVehicle.plate || '',
+    year: normalizedVehicle.year ? String(normalizedVehicle.year) : '',
+    color: normalizedVehicle.color || '',
+  };
+};
 
 export default function DeliveryVehicleSetupPage() {
   const navigation = useNavigation();
@@ -39,15 +56,15 @@ export default function DeliveryVehicleSetupPage() {
   );
   const currentPeopleIri = currentPeopleId ? `/people/${currentPeopleId}` : '';
 
-  const {items: deliveryRateGroups, isLoading, reload, error} = useDeliveryRateGroupsCollection(
-    useMemo(() => ({ courier: currentPeopleIri, itemsPerPage: 50 }), [currentPeopleIri]),
+  const {items: vehicles, isLoading, reload, error} = useDeliveryCourierVehiclesCollection(
+    useMemo(() => ({ courier: currentPeopleIri, itemsPerPage: 20 }), [currentPeopleIri]),
     Boolean(currentPeopleIri),
   );
 
-  const hasVehicleVersion = useMemo(
-    () => deliveryRateGroups.some(group => normalizeText(group?.vehicleType) !== ''),
-    [deliveryRateGroups],
-  );
+  const currentVehicle = Array.isArray(vehicles) ? vehicles[0] || null : null;
+
+  const [draft, setDraft] = useState(() => createVehicleDraft());
+  const [savedAndContinue, setSavedAndContinue] = useState(false);
 
   const bootstrapReady =
     Boolean(sessionChecked) &&
@@ -56,29 +73,62 @@ export default function DeliveryVehicleSetupPage() {
     Boolean(user);
 
   useEffect(() => {
-    if (!isLoading && hasVehicleVersion && currentPeopleIri) {
+    setDraft(createVehicleDraft(currentVehicle));
+  }, [currentVehicle]);
+
+  useEffect(() => {
+    if (
+      !isLoading &&
+      currentVehicle &&
+      currentPeopleIri &&
+      !savedAndContinue &&
+      isDeliveryCourierVehicleComplete(currentVehicle)
+    ) {
       navigation.replace('HomePage');
     }
-  }, [currentPeopleIri, hasVehicleVersion, isLoading, navigation]);
+  }, [currentPeopleIri, currentVehicle, isLoading, navigation, savedAndContinue]);
 
-  const handleSave = async (payload) => {
+  const canSave =
+    Boolean(draft.vehicleType) &&
+    Boolean(draft.brand.trim()) &&
+    Boolean(draft.model.trim()) &&
+    Boolean(draft.plate.trim()) &&
+    Boolean(draft.year.trim());
+
+  const updateField = (field, value) => {
+    setDraft(prev => ({
+      ...prev,
+      [field]: field === 'plate' ? String(value || '').toUpperCase() : value,
+    }));
+  };
+
+  const handleSave = async () => {
+    if (!currentPeopleIri) {
+      return;
+    }
+
     try {
-      const response = await api.fetch('/delivery_tax_groups', {
+      const response = await api.fetch('/delivery_courier_vehicles', {
         method: 'POST',
-        body: payload,
+        body: {
+          vehicleType: draft.vehicleType,
+          brand: draft.brand,
+          model: draft.model,
+          plate: draft.plate,
+          year: draft.year,
+          color: draft.color,
+        },
       });
       const saved = unwrapHydratorItem(response);
 
-      showSuccess?.('Primeira versão da tabela criada.');
-      await reload();
-
+      showSuccess?.('Veículo salvo com sucesso.');
       if (saved?.id) {
-        navigation.replace('DeliveryRateTableCompaniesPage', { id: String(saved.id) });
+        setSavedAndContinue(true);
       }
-
-      return saved;
+      await reload();
+      navigation.replace('DeliveryRateTablesPage');
     } catch (error) {
-      showError?.(error?.message || 'Não foi possível salvar a tabela de entrega.');
+      showError?.(error?.message || 'Não foi possível salvar o veículo.');
       throw error;
     }
   };
@@ -115,9 +165,9 @@ export default function DeliveryVehicleSetupPage() {
       <SafeAreaView style={styles.container} edges={['bottom']}>
         <View style={styles.scrollContent}>
           <View style={styles.emptyState}>
-            <Text style={styles.emptyStateTitle}>Motoboy não identificado</Text>
+            <Text style={styles.emptyStateTitle}>Cadastro indisponível</Text>
             <Text style={styles.emptyStateText}>
-              O fluxo de entrega depende do vínculo `people_link` do tipo `courier`.
+              O veículo só pode ser salvo quando o usuário autenticado estiver identificado.
             </Text>
           </View>
         </View>
@@ -127,21 +177,160 @@ export default function DeliveryVehicleSetupPage() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
-      <DeliveryRateTableEditor
-        initialDraft={createEmptyTableDraft()}
-        lockVehicleType={false}
-        saveLabel="Salvar e continuar"
-        subtitle="Cadastre a primeira tabela da operação. Depois do primeiro save, você poderá associar empresas e criar novas versões."
-        title="Cadastro do veículo"
-        helperText="O veículo é obrigatório para liberar o app. Esta é a primeira versão imutável da tabela de entrega."
-        onCancel={() => navigation.replace('HomePage')}
-        onSave={handleSave}
-        onSaved={saved => {
-          if (!saved?.id) {
-            navigation.replace('HomePage');
-          }
-        }}
-      />
+      <View style={styles.scrollContent}>
+        <View style={styles.heroCard}>
+          <Text style={styles.heroEyebrow}>Delivery</Text>
+          <Text style={styles.heroTitle}>Cadastro do veículo</Text>
+          <Text style={styles.heroText}>
+            Registre seu veículo em uma tabela própria com marca, modelo, ano e placa. Depois disso, as tabelas de frete ficam em outra tela.
+          </Text>
+          <View style={styles.heroPillRow}>
+            <View style={styles.heroPill}>
+              <Text style={styles.heroPillText}>
+                {canSave ? 'Cadastro pronto' : 'Cadastro pendente'}
+              </Text>
+            </View>
+            <View style={styles.heroPill}>
+              <Text style={styles.heroPillText}>
+                {VEHICLE_OPTIONS.find(option => option.value === draft.vehicleType)?.label || 'Moto'}
+              </Text>
+            </View>
+            <View style={styles.heroPill}>
+              <Text style={styles.heroPillText}>
+                {draft.plate ? `Placa ${draft.plate}` : 'Placa pendente'}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <ScrollView contentContainerStyle={{gap: 12}} keyboardShouldPersistTaps="handled">
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Tipo de veículo</Text>
+              <Text style={styles.sectionText}>
+                Este cadastro apenas libera o veículo da sua conta. A tela de tabelas vem depois.
+              </Text>
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <View style={styles.segmentedRow}>
+                {VEHICLE_OPTIONS.map(option => {
+                  const active = draft.vehicleType === option.value;
+
+                  return (
+                    <TouchableOpacity
+                      key={option.value}
+                      activeOpacity={0.86}
+                      style={[
+                        styles.segmentedOption,
+                        active ? styles.segmentedOptionActive : null,
+                      ]}
+                      onPress={() => updateField('vehicleType', option.value)}
+                    >
+                      <Text
+                        style={[
+                          styles.segmentedLabel,
+                          active ? styles.segmentedLabelActive : null,
+                        ]}
+                      >
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Dados do veículo</Text>
+              <Text style={styles.sectionText}>
+                Informe os dados completos do veículo. Esses campos são obrigatórios para liberar o acesso do motoboy.
+              </Text>
+            </View>
+
+            <View style={styles.bandGrid}>
+              <View style={styles.bandGridRow}>
+                <View style={styles.bandField}>
+                  <Text style={styles.fieldLabel}>Marca</Text>
+                  <TextInput
+                    style={[styles.textInput, styles.bandFieldInput]}
+                    placeholder="Ex.: Honda"
+                    placeholderTextColor="#94A3B8"
+                    value={draft.brand}
+                    autoCapitalize="words"
+                    onChangeText={value => updateField('brand', value)}
+                  />
+                </View>
+
+                <View style={styles.bandField}>
+                  <Text style={styles.fieldLabel}>Modelo</Text>
+                  <TextInput
+                    style={[styles.textInput, styles.bandFieldInput]}
+                    placeholder="Ex.: CG 160"
+                    placeholderTextColor="#94A3B8"
+                    value={draft.model}
+                    autoCapitalize="words"
+                    onChangeText={value => updateField('model', value)}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.bandGridRow}>
+                <View style={styles.bandField}>
+                  <Text style={styles.fieldLabel}>Ano</Text>
+                  <TextInput
+                    style={[styles.textInput, styles.bandFieldInput]}
+                    placeholder="Ex.: 2024"
+                    placeholderTextColor="#94A3B8"
+                    value={draft.year}
+                    keyboardType="number-pad"
+                    maxLength={4}
+                    onChangeText={value => updateField('year', value.replace(/\D+/g, ''))}
+                  />
+                </View>
+
+                <View style={styles.bandField}>
+                  <Text style={styles.fieldLabel}>Placa</Text>
+                  <TextInput
+                    style={[styles.textInput, styles.bandFieldInput]}
+                    placeholder="Ex.: ABC1D23"
+                    placeholderTextColor="#94A3B8"
+                    value={draft.plate}
+                    autoCapitalize="characters"
+                    maxLength={10}
+                    onChangeText={value => updateField('plate', value.replace(/\s+/g, ''))}
+                  />
+                </View>
+              </View>
+
+              <View style={[styles.bandField, styles.bandFieldFull]}>
+                <Text style={styles.fieldLabel}>Cor</Text>
+                <TextInput
+                  style={[styles.textInput, styles.bandFieldInput]}
+                  placeholder="Ex.: Preta"
+                  placeholderTextColor="#94A3B8"
+                  value={draft.color}
+                  autoCapitalize="words"
+                  onChangeText={value => updateField('color', value)}
+                />
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.actionBar}>
+            <TouchableOpacity
+              activeOpacity={0.86}
+              style={[styles.primaryButton, !canSave ? styles.primaryButtonDisabled : null]}
+              disabled={!canSave}
+              onPress={handleSave}
+            >
+              <Text style={styles.primaryButtonText}>Salvar veículo</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }

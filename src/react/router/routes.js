@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 import React from 'react';
 import OrderLogisticsPage from '@controleonline/ui-logistic/src/react/pages/orders/OrderLogisticsPage';
 import DeliveryOrdersPage from '@controleonline/ui-logistic/src/react/pages/orders/index';
@@ -84,7 +83,7 @@ const logisticRoutes = [
       showCompanyFilter: false,
       title: 'Cadastro do veículo',
     },
-    path: 'delivery/courier/rates/setup',
+    path: 'delivery/courier/vehicle/setup',
   },
   {
     name: 'DeliveryRateTablesPage',
