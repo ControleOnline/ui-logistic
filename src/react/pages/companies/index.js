@@ -271,7 +271,6 @@ export default function DeliveryCompaniesPage() {
         peopleActions.myCompanies(),
         presenceActions.getItems({
           courier: currentPeopleIri,
-          itemsPerPage: PAGE_SIZE,
         }),
       ]);
 

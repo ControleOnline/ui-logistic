@@ -128,3 +128,4 @@ export default function DeliveryRateTableFormPage() {
     </SafeAreaView>
   );
 }
+// TODO(store-first): quando este arquivo for mexido, mover a leitura para stores, remover api.fetch e evitar repassar dados em objetos quando o store ja resolver isso.

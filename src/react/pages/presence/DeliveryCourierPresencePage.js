@@ -216,7 +216,6 @@ export default function DeliveryCourierPresencePage({
 
     const query = {
       company: `/people/${targetCompanyId}`,
-      itemsPerPage: 1,
     };
 
     if (!isReadOnly && currentPeopleIri) {
@@ -235,7 +234,6 @@ export default function DeliveryCourierPresencePage({
 
     const response = await scheduleActions.getItems({
       courier: currentPeopleIri,
-      itemsPerPage: 100,
     });
 
     return Array.isArray(response) ? response : [];
@@ -694,3 +692,4 @@ export default function DeliveryCourierPresencePage({
     </SafeAreaView>
   );
 }
+// TODO(store-first): quando este arquivo for mexido, mover a leitura para stores, remover api.fetch e evitar repassar dados em objetos quando o store ja resolver isso.

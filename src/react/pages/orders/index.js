@@ -123,8 +123,7 @@ export default function DeliveryOrdersPage({navigation}) {
 
   const historyQuery = useMemo(() => {
     const query = {
-      itemsPerPage: PAGE_SIZE,
-    };
+      };
 
     const currentSort =
       sortState?.field && sortState?.direction

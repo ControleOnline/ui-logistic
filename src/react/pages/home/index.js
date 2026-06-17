@@ -55,7 +55,7 @@ export default function DeliveryHomePage({navigation}) {
     error: courierVehicleError,
     reload: reloadCourierVehicles,
   } = useDeliveryCourierVehiclesCollection(
-    useMemo(() => ({ courier: currentPeopleIri, itemsPerPage: 20 }), [currentPeopleIri]),
+    useMemo(() => ({ courier: currentPeopleIri}), [currentPeopleIri]),
     Boolean(bootstrapReady && currentPeopleIri),
   );
 

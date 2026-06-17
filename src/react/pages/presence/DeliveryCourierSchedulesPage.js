@@ -93,7 +93,6 @@ export default function DeliveryCourierSchedulesPage() {
     try {
       const response = await actions.getItems({
         courier: currentPeopleIri,
-        itemsPerPage: PAGE_SIZE,
       });
       setItems(Array.isArray(response) ? response : []);
     } catch (caughtError) {

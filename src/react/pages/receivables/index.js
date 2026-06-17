@@ -167,7 +167,6 @@ export default function DeliveryReceivablesPage() {
   const buildQuery = useCallback(
     page => {
       const query = {
-        itemsPerPage: PAGE_SIZE,
         page,
         invoiceType: 'invoice',
       };

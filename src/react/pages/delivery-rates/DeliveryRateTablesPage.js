@@ -43,7 +43,7 @@ export default function DeliveryRateTablesPage() {
   const currentPeopleIri = currentPeopleId ? `/people/${currentPeopleId}` : '';
 
   const {items, isLoading, error, reload} = useDeliveryRateGroupsCollection(
-    useMemo(() => ({ courier: currentPeopleIri, itemsPerPage: 100 }), [currentPeopleIri]),
+    useMemo(() => ({ courier: currentPeopleIri}), [currentPeopleIri]),
     Boolean(currentPeopleIri),
   );
   const {
@@ -52,7 +52,7 @@ export default function DeliveryRateTablesPage() {
     error: vehicleError,
     reload: reloadVehicles,
   } = useDeliveryCourierVehiclesCollection(
-    useMemo(() => ({ courier: currentPeopleIri, itemsPerPage: 20 }), [currentPeopleIri]),
+    useMemo(() => ({ courier: currentPeopleIri}), [currentPeopleIri]),
     Boolean(currentPeopleIri),
   );
 

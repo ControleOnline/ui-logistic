@@ -57,7 +57,7 @@ export default function DeliveryVehicleSetupPage() {
   const currentPeopleIri = currentPeopleId ? `/people/${currentPeopleId}` : '';
 
   const {items: vehicles, isLoading, reload, error} = useDeliveryCourierVehiclesCollection(
-    useMemo(() => ({ courier: currentPeopleIri, itemsPerPage: 20 }), [currentPeopleIri]),
+    useMemo(() => ({ courier: currentPeopleIri}), [currentPeopleIri]),
     Boolean(currentPeopleIri),
   );
 
@@ -334,3 +334,4 @@ export default function DeliveryVehicleSetupPage() {
     </SafeAreaView>
   );
 }
+// TODO(store-first): quando este arquivo for mexido, mover a leitura para stores, remover api.fetch e evitar repassar dados em objetos quando o store ja resolver isso.

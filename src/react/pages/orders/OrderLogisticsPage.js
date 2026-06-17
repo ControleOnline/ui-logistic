@@ -1202,7 +1202,6 @@ const OrderLogisticsPage = ({navigation, route}) => {
         setAddressOptionsLoading(true);
         const response = await addressActions.getItems({
           people: customerIri,
-          itemsPerPage: 50,
         });
         const items = extractCollectionItems(response);
 
@@ -1436,7 +1435,6 @@ const OrderLogisticsPage = ({navigation, route}) => {
           'link.company': orderCompanyIri,
           'link.linkType': 'client',
           search: normalizedSearch,
-          itemsPerPage: 20,
         });
 
         if (!isMounted) {
@@ -1826,3 +1824,4 @@ const OrderLogisticsPage = ({navigation, route}) => {
 };
 
 export default OrderLogisticsPage;
+// TODO(store-first): quando este arquivo for mexido, mover a leitura para stores, remover api.fetch e evitar repassar dados em objetos quando o store ja resolver isso.
