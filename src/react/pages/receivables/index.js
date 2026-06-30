@@ -126,7 +126,6 @@ export default function DeliveryReceivablesPage() {
     [currentCompany?.id, themeColors],
   );
 
-  const [currentPage, setCurrentPage] = useState(1);
   const [loadedInvoices, setLoadedInvoices] = useState([]);
   const [reportedTotalItems, setReportedTotalItems] = useState(0);
   const [searchText, setSearchText] = useState('');
@@ -139,6 +138,13 @@ export default function DeliveryReceivablesPage() {
   const activeQueryKeyRef = useRef('');
   const hasUserScrolledRef = useRef(false);
   const requestIdRef = useRef(0);
+  const invoiceStoreRef = useRef(invoiceStore);
+  const invoiceActionsRef = useRef(invoiceActions);
+
+  useEffect(() => {
+    invoiceStoreRef.current = invoiceStore;
+    invoiceActionsRef.current = invoiceActions;
+  }, [invoiceActions, invoiceStore]);
 
   const totalItems = Number(reportedTotalItems || 0);
 
@@ -203,12 +209,12 @@ export default function DeliveryReceivablesPage() {
       activeQueryKeyRef.current = requestKey;
 
       try {
-        const response = await invoiceActions.getItems(buildQuery(page));
+        const response = await invoiceActionsRef.current.getItems(buildQuery(page));
         if (activeQueryKeyRef.current !== requestKey) {
           return;
         }
         const pageItems = Array.isArray(response) ? response : [];
-        setReportedTotalItems(Number(invoiceStore.getters.totalItems || pageItems.length || 0));
+        setReportedTotalItems(Number(invoiceStoreRef.current?.getters?.totalItems || pageItems.length || 0));
         setLoadedInvoices(prev =>
           replace ? pageItems : appendUniqueById(prev, pageItems),
         );
@@ -221,7 +227,7 @@ export default function DeliveryReceivablesPage() {
         }
       }
     },
-    [buildQuery, currentPeopleIri, invoiceActions, invoiceStore, queryKey, showError],
+    [buildQuery, currentPeopleIri, queryKey, showError],
   );
 
   useEffect(() => {
@@ -231,7 +237,6 @@ export default function DeliveryReceivablesPage() {
 
     const timeout = setTimeout(() => {
       hasUserScrolledRef.current = false;
-      setCurrentPage(1);
       setLoadedInvoices([]);
       setReportedTotalItems(0);
       fetchPage(1, true);
@@ -245,11 +250,10 @@ export default function DeliveryReceivablesPage() {
       return;
     }
 
-    const nextPage = currentPage + 1;
-    setCurrentPage(nextPage);
+    const nextPage = Math.floor(loadedInvoices.length / PAGE_SIZE) + 1;
     setLoadingMore(true);
     fetchPage(nextPage, false);
-  }, [currentPage, fetchPage, hasMore, loadingMore]);
+  }, [fetchPage, hasMore, loadedInvoices.length, loadingMore]);
 
   const hasCurrentCompany =
     !!currentCompany && Object.entries(currentCompany).length > 0;
@@ -297,7 +301,6 @@ export default function DeliveryReceivablesPage() {
             add={false}
             onMomentumScrollBegin={markUserScrolled}
             onScrollBeginDrag={markUserScrolled}
-            onEndReached={loadMore}
           onRowPress={item => {
             const invoiceId = String(item?.id || item?.['@id'] || '').replace(/\D/g, '');
             if (invoiceId) {
