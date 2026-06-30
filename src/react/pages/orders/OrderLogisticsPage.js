@@ -16,6 +16,7 @@ import {
   Image,
   Linking,
   Modal,
+  Platform,
   ScrollView,
   Text,
   TextInput,
@@ -44,6 +45,9 @@ import {getOrderChannelLabel, getOrderChannelLogo} from '@assets/ppc/channels';
 import OrderStackedTopBar from '@controleonline/ui-orders/src/react/pages/orders/sales/components/OrderStackedTopBar';
 import useOrderDetailsVisuals from '@controleonline/ui-orders/src/react/pages/orders/sales/useOrderDetailsVisuals';
 import ContextHelpButton from '@controleonline/ui-common/src/react/components/ContextHelpButton';
+import {resolveGoogleMapsSettings} from '@controleonline/ui-common/src/react/utils/googleMapsConfig';
+import ShopGoogleMap from '@controleonline/ui-shop/src/react/components/storefront/ShopGoogleMap';
+import ShopNativeMap from '@controleonline/ui-shop/src/react/components/storefront/ShopNativeMap';
 import resolveOrderLogisticsSnapshot from './orderLogisticsPresentation';
 import createStyles from './orderLogisticsPage.styles';
 
@@ -213,6 +217,88 @@ const formatQuotePrice = price => {
 
   return Formatter.formatMoney(numeric);
 };
+
+const parseConfigObject = value => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    if (typeof value === 'string') {
+      try {
+        const parsed = JSON.parse(value);
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+      } catch {
+        return {};
+      }
+    }
+
+    return {};
+  }
+
+  return value;
+};
+
+const pickFiniteCoordinate = (...candidates) => {
+  for (const candidate of candidates) {
+    const numeric = Number(candidate);
+    if (Number.isFinite(numeric)) {
+      return numeric;
+    }
+  }
+
+  return null;
+};
+
+const extractAddressCoordinates = address => {
+  if (!address || typeof address !== 'object') {
+    return null;
+  }
+
+  const latitude = pickFiniteCoordinate(
+    address.latitude,
+    address.lat,
+    address.coords?.latitude,
+    address.coordinates?.latitude,
+    address.location?.latitude,
+    address.geo?.latitude,
+  );
+  const longitude = pickFiniteCoordinate(
+    address.longitude,
+    address.lng,
+    address.coords?.longitude,
+    address.coordinates?.longitude,
+    address.location?.longitude,
+    address.geo?.longitude,
+  );
+
+  if (latitude === null || longitude === null) {
+    return null;
+  }
+
+  return {latitude, longitude};
+};
+
+const buildDeliveryMapMarker = ({id, label, address, addressLines = []}) => {
+  const coordinates = extractAddressCoordinates(address);
+
+  if (!coordinates) {
+    return null;
+  }
+
+  return {
+    id,
+    companyName: label,
+    title: label,
+    addressLine: Array.isArray(addressLines) ? String(addressLines[0] || '') : '',
+    addressExtra: Array.isArray(addressLines) ? addressLines.slice(1).filter(Boolean).join(' • ') : '',
+    latitude: coordinates.latitude,
+    longitude: coordinates.longitude,
+  };
+};
+
+const DeliveryRouteMap = ({apiKey, markerPayloads}) =>
+  Platform.OS === 'web' ? (
+    <ShopGoogleMap apiKey={apiKey} markerPayloads={markerPayloads} />
+  ) : (
+    <ShopNativeMap apiKey={apiKey} markerPayloads={markerPayloads} />
+  );
 
 const isRelevantOrdersMessage = (message, orderId, companyId) => {
   if (!message || normalizeText(message.store) !== 'orders') {
@@ -1545,6 +1631,83 @@ const OrderLogisticsPage = ({navigation, route}) => {
     selectedQuote,
   ]);
 
+
+  const companyConfigs = useMemo(
+    () => parseConfigObject(currentCompany?.configs || defaultCompany?.configs || {}),
+    [currentCompany?.configs, defaultCompany?.configs],
+  );
+  const googleMapsSettings = useMemo(
+    () => resolveGoogleMapsSettings(companyConfigs),
+    [companyConfigs],
+  );
+  const googleMapsApiKey =
+    googleMapsSettings.webGoogleMapsApiKey ||
+    googleMapsSettings.androidGoogleMapsApiKey ||
+    '';
+  const deliveryValueLabel = useMemo(
+    () =>
+      formatQuotePrice(
+        selectedQuote?.price ?? logistics.selection.price ?? logistics.order?.price ?? null,
+      ),
+    [logistics.order?.price, logistics.selection.price, selectedQuote?.price],
+  );
+  const deliveryMainOrderLabel = useMemo(() => {
+    const externalCode = normalizeText(logistics.order?.mainOrder?.externalCode);
+    if (externalCode) {
+      return '#' + externalCode;
+    }
+
+    const mainOrderIdValue = normalizeText(
+      logistics.order?.mainOrderId ?? logistics.order?.main_order_id ?? '',
+    );
+
+    if (mainOrderIdValue) {
+      return '#' + mainOrderIdValue;
+    }
+
+    return 'Pedido nao informado';
+  }, [logistics.order?.mainOrder?.externalCode, logistics.order?.mainOrderId, logistics.order?.main_order_id]);
+  const deliveryStatusLabel = useMemo(
+    () =>
+      normalizeText(
+        logistics.delivery?.status ||
+          selectedQuote?.status?.status ||
+          logistics.order?.status?.status ||
+          logistics.order?.status?.realStatus ||
+          '',
+      ) || 'Status nao informado',
+    [
+      logistics.delivery?.status,
+      logistics.order?.status?.realStatus,
+      logistics.order?.status?.status,
+      selectedQuote?.status?.status,
+    ],
+  );
+  const pickupMapMarker = useMemo(
+    () =>
+      buildDeliveryMapMarker({
+        id: 'pickup',
+        label: 'Origem',
+        address: logistics.route?.pickupAddress || logistics.order?.addressOrigin || null,
+        addressLines: pickupAddressLines,
+      }),
+    [logistics.order?.addressOrigin, logistics.route?.pickupAddress, pickupAddressLines],
+  );
+  const dropoffMapMarker = useMemo(
+    () =>
+      buildDeliveryMapMarker({
+        id: 'dropoff',
+        label: 'Destino',
+        address: logistics.route?.dropoffAddress || logistics.order?.addressDestination || null,
+        addressLines: dropoffAddressLines,
+      }),
+    [dropoffAddressLines, logistics.order?.addressDestination, logistics.route?.dropoffAddress],
+  );
+  const deliveryMapMarkers = useMemo(
+    () => [pickupMapMarker, dropoffMapMarker].filter(Boolean),
+    [dropoffMapMarker, pickupMapMarker],
+  );
+
   const requestQuotes = useCallback(async () => {
     if (!orderId) {
       return;
@@ -1727,6 +1890,34 @@ const OrderLogisticsPage = ({navigation, route}) => {
                 value={dropoffContactLines}
               />
             </View>
+
+            <SectionCard
+              styles={pageStyles}
+              title="Detalhes da entrega"
+              subtitle="Valor, pedido principal e status aceito"
+            >
+              <View style={pageStyles.routeGrid}>
+                <FieldBlock styles={pageStyles} label="Valor da entrega" value={[deliveryValueLabel]} />
+                <FieldBlock styles={pageStyles} label="Pedido principal" value={[deliveryMainOrderLabel]} />
+                <FieldBlock styles={pageStyles} label="Status da entrega" value={[deliveryStatusLabel]} />
+              </View>
+            </SectionCard>
+
+            {deliveryMapMarkers.length > 0 ? (
+              <SectionCard
+                styles={pageStyles}
+                title="Mapa da entrega"
+                subtitle="Origem e destino da viagem"
+              >
+                <View style={pageStyles.mapViewportWrap}>
+                  <DeliveryRouteMap apiKey={googleMapsApiKey} markerPayloads={deliveryMapMarkers} />
+                </View>
+                <View style={pageStyles.routeGrid}>
+                  <FieldBlock styles={pageStyles} label="Origem" value={pickupAddressLines} />
+                  <FieldBlock styles={pageStyles} label="Destino" value={dropoffAddressLines} />
+                </View>
+              </SectionCard>
+            ) : null}
 
             {displayQuotes.length > 0 ? (
               <View style={pageStyles.quoteGrid}>

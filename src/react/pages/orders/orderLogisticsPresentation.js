@@ -374,6 +374,7 @@ const buildQuoteStatusSummary = (providers, quotes) => {
 const buildQuoteSnapshot = source => {
   const payload = normalizePayload(source);
   const order = payload.order || source.order || source;
+  const delivery = payload.delivery || {};
   const route = payload.route || {};
   const management = payload.management || {};
   const providersSource = Array.isArray(payload.providers) ? payload.providers : [];
@@ -450,7 +451,8 @@ const buildQuoteSnapshot = source => {
       id: order?.id ?? null,
       orderType: normalizeText(order?.orderType || ''),
       app: normalizeText(order?.app || ''),
-      mainOrderId: order?.mainOrderId ?? null,
+      mainOrderId: order?.mainOrderId ?? order?.main_order_id ?? order?.mainOrder?.id ?? null,
+      mainOrder: order?.mainOrder ?? order?.main_order ?? null,
       price: order?.price !== undefined && order?.price !== null ? Number(order.price) : null,
       status: order?.status && typeof order.status === 'object' ? order.status : null,
       client: order?.client || null,
@@ -483,7 +485,7 @@ const buildQuoteSnapshot = source => {
           : managementMode === 'quote' || normalizeKey(order?.app) === 'pos',
       label: hasDeliveryOrder ? 'Entrega gerenciada pela integracao' : management.label || 'Cotacoes da loja',
       source: normalizeText(management.source || order?.app || ''),
-      mainOrderId: management.mainOrderId ?? order?.id ?? null,
+      mainOrderId: management.mainOrderId ?? order?.mainOrderId ?? order?.main_order_id ?? order?.mainOrder?.id ?? order?.id ?? null,
     },
     providers: Array.from(providerMap.values()),
     quotes,
@@ -514,9 +516,9 @@ const buildQuoteSnapshot = source => {
       deliveryPeople: courierContactInfo,
       trackingUrl: selectedTrackingUrl,
       requestedAt: selection.selectedAt || '',
-      status: hasDeliveryOrder
-        ? 'Entrega definida'
-        : selectedQuote?.quoteStateLabel || '',
+      status:
+        normalizeText(delivery.status || '') ||
+        (hasDeliveryOrder ? 'Entrega definida' : selectedQuote?.quoteStateLabel || ''),
       currentIntegrationKey: selectedProviderKey || selectedQuote?.providerKey || (hasDeliveryOrder ? normalizeIntegrationKey(order?.app) || '' : ''),
     },
   };
@@ -524,6 +526,7 @@ const buildQuoteSnapshot = source => {
 
 const buildLegacySnapshot = order => {
   const orderData = order?.order || order;
+  const delivery = order?.delivery || {};
   const pickupAddress = orderData?.addressOrigin || orderData?.provider?.address?.[0] || null;
   const dropoffAddress = orderData?.addressDestination || null;
   const pickupContact = orderData?.retrieveContact || orderData?.provider || null;

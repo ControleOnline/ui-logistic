@@ -364,6 +364,15 @@ const createStyles = palette =>
       flexWrap: 'wrap',
       gap: 8,
     },
+    mapViewportWrap: {
+      width: '100%',
+      height: 260,
+      borderRadius: 14,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: palette?.borderSoft,
+      backgroundColor: '#E5EEF5',
+    },
     quoteGrid: {
       flexDirection: 'row',
       flexWrap: 'wrap',

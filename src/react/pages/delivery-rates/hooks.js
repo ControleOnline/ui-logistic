@@ -165,7 +165,7 @@ export const useDeliveryCourierVehiclesCollection = (query = {}, enabled = true)
   const isFocused = useIsFocused();
 
   const [items, setItems] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(Boolean(enabled && isFocused));
   const [error, setError] = useState('');
   const requestIdRef = useRef(0);
 
