@@ -137,6 +137,7 @@ export default function DeliveryReceivablesPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const activeQueryKeyRef = useRef('');
+  const hasUserScrolledRef = useRef(false);
   const requestIdRef = useRef(0);
 
   const totalItems = Number(reportedTotalItems || 0);
@@ -229,6 +230,7 @@ export default function DeliveryReceivablesPage() {
     }
 
     const timeout = setTimeout(() => {
+      hasUserScrolledRef.current = false;
       setCurrentPage(1);
       setLoadedInvoices([]);
       setReportedTotalItems(0);
@@ -239,7 +241,7 @@ export default function DeliveryReceivablesPage() {
   }, [currentPeopleIri, fetchPage, isFocused, queryKey]);
 
   const loadMore = useCallback(() => {
-    if (loadingMore || !hasMore) {
+    if (!hasUserScrolledRef.current || loadingMore || !hasMore) {
       return;
     }
 
@@ -251,6 +253,9 @@ export default function DeliveryReceivablesPage() {
 
   const hasCurrentCompany =
     !!currentCompany && Object.entries(currentCompany).length > 0;
+  const markUserScrolled = useCallback(() => {
+    hasUserScrolledRef.current = true;
+  }, []);
   const isBootstrapReady =
     Boolean(sessionChecked) && hasCurrentCompany && Boolean(themeColors);
 
@@ -290,7 +295,9 @@ export default function DeliveryReceivablesPage() {
             initialViewMode="table"
             isLoading={loadingMore || isLoading}
             add={false}
-          onEndReached={loadMore}
+            onMomentumScrollBegin={markUserScrolled}
+            onScrollBeginDrag={markUserScrolled}
+            onEndReached={loadMore}
           onRowPress={item => {
             const invoiceId = String(item?.id || item?.['@id'] || '').replace(/\D/g, '');
             if (invoiceId) {
@@ -300,8 +307,8 @@ export default function DeliveryReceivablesPage() {
           searchProps={{
             onSearch: setSearchText,
             placeholder: 'Buscar recebivel',
-              value: searchText,
-            }}
+            value: searchText,
+          }}
             onSortChange={setSortState}
             showColumnFiltersButton={false}
             showRowActions={false}
