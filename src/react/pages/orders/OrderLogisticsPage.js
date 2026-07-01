@@ -15,7 +15,6 @@ import {
   Image,
   Linking,
   Modal,
-  Platform,
   ScrollView,
   Text,
   TextInput,
@@ -52,8 +51,7 @@ import {
 import {resolveCurrentPeopleIri} from '@controleonline/ui-logistic/src/react/utils/deliveryIdentity';
 import ContextHelpButton from '@controleonline/ui-common/src/react/components/ContextHelpButton';
 import {resolveGoogleMapsSettings} from '@controleonline/ui-common/src/react/utils/googleMapsConfig';
-import ShopGoogleMap from '@controleonline/ui-shop/src/react/components/storefront/ShopGoogleMap';
-import ShopNativeMap from '@controleonline/ui-shop/src/react/components/storefront/ShopNativeMap';
+import DefaultMap from '@controleonline/ui-default/src/react/components/map/DefaultMap';
 import resolveOrderLogisticsSnapshot from './orderLogisticsPresentation';
 import createStyles from './orderLogisticsPage.styles';
 
@@ -303,13 +301,6 @@ const buildDeliveryMapMarker = ({id, label, address, addressLines = []}) => {
     longitude: coordinates.longitude,
   };
 };
-
-const DeliveryRouteMap = ({apiKey, markerPayloads}) =>
-  Platform.OS === 'web' ? (
-    <ShopGoogleMap apiKey={apiKey} markerPayloads={markerPayloads} />
-  ) : (
-    <ShopNativeMap apiKey={apiKey} markerPayloads={markerPayloads} />
-  );
 
 const isRelevantOrdersMessage = (message, orderId, companyId) => {
   if (!message || normalizeText(message.store) !== 'orders') {
@@ -2108,7 +2099,14 @@ const OrderLogisticsPage = ({navigation, route}) => {
           {deliveryMapMarkers.length > 0 ? (
             <SectionCard styles={pageStyles} title="Mapa da entrega">
               <View style={pageStyles.mapViewportWrap}>
-                <DeliveryRouteMap apiKey={googleMapsApiKey} markerPayloads={deliveryMapMarkers} />
+                <DefaultMap
+                  apiKey={googleMapsApiKey}
+                  addresses={{
+                    origin: pickupMapMarker,
+                    destination: dropoffMapMarker,
+                    markers: deliveryMapMarkers,
+                  }}
+                />
               </View>
             </SectionCard>
           ) : null}
