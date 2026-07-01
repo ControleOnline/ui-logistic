@@ -1076,6 +1076,14 @@ const OrderLogisticsPage = ({navigation, route}) => {
     return logisticsResponse;
   }, [orderId, refreshLogistics, refreshOrder]);
 
+  const loadLogisticsData = useCallback(async () => {
+    if (!orderId) {
+      return null;
+    }
+
+    return refreshLogistics();
+  }, [orderId, refreshLogistics]);
+
   const refreshAll = useCallback(async () => {
     if (!orderId) {
       return;
@@ -1107,7 +1115,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
       setIsRefreshing(true);
       setLoadFailed(false);
 
-      loadPageData()
+      loadLogisticsData()
         .catch(() => {
           if (active) {
             setLoadFailed(true);
@@ -1122,7 +1130,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
       return () => {
         active = false;
       };
-    }, [loadPageData, orderId]),
+    }, [loadLogisticsData, orderId]),
   );
 
   useEffect(() => {
