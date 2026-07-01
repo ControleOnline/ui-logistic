@@ -64,6 +64,20 @@ export default function DeliveryOrdersPage() {
   const hasCurrentCompany = !!currentCompany && Object.keys(currentCompany || {}).length > 0;
   const isBootstrapReady = Boolean(sessionChecked) && hasCurrentCompany && Boolean(themeColors);
   const orderCount = Number(deliveryGetters?.totalItems || deliveryGetters?.items?.length || 0);
+  const deliveryRequestParams = useMemo(
+    () => ({
+      orderType: DELIVERY_ORDER_TYPE,
+      provider: currentPeopleIri,
+    }),
+    [currentPeopleIri],
+  );
+  const deliverySort = useMemo(
+    () => ({
+      direction: 'desc',
+      field: 'orderDate',
+    }),
+    [],
+  );
 
   const openOrder = useCallback(
     order => {
@@ -137,19 +151,13 @@ export default function DeliveryOrdersPage() {
             add={false}
             forceCardsOnCompact={false}
             onRowPress={openOrder}
-            requestParams={{
-              orderType: DELIVERY_ORDER_TYPE,
-              provider: currentPeopleIri,
-            }}
+            requestParams={deliveryRequestParams}
             renderCard={renderCard}
             searchProps={{
               placeholder: 'Buscar pedido, cliente ou recebedor',
             }}
             showRowActions={false}
-            sort={{
-              direction: 'desc',
-              field: 'orderDate',
-            }}
+            sort={deliverySort}
             storeName="delivery_orders"
           />
         </View>
