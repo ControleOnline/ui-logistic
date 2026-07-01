@@ -1046,7 +1046,12 @@ const OrderLogisticsPage = ({navigation, route}) => {
       return null;
     }
 
-    return currentOrdersActions.get(orderId);
+    return currentOrdersActions.get({
+      id: orderId,
+      __storeMeta: {
+        preserveItem: true,
+      },
+    });
   }, [orderId]);
 
   const refreshLogistics = useCallback(async () => {
