@@ -1712,14 +1712,6 @@ const OrderLogisticsPage = ({navigation, route}) => {
           )
           ? 'Aguardando aceite'
           : 'Online';
-  const helpMessage = useMemo(
-    () =>
-      [
-        'Resumo da corrida, rota e mapa da entrega.',
-        'Use as acoes rapidas para trocar cliente ou atualizar o endereco.',
-      ],
-    [],
-  );
   const emptyStateMessage = hasDeliveryAddress
     ? 'Solicite cotações para exibir as opções vinculadas.'
     : 'Informe um endereço de entrega válido para solicitar cotações.';
@@ -1835,6 +1827,19 @@ const OrderLogisticsPage = ({navigation, route}) => {
   );
   const showDeliveryAcceptanceActions = Boolean(orderId && isAwaitingAcceptance && !isClosedOrder);
   const deliveryAcceptanceSpacer = showDeliveryAcceptanceActions ? 188 : 0;
+  const helpMessage = useMemo(
+    () =>
+      showDeliveryAcceptanceActions
+        ? [
+            'Resumo da corrida, rota e mapa da entrega.',
+            'Aceite ou recuse a corrida para continuar.',
+          ]
+        : [
+            'Resumo da corrida, rota e mapa da entrega.',
+            'Use as acoes rapidas para trocar cliente ou atualizar o endereco.',
+          ],
+    [showDeliveryAcceptanceActions],
+  );
 
   useEffect(() => {
     if (route?.params?.hideBottomToolBar === showDeliveryAcceptanceActions) {
@@ -1992,6 +1997,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
     },
     [showError],
   );
+  const canManageCustomerAndAddress = !showDeliveryAcceptanceActions;
 
   return (
     <SafeAreaView style={pageStyles.pageRoot} edges={['bottom']}>
@@ -2108,24 +2114,26 @@ const OrderLogisticsPage = ({navigation, route}) => {
               />
             )}
 
-            <View style={pageStyles.sectionActionRow}>
-              <ActionButton
-                styles={pageStyles}
-                label={selectedOrderClientIri ? 'Trocar cliente' : 'Vincular cliente'}
-                icon={<MaterialCommunityIcons name="account" size={18} color={ppcColors?.textPrimary} />}
-                onPress={openCustomerModal}
-                primary
-              />
-              {selectedOrderClientIri ? (
+            {canManageCustomerAndAddress ? (
+              <View style={pageStyles.sectionActionRow}>
                 <ActionButton
                   styles={pageStyles}
-                  label="Alterar endereco"
-                  icon={<MaterialCommunityIcons name="map-marker-outline" size={18} color={ppcColors?.accentInfo} />}
-                  onPress={openAddressModal}
-                  secondary
+                  label={selectedOrderClientIri ? 'Trocar cliente' : 'Vincular cliente'}
+                  icon={<MaterialCommunityIcons name="account" size={18} color={ppcColors?.textPrimary} />}
+                  onPress={openCustomerModal}
+                  primary
                 />
-              ) : null}
-            </View>
+                {selectedOrderClientIri ? (
+                  <ActionButton
+                    styles={pageStyles}
+                    label="Alterar endereco"
+                    icon={<MaterialCommunityIcons name="map-marker-outline" size={18} color={ppcColors?.accentInfo} />}
+                    onPress={openAddressModal}
+                    secondary
+                  />
+                ) : null}
+              </View>
+            ) : null}
           </SectionCard>
 
           {deliveryMapMarkers.length > 0 ? (
@@ -2211,47 +2219,51 @@ const OrderLogisticsPage = ({navigation, route}) => {
           />
         </View>
       ) : null}
-      <CustomerAssignmentModal
-        styles={pageStyles}
-        visible={customerModalVisible}
-        onClose={closeCustomerModal}
-        customerSearch={customerSearch}
-        onCustomerSearchChange={setCustomerSearch}
-        customerSearchLoading={customerSearchLoading}
-        customerSearchResults={customerSearchResults}
-        selectedOrderClientIri={selectedOrderClientIri}
-        customerLinkingId={customerLinkingId}
-        onSelectCustomer={handleSelectCustomer}
-        onCreateCustomer={openCustomerCreateModal}
-        ppcColors={ppcColors}
-      />
-      <AddCompanyModal
-        visible={customerCreateModalVisible}
-        onClose={() => setCustomerCreateModalVisible(false)}
-        context={{context: 'client'}}
-        onSuccess={savedCustomer => {
-          void handleCustomerCreated(savedCustomer)
-        }}
-      />
-      <AddressAssignmentModal
-        styles={pageStyles}
-        visible={addressModalVisible}
-        onClose={closeAddressModal}
-        selectedOrderClientIri={selectedOrderClientIri}
-        selectedOrderClient={localOrderClient}
-        selectedOrderAddressIri={selectedOrderAddressIri}
-        addressOptionsLoading={addressOptionsLoading}
-        addressOptions={addressOptions}
-        addressSelectingId={addressSelectingId}
-        addressSaveLoading={addressSaveLoading}
-        ppcColors={ppcColors}
-        addressModalMode={addressModalMode}
-        addressForm={addressForm}
-        onOpenCreateMode={openAddressCreateMode}
-        onAddressFormFieldChange={handleAddressFormFieldChange}
-        onSelectAddress={handleSelectAddress}
-        onCreateAddress={handleCreateAddress}
-      />
+      {canManageCustomerAndAddress ? (
+        <>
+          <CustomerAssignmentModal
+            styles={pageStyles}
+            visible={customerModalVisible}
+            onClose={closeCustomerModal}
+            customerSearch={customerSearch}
+            onCustomerSearchChange={setCustomerSearch}
+            customerSearchLoading={customerSearchLoading}
+            customerSearchResults={customerSearchResults}
+            selectedOrderClientIri={selectedOrderClientIri}
+            customerLinkingId={customerLinkingId}
+            onSelectCustomer={handleSelectCustomer}
+            onCreateCustomer={openCustomerCreateModal}
+            ppcColors={ppcColors}
+          />
+          <AddCompanyModal
+            visible={customerCreateModalVisible}
+            onClose={() => setCustomerCreateModalVisible(false)}
+            context={{context: 'client'}}
+            onSuccess={savedCustomer => {
+              void handleCustomerCreated(savedCustomer)
+            }}
+          />
+          <AddressAssignmentModal
+            styles={pageStyles}
+            visible={addressModalVisible}
+            onClose={closeAddressModal}
+            selectedOrderClientIri={selectedOrderClientIri}
+            selectedOrderClient={localOrderClient}
+            selectedOrderAddressIri={selectedOrderAddressIri}
+            addressOptionsLoading={addressOptionsLoading}
+            addressOptions={addressOptions}
+            addressSelectingId={addressSelectingId}
+            addressSaveLoading={addressSaveLoading}
+            ppcColors={ppcColors}
+            addressModalMode={addressModalMode}
+            addressForm={addressForm}
+            onOpenCreateMode={openAddressCreateMode}
+            onAddressFormFieldChange={handleAddressFormFieldChange}
+            onSelectAddress={handleSelectAddress}
+            onCreateAddress={handleCreateAddress}
+          />
+        </>
+      ) : null}
     </SafeAreaView>
   );
 };
