@@ -485,6 +485,23 @@ const createStyles = palette =>
       padding: 12,
       gap: 10,
     },
+    deliveryAcceptanceFloatingWrap: {
+      position: 'absolute',
+      left: 10,
+      right: 10,
+      zIndex: 30,
+      elevation: 12,
+    },
+    deliveryAcceptanceFloatingCard: {
+      shadowColor: '#052E16',
+      shadowOpacity: 0.14,
+      shadowRadius: 18,
+      shadowOffset: {
+        width: 0,
+        height: 10,
+      },
+      elevation: 8,
+    },
     deliveryAcceptanceTextWrap: {
       gap: 3,
     },

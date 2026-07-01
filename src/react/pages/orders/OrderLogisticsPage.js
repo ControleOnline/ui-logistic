@@ -335,6 +335,43 @@ const SectionCard = ({styles, title, subtitle = '', action = null, headerRight =
   </View>
 );
 
+const DeliveryAcceptanceCard = ({
+  styles,
+  requestLoading,
+  onAccept,
+  onCancel,
+  containerStyle = null,
+}) => (
+  <View style={[styles.deliveryAcceptanceCard, containerStyle]}>
+    <View style={styles.deliveryAcceptanceTextWrap}>
+      <Text style={styles.deliveryAcceptanceTitle}>Aguardando aceite</Text>
+      <Text style={styles.deliveryAcceptanceSubtitle}>
+        Aceite a corrida para assumir a entrega ou cancele se nao puder atender.
+      </Text>
+    </View>
+    <View style={styles.deliveryAcceptanceActions}>
+      <ActionButton
+        styles={styles}
+        label="Aceitar corrida"
+        icon={<MaterialCommunityIcons name="check" size={18} color="#FFFFFF" />}
+        onPress={onAccept}
+        disabled={requestLoading}
+        success
+        style={styles.deliveryAcceptanceButton}
+      />
+      <ActionButton
+        styles={styles}
+        label="Cancelar corrida"
+        icon={<MaterialCommunityIcons name="close" size={18} color="#B91C1C" />}
+        onPress={onCancel}
+        disabled={requestLoading}
+        danger
+        style={styles.deliveryAcceptanceButton}
+      />
+    </View>
+  </View>
+);
+
 const StatusPill = ({styles, label, tone = 'default'}) => (
   <View
     style={[
@@ -1797,6 +1834,17 @@ const OrderLogisticsPage = ({navigation, route}) => {
     [deliveryStatusSource],
   );
   const showDeliveryAcceptanceActions = Boolean(orderId && isAwaitingAcceptance && !isClosedOrder);
+  const deliveryAcceptanceSpacer = showDeliveryAcceptanceActions ? 188 : 0;
+
+  useEffect(() => {
+    if (route?.params?.hideBottomToolBar === showDeliveryAcceptanceActions) {
+      return;
+    }
+
+    navigation?.setParams?.({
+      hideBottomToolBar: showDeliveryAcceptanceActions,
+    });
+  }, [navigation, route?.params?.hideBottomToolBar, showDeliveryAcceptanceActions]);
 
   const pickupMapMarker = useMemo(
     () =>
@@ -1958,7 +2006,9 @@ const OrderLogisticsPage = ({navigation, route}) => {
         style={pageStyles.pageScroll}
         contentContainerStyle={[
           pageStyles.pageScrollContent,
-          {paddingBottom: 24 + (insets.bottom || 0)},
+          {
+            paddingBottom: 24 + (insets.bottom || 0) + deliveryAcceptanceSpacer,
+          },
         ]}
       >
         <View style={pageStyles.topBarWrap}>
@@ -2049,36 +2099,14 @@ const OrderLogisticsPage = ({navigation, route}) => {
               />
             </View>
 
-            {showDeliveryAcceptanceActions ? (
-              <View style={pageStyles.deliveryAcceptanceCard}>
-                <View style={pageStyles.deliveryAcceptanceTextWrap}>
-                  <Text style={pageStyles.deliveryAcceptanceTitle}>Aguardando aceite</Text>
-                  <Text style={pageStyles.deliveryAcceptanceSubtitle}>
-                    Aceite a corrida para assumir a entrega ou cancele se nao puder atender.
-                  </Text>
-                </View>
-                <View style={pageStyles.deliveryAcceptanceActions}>
-                  <ActionButton
-                    styles={pageStyles}
-                    label="Aceitar corrida"
-                    icon={<MaterialCommunityIcons name="check" size={18} color="#FFFFFF" />}
-                    onPress={handleAcceptDelivery}
-                    disabled={requestLoading}
-                    success
-                    style={pageStyles.deliveryAcceptanceButton}
-                  />
-                  <ActionButton
-                    styles={pageStyles}
-                    label="Cancelar corrida"
-                    icon={<MaterialCommunityIcons name="close" size={18} color="#B91C1C" />}
-                    onPress={handleCancelDelivery}
-                    disabled={requestLoading}
-                    danger
-                    style={pageStyles.deliveryAcceptanceButton}
-                  />
-                </View>
-              </View>
-            ) : null}
+            {showDeliveryAcceptanceActions ? null : (
+              <DeliveryAcceptanceCard
+                styles={pageStyles}
+                requestLoading={requestLoading}
+                onAccept={handleAcceptDelivery}
+                onCancel={handleCancelDelivery}
+              />
+            )}
 
             <View style={pageStyles.sectionActionRow}>
               <ActionButton
@@ -2164,6 +2192,25 @@ const OrderLogisticsPage = ({navigation, route}) => {
           />
         </View>
       </ScrollView>
+      {showDeliveryAcceptanceActions ? (
+        <View
+          pointerEvents="box-none"
+          style={[
+            pageStyles.deliveryAcceptanceFloatingWrap,
+            {
+              bottom: (insets.bottom || 0) + 12,
+            },
+          ]}
+        >
+          <DeliveryAcceptanceCard
+            styles={pageStyles}
+            requestLoading={requestLoading}
+            onAccept={handleAcceptDelivery}
+            onCancel={handleCancelDelivery}
+            containerStyle={pageStyles.deliveryAcceptanceFloatingCard}
+          />
+        </View>
+      ) : null}
       <CustomerAssignmentModal
         styles={pageStyles}
         visible={customerModalVisible}
