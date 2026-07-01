@@ -38,7 +38,6 @@ import {
   createEmptyAddressForm,
   normalizePostalCodeInput,
   normalizeText as normalizeDisplayText,
-  resolveAddressDisplayParts,
 } from '@controleonline/ui-common/src/react/utils/entityDisplay';
 import {normalizeEntityId, toEntityIri} from '@controleonline/ui-common/src/react/utils/commercialDocumentOrders';
 import {getOrderChannelLabel, getOrderChannelLogo} from '@assets/ppc/channels';
