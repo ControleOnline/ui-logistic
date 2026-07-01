@@ -1743,23 +1743,6 @@ const OrderLogisticsPage = ({navigation, route}) => {
   ]);
 
 
-  const mapConfig = useMemo(
-    () => ({
-      ...parseConfigObject(currentCompany?.configs || defaultCompany?.configs || {}),
-      addresses: {
-        origin: pickupMapMarker,
-        destination: dropoffMapMarker,
-        markers: deliveryMapMarkers,
-      },
-    }),
-    [
-      currentCompany?.configs,
-      defaultCompany?.configs,
-      deliveryMapMarkers,
-      dropoffMapMarker,
-      pickupMapMarker,
-    ],
-  );
   const deliveryValueLabel = useMemo(
     () =>
       formatQuotePrice(
@@ -1838,6 +1821,23 @@ const OrderLogisticsPage = ({navigation, route}) => {
   const deliveryMapMarkers = useMemo(
     () => [pickupMapMarker, dropoffMapMarker].filter(Boolean),
     [dropoffMapMarker, pickupMapMarker],
+  );
+  const mapConfig = useMemo(
+    () => ({
+      ...parseConfigObject(currentCompany?.configs || defaultCompany?.configs || {}),
+      addresses: {
+        origin: pickupMapMarker,
+        destination: dropoffMapMarker,
+        markers: deliveryMapMarkers,
+      },
+    }),
+    [
+      currentCompany?.configs,
+      defaultCompany?.configs,
+      deliveryMapMarkers,
+      dropoffMapMarker,
+      pickupMapMarker,
+    ],
   );
 
   const requestQuotes = useCallback(async () => {
