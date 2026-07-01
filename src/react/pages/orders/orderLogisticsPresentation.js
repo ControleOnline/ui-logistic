@@ -449,6 +449,7 @@ const buildQuoteSnapshot = source => {
   return {
     order: {
       id: order?.id ?? null,
+      displayId: normalizeText(order?.displayId ?? order?.id ?? '') || null,
       orderType: normalizeText(order?.orderType || ''),
       app: normalizeText(order?.app || ''),
       mainOrderId: order?.mainOrderId ?? order?.main_order_id ?? order?.mainOrder?.id ?? null,
@@ -603,6 +604,27 @@ const buildLegacySnapshot = order => {
     canQuote: false,
     integrations,
     currentIntegration: null,
+    order: {
+      id: orderData?.id ?? null,
+      displayId: normalizeText(orderData?.displayId ?? orderData?.id ?? '') || null,
+      orderType: normalizeText(orderData?.orderType || ''),
+      app: normalizeText(orderData?.app || ''),
+      mainOrderId: orderData?.mainOrderId ?? orderData?.main_order_id ?? orderData?.mainOrder?.id ?? null,
+      mainOrder: orderData?.mainOrder ?? orderData?.main_order ?? null,
+      price: orderData?.price !== undefined && orderData?.price !== null ? Number(orderData.price) : null,
+      status: orderData?.status && typeof orderData.status === 'object' ? orderData.status : null,
+      client: orderData?.client || null,
+      provider: orderData?.provider || null,
+      payer: orderData?.payer || null,
+      addressOrigin: pickupAddress,
+      addressDestination: dropoffAddress,
+      retrieveContact: pickupContact,
+      deliveryContact: dropoffContact,
+      deliveryPeopleId,
+      deliveryPeople: courierContact,
+      comments: normalizeText(orderData?.comments || ''),
+      otherInformations: orderData?.otherInformations || {},
+    },
   };
 };
 
@@ -715,6 +737,27 @@ const buildPayloadSnapshot = source => {
     currentIntegration,
     isClosedOrder,
     showIntegrationSection: !isClosedOrder,
+    order: {
+      id: order?.id ?? null,
+      displayId: normalizeText(order?.displayId ?? order?.id ?? '') || null,
+      orderType: normalizeText(order?.orderType || ''),
+      app: normalizeText(order?.app || ''),
+      mainOrderId: order?.mainOrderId ?? order?.main_order_id ?? order?.mainOrder?.id ?? null,
+      mainOrder: order?.mainOrder ?? order?.main_order ?? null,
+      price: order?.price !== undefined && order?.price !== null ? Number(order.price) : null,
+      status: order?.status && typeof order.status === 'object' ? order.status : null,
+      client: order?.client || null,
+      provider: order?.provider || null,
+      payer: order?.payer || null,
+      addressOrigin: pickupAddress,
+      addressDestination: dropoffAddress,
+      retrieveContact: pickupContact,
+      deliveryContact: dropoffContact,
+      deliveryPeopleId,
+      deliveryPeople: courierContact,
+      comments: normalizeText(order?.comments || ''),
+      otherInformations: order?.otherInformations || {},
+    },
   };
 };
 

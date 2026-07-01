@@ -1779,22 +1779,17 @@ const OrderLogisticsPage = ({navigation, route}) => {
       ),
     [logistics.order?.price, logistics.selection.price, selectedQuote?.price],
   );
-  const deliveryMainOrderLabel = useMemo(() => {
-    const externalCode = normalizeText(logistics.order?.mainOrder?.externalCode);
-    if (externalCode) {
-      return '#' + externalCode;
-    }
-
-    const mainOrderIdValue = normalizeText(
-      logistics.order?.mainOrderId ?? logistics.order?.main_order_id ?? '',
+  const deliveryOrderLabel = useMemo(() => {
+    const orderDisplayId = normalizeText(
+      logistics.order?.displayId || logistics.order?.id || orderId || '',
     );
 
-    if (mainOrderIdValue) {
-      return '#' + mainOrderIdValue;
+    if (orderDisplayId) {
+      return '#' + orderDisplayId;
     }
 
     return 'Pedido nao informado';
-  }, [logistics.order?.mainOrder?.externalCode, logistics.order?.mainOrderId, logistics.order?.main_order_id]);
+  }, [logistics.order?.displayId, logistics.order?.id, orderId]);
   const deliveryStatusSource = useMemo(
     () =>
       logistics.order?.status?.status ||
@@ -2092,7 +2087,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
               <CompactInfoChip
                 styles={pageStyles}
                 icon="file-document-outline"
-                label={deliveryMainOrderLabel}
+                label={deliveryOrderLabel}
                 tone="muted"
                 ppcColors={ppcColors}
               />
@@ -2149,11 +2144,11 @@ const OrderLogisticsPage = ({navigation, route}) => {
           <SectionCard
             styles={pageStyles}
             title="Detalhes da entrega"
-            subtitle="Valor, pedido principal e status aceito"
+            subtitle="Valor, pedido atual e status aceito"
           >
             <View style={pageStyles.routeGrid}>
               <FieldBlock styles={pageStyles} label="Valor da entrega" value={[deliveryValueLabel]} />
-              <FieldBlock styles={pageStyles} label="Pedido principal" value={[deliveryMainOrderLabel]} />
+              <FieldBlock styles={pageStyles} label="Pedido atual" value={[deliveryOrderLabel]} />
               <FieldBlock styles={pageStyles} label="Status da entrega" value={[deliveryStatusLabel]} />
             </View>
           </SectionCard>
