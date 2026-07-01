@@ -142,20 +142,6 @@ const renderAddressLines = parts => {
   return lines.length ? lines : ['Endereco nao informado.'];
 };
 
-const renderContactLines = contact => {
-  if (!contact) {
-    return ['Contato nao informado.'];
-  }
-
-  const lines = [
-    normalizeDisplayText(contact.name),
-    normalizeDisplayText(contact.phone),
-    normalizeDisplayText(contact.email),
-  ].filter(Boolean);
-
-  return lines.length ? lines : ['Contato nao informado.'];
-};
-
 const resolveProviderLogo = quote =>
   getOrderChannelLogo({
     app: quote?.app || quote?.providerLabel || quote?.providerKey || quote?.provider_key || '',
@@ -420,6 +406,74 @@ const CompactInfoChip = ({styles, icon, label, tone = 'default', ppcColors}) => 
     >
       {label}
     </Text>
+  </View>
+);
+
+const RouteSummaryStop = ({styles, icon, label, lines, tone = 'default', ppcColors}) => {
+  const normalizedLines = Array.isArray(lines)
+    ? lines.map(item => normalizeText(item)).filter(Boolean)
+    : [];
+  const primaryLine = normalizedLines[0] || 'Endereco nao informado.';
+  const secondaryLine = normalizedLines.slice(1).join(' • ');
+
+  return (
+    <View
+      style={[
+        styles.routeSummaryStop,
+        tone === 'success' && styles.routeSummaryStopSuccess,
+      ]}
+    >
+      <View
+        style={[
+          styles.routeSummaryIconWrap,
+          tone === 'success' && styles.routeSummaryIconWrapSuccess,
+        ]}
+      >
+        <MaterialCommunityIcons
+          name={icon}
+          size={16}
+          color={
+            tone === 'success'
+              ? styles.iconColorSuccess.color
+              : ppcColors?.accentInfo || styles.iconColorPrimary.color
+          }
+        />
+      </View>
+      <View style={styles.routeSummaryTextWrap}>
+        <Text style={styles.routeSummaryLabel}>{label}</Text>
+        <Text style={styles.routeSummaryPrimary}>{primaryLine}</Text>
+        {secondaryLine ? (
+          <Text style={styles.routeSummarySecondary}>{secondaryLine}</Text>
+        ) : null}
+      </View>
+    </View>
+  );
+};
+
+const RouteSummaryStrip = ({styles, pickupAddressLines, dropoffAddressLines, ppcColors}) => (
+  <View style={styles.routeSummaryStrip}>
+    <RouteSummaryStop
+      styles={styles}
+      icon="map-marker-outline"
+      label="Coleta"
+      lines={pickupAddressLines}
+      ppcColors={ppcColors}
+    />
+    <View style={styles.routeSummaryDivider}>
+      <MaterialCommunityIcons
+        name="arrow-right-bold"
+        size={18}
+        color={ppcColors?.accentInfo || styles.iconColorPrimary.color}
+      />
+    </View>
+    <RouteSummaryStop
+      styles={styles}
+      icon="map-marker"
+      label="Entrega"
+      lines={dropoffAddressLines}
+      tone="success"
+      ppcColors={ppcColors}
+    />
   </View>
 );
 
@@ -1161,14 +1215,6 @@ const OrderLogisticsPage = ({navigation, route}) => {
     () => renderAddressLines(logistics.dropoffAddressParts),
     [logistics.dropoffAddressParts],
   );
-  const pickupContactLines = useMemo(
-    () => renderContactLines(logistics.pickupContact),
-    [logistics.pickupContact],
-  );
-  const dropoffContactLines = useMemo(
-    () => renderContactLines(logistics.dropoffContact),
-    [logistics.dropoffContact],
-  );
   const hasDeliveryAddress = useMemo(
     () => dropoffAddressLines.some(line => line !== 'Endereco nao informado.'),
     [dropoffAddressLines],
@@ -1186,22 +1232,6 @@ const OrderLogisticsPage = ({navigation, route}) => {
   const orderCompanyIri = useMemo(
     () => toEntityIri(logistics.order?.provider || currentCompany || defaultCompany, 'people'),
     [currentCompany, defaultCompany, logistics.order?.provider],
-  );
-  const clientContactLines = useMemo(
-    () =>
-      renderContactLines(
-        logistics.route?.dropoffContact || logistics.dropoffContact || localOrderClient,
-      ),
-    [localOrderClient, logistics.dropoffContact, logistics.route?.dropoffContact],
-  );
-  const clientAddressLines = useMemo(
-    () =>
-      renderAddressLines(
-        logistics.route?.dropoffAddressParts ||
-          logistics.dropoffAddressParts ||
-          resolveAddressDisplayParts(localOrderAddress),
-      ),
-    [localOrderAddress, logistics.dropoffAddressParts, logistics.route?.dropoffAddressParts],
   );
   const clientSummaryLines = useMemo(() => {
     const summarySource =
@@ -1579,9 +1609,8 @@ const OrderLogisticsPage = ({navigation, route}) => {
   const helpMessage = useMemo(
     () =>
       [
-        'Cada card representa uma cotacao ou entrega vinculada.',
-        'O logo identifica a integracao.',
-        'Quando a entrega ja foi definida, motoboy e telefone aparecem no card selecionado.',
+        'Resumo da corrida, rota e mapa da entrega.',
+        'Use as acoes rapidas para trocar cliente ou atualizar o endereco.',
       ],
     [],
   );
@@ -1809,7 +1838,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
         <View style={pageStyles.topBarWrap}>
           <SectionCard
             styles={pageStyles}
-            title="Logística"
+            title="Entrega"
             headerRight={
               <View style={pageStyles.sectionHeaderRightGroup}>
                 <StatusPill
@@ -1818,9 +1847,9 @@ const OrderLogisticsPage = ({navigation, route}) => {
                   tone={loadFailed ? 'danger' : isRefreshing ? 'muted' : isClosedOrder ? 'muted' : 'success'}
                 />
                 <ContextHelpButton
-                  title="Logística"
+                  title="Entrega"
                   message={helpMessage}
-                  accessibilityLabel="Ajuda da logística"
+                  accessibilityLabel="Ajuda da entrega"
                 />
               </View>
             }
@@ -1847,24 +1876,50 @@ const OrderLogisticsPage = ({navigation, route}) => {
               </View>
             }
           >
-            <View style={pageStyles.routeGrid}>
-              <FieldBlock styles={pageStyles} label="Cliente do pedido" value={clientSummaryLines} />
-              <FieldBlock
+            <View style={pageStyles.deliveryHeroHeader}>
+              <View style={pageStyles.deliveryHeroHeaderText}>
+                <Text style={pageStyles.deliveryHeroLabel}>Cliente</Text>
+                <Text style={pageStyles.deliveryHeroValue}>
+                  {clientSummaryLines[0] || 'Cliente nao informado.'}
+                </Text>
+                {clientSummaryLines[1] ? (
+                  <Text style={pageStyles.deliveryHeroMeta}>{clientSummaryLines[1]}</Text>
+                ) : null}
+              </View>
+              <StatusPill
                 styles={pageStyles}
-                label="Contato do cliente"
-                value={clientContactLines}
+                label={selectedOrderClientIri ? 'Cliente vinculado' : 'Sem cliente'}
+                tone={selectedOrderClientIri ? 'success' : 'muted'}
               />
             </View>
-            <View style={pageStyles.routeGrid}>
-              <FieldBlock
+
+            <RouteSummaryStrip
+              styles={pageStyles}
+              pickupAddressLines={pickupAddressLines}
+              dropoffAddressLines={dropoffAddressLines}
+              ppcColors={ppcColors}
+            />
+
+            <View style={pageStyles.deliveryHeroMetaRow}>
+              <CompactInfoChip
                 styles={pageStyles}
-                label="Endereco de entrega"
-                value={clientAddressLines}
+                icon="cash"
+                label={deliveryValueLabel}
+                ppcColors={ppcColors}
               />
-              <FieldBlock
+              <CompactInfoChip
                 styles={pageStyles}
-                label="Status do vinculo"
-                value={selectedOrderClientIri ? ['Cliente vinculado'] : ['Sem cliente']}
+                icon="file-document-outline"
+                label={deliveryMainOrderLabel}
+                tone="muted"
+                ppcColors={ppcColors}
+              />
+              <CompactInfoChip
+                styles={pageStyles}
+                icon="check-circle-outline"
+                label={deliveryStatusLabel}
+                tone="success"
+                ppcColors={ppcColors}
               />
             </View>
 
@@ -1886,86 +1941,61 @@ const OrderLogisticsPage = ({navigation, route}) => {
                 />
               ) : null}
             </View>
+          </SectionCard>
 
-            <View style={pageStyles.routeGrid}>
-              <FieldBlock styles={pageStyles} label="Origem" value={pickupAddressLines} />
-              <FieldBlock styles={pageStyles} label="Destino" value={dropoffAddressLines} />
-            </View>
-            <View style={pageStyles.routeGrid}>
-              <FieldBlock
-                styles={pageStyles}
-                label="Contato da coleta"
-                value={pickupContactLines}
-              />
-              <FieldBlock
-                styles={pageStyles}
-                label="Contato da entrega"
-                value={dropoffContactLines}
-              />
-            </View>
-
-            <SectionCard
-              styles={pageStyles}
-              title="Detalhes da entrega"
-              subtitle="Valor, pedido principal e status aceito"
-            >
-              <View style={pageStyles.routeGrid}>
-                <FieldBlock styles={pageStyles} label="Valor da entrega" value={[deliveryValueLabel]} />
-                <FieldBlock styles={pageStyles} label="Pedido principal" value={[deliveryMainOrderLabel]} />
-                <FieldBlock styles={pageStyles} label="Status da entrega" value={[deliveryStatusLabel]} />
+          {deliveryMapMarkers.length > 0 ? (
+            <SectionCard styles={pageStyles} title="Mapa da entrega">
+              <View style={pageStyles.mapViewportWrap}>
+                <DeliveryRouteMap apiKey={googleMapsApiKey} markerPayloads={deliveryMapMarkers} />
               </View>
             </SectionCard>
+          ) : null}
 
-            {deliveryMapMarkers.length > 0 ? (
-              <SectionCard
-                styles={pageStyles}
-                title="Mapa da entrega"
-                subtitle="Origem e destino da viagem"
-              >
-                <View style={pageStyles.mapViewportWrap}>
-                  <DeliveryRouteMap apiKey={googleMapsApiKey} markerPayloads={deliveryMapMarkers} />
-                </View>
-                <View style={pageStyles.routeGrid}>
-                  <FieldBlock styles={pageStyles} label="Origem" value={pickupAddressLines} />
-                  <FieldBlock styles={pageStyles} label="Destino" value={dropoffAddressLines} />
-                </View>
-              </SectionCard>
-            ) : null}
+          <SectionCard
+            styles={pageStyles}
+            title="Detalhes da entrega"
+            subtitle="Valor, pedido principal e status aceito"
+          >
+            <View style={pageStyles.routeGrid}>
+              <FieldBlock styles={pageStyles} label="Valor da entrega" value={[deliveryValueLabel]} />
+              <FieldBlock styles={pageStyles} label="Pedido principal" value={[deliveryMainOrderLabel]} />
+              <FieldBlock styles={pageStyles} label="Status da entrega" value={[deliveryStatusLabel]} />
+            </View>
+          </SectionCard>
 
-            {displayQuotes.length > 0 ? (
-              <View style={pageStyles.quoteGrid}>
-                {displayQuotes.map((quote, index) => {
-                  const selectedById =
-                    Boolean(quote?.selected) ||
-                    normalizeOrderId(quote.id) ===
-                      normalizeOrderId(selectedQuote?.id || logistics.selection.quoteOrderId);
-                  const quoteStatusLabel = resolveQuoteStatusLabel(quote);
-                  const quoteHasDeliveryDetails = hasDeliveryOrder && (
-                    selectedById ||
-                    ['fechado', 'closed'].includes(quoteStatusLabel.toLowerCase())
-                  );
+          {displayQuotes.length > 0 ? (
+            <View style={pageStyles.quoteGrid}>
+              {displayQuotes.map((quote, index) => {
+                const selectedById =
+                  Boolean(quote?.selected) ||
+                  normalizeOrderId(quote.id) ===
+                    normalizeOrderId(selectedQuote?.id || logistics.selection.quoteOrderId);
+                const quoteStatusLabel = resolveQuoteStatusLabel(quote);
+                const quoteHasDeliveryDetails = hasDeliveryOrder && (
+                  selectedById ||
+                  ['fechado', 'closed'].includes(quoteStatusLabel.toLowerCase())
+                );
 
-                  return (
-                    <QuoteCard
-                      key={`${quote.id || quote.providerKey || 'quote'}-${index}`}
-                      styles={pageStyles}
-                      quote={quote}
-                      delivery={quoteHasDeliveryDetails ? logistics.delivery : null}
-                      onSelect={selectQuote}
-                      onOpenTracking={handleOpenTracking}
-                      requestLoading={requestLoading}
-                      allowSelectionActions={!isClosedOrder && !hasDeliveryOrder}
-                    />
-                  );
-                })}
-              </View>
-            ) : (
-              <View style={pageStyles.emptyState}>
-                <Text style={pageStyles.emptyStateTitle}>Nenhuma cotacao ainda</Text>
-                <Text style={pageStyles.emptyStateText}>{emptyStateMessage}</Text>
-              </View>
-            )}
-            </SectionCard>
+                return (
+                  <QuoteCard
+                    key={`${quote.id || quote.providerKey || 'quote'}-${index}`}
+                    styles={pageStyles}
+                    quote={quote}
+                    delivery={quoteHasDeliveryDetails ? logistics.delivery : null}
+                    onSelect={selectQuote}
+                    onOpenTracking={handleOpenTracking}
+                    requestLoading={requestLoading}
+                    allowSelectionActions={!isClosedOrder && !hasDeliveryOrder}
+                  />
+                );
+              })}
+            </View>
+          ) : (
+            <View style={pageStyles.emptyState}>
+              <Text style={pageStyles.emptyStateTitle}>Nenhuma cotacao ainda</Text>
+              <Text style={pageStyles.emptyStateText}>{emptyStateMessage}</Text>
+            </View>
+          )}
 
           <StateStore
             loading={isRefreshing ? 'Atualizando logística...' : false}

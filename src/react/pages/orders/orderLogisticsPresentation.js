@@ -415,7 +415,7 @@ const buildQuoteSnapshot = source => {
   const selectedQuote =
     quotes.find(quote => normalizeReferenceId(quote.id) === normalizeReferenceId(selection.quoteOrderId)) ||
     null;
-  const pickupAddress = route.pickupAddress || order?.addressOrigin || order?.provider?.address?.[0] || null;
+  const pickupAddress = route.pickupAddress || order?.addressOrigin || null;
   const dropoffAddress = route.dropoffAddress || order?.addressDestination || null;
   const pickupContact = route.pickupContact || order?.retrieveContact || order?.provider || null;
   const dropoffContact = route.dropoffContact || order?.deliveryContact || order?.client || null;
@@ -527,7 +527,7 @@ const buildQuoteSnapshot = source => {
 const buildLegacySnapshot = order => {
   const orderData = order?.order || order;
   const delivery = order?.delivery || {};
-  const pickupAddress = orderData?.addressOrigin || orderData?.provider?.address?.[0] || null;
+  const pickupAddress = orderData?.addressOrigin || null;
   const dropoffAddress = orderData?.addressDestination || null;
   const pickupContact = orderData?.retrieveContact || orderData?.provider || null;
   const dropoffContact = orderData?.deliveryContact || orderData?.client || null;
@@ -667,7 +667,7 @@ const buildPayloadSnapshot = source => {
     currentIntegrationCandidate,
     statusMap.get(normalizeIntegrationKey(currentIntegrationCandidate?.key)),
   );
-  const pickupAddress = order?.addressOrigin || order?.provider?.address?.[0] || null;
+  const pickupAddress = order?.addressOrigin || null;
   const dropoffAddress = order?.addressDestination || null;
   const pickupContact = order?.retrieveContact || order?.provider || null;
   const dropoffContact = order?.deliveryContact || order?.client || null;
