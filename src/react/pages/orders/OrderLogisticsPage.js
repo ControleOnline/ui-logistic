@@ -50,7 +50,6 @@ import {
 } from '@controleonline/ui-logistic/src/react/utils/deliveryAcceptanceQueue';
 import {resolveCurrentPeopleIri} from '@controleonline/ui-logistic/src/react/utils/deliveryIdentity';
 import ContextHelpButton from '@controleonline/ui-common/src/react/components/ContextHelpButton';
-import {resolveGoogleMapsSettings} from '@controleonline/ui-common/src/react/utils/googleMapsConfig';
 import DefaultMap from '@controleonline/ui-default/src/react/components/map/DefaultMap';
 import resolveOrderLogisticsSnapshot from './orderLogisticsPresentation';
 import createStyles from './orderLogisticsPage.styles';
@@ -1744,18 +1743,23 @@ const OrderLogisticsPage = ({navigation, route}) => {
   ]);
 
 
-  const companyConfigs = useMemo(
-    () => parseConfigObject(currentCompany?.configs || defaultCompany?.configs || {}),
-    [currentCompany?.configs, defaultCompany?.configs],
+  const mapConfig = useMemo(
+    () => ({
+      ...parseConfigObject(currentCompany?.configs || defaultCompany?.configs || {}),
+      addresses: {
+        origin: pickupMapMarker,
+        destination: dropoffMapMarker,
+        markers: deliveryMapMarkers,
+      },
+    }),
+    [
+      currentCompany?.configs,
+      defaultCompany?.configs,
+      deliveryMapMarkers,
+      dropoffMapMarker,
+      pickupMapMarker,
+    ],
   );
-  const googleMapsSettings = useMemo(
-    () => resolveGoogleMapsSettings(companyConfigs),
-    [companyConfigs],
-  );
-  const googleMapsApiKey =
-    googleMapsSettings.webGoogleMapsApiKey ||
-    googleMapsSettings.androidGoogleMapsApiKey ||
-    '';
   const deliveryValueLabel = useMemo(
     () =>
       formatQuotePrice(
@@ -2100,12 +2104,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
             <SectionCard styles={pageStyles} title="Mapa da entrega">
               <View style={pageStyles.mapViewportWrap}>
                 <DefaultMap
-                  apiKey={googleMapsApiKey}
-                  addresses={{
-                    origin: pickupMapMarker,
-                    destination: dropoffMapMarker,
-                    markers: deliveryMapMarkers,
-                  }}
+                  config={mapConfig}
                 />
               </View>
             </SectionCard>
