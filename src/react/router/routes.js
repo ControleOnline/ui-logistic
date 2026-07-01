@@ -35,7 +35,7 @@ const logisticRoutes = [
       title: () => global.t?.t('orders', 'title', 'logistics') || 'Logistica',
     },
     path: 'order-logistics-page',
-    initialParams: {store: 'orders'},
+    initialParams: {store: 'orders', showBottomToolBar: true},
   },
   {
     name: 'DeliveryOrdersPage',

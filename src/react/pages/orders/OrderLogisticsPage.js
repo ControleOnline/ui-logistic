@@ -43,6 +43,13 @@ import {normalizeEntityId, toEntityIri} from '@controleonline/ui-common/src/reac
 import {getOrderChannelLabel, getOrderChannelLogo} from '@assets/ppc/channels';
 import OrderStackedTopBar from '@controleonline/ui-orders/src/react/pages/orders/sales/components/OrderStackedTopBar';
 import useOrderDetailsVisuals from '@controleonline/ui-orders/src/react/pages/orders/sales/useOrderDetailsVisuals';
+import {
+  DELIVERY_STATUS_AWAITING_ACCEPTANCE,
+  includesDeliveryStatusKey,
+  resolveDeliveryStatusLabel,
+  resolveDeliveryStatusTone,
+} from '@controleonline/ui-logistic/src/react/utils/deliveryAcceptanceQueue';
+import {resolveCurrentPeopleIri} from '@controleonline/ui-logistic/src/react/utils/deliveryIdentity';
 import ContextHelpButton from '@controleonline/ui-common/src/react/components/ContextHelpButton';
 import {resolveGoogleMapsSettings} from '@controleonline/ui-common/src/react/utils/googleMapsConfig';
 import ShopGoogleMap from '@controleonline/ui-shop/src/react/components/storefront/ShopGoogleMap';
@@ -74,61 +81,6 @@ const normalizeOrderId = value =>
     .trim();
 
 const normalizeText = value => String(value ?? '').trim();
-const DELIVERY_STATUS_AWAITING_ACCEPTANCE = [
-  'aguardando aceite',
-  'awaiting acceptance',
-  'waiting acceptance',
-  'pending acceptance',
-  'acceptance pending',
-  'pending',
-  'pendente',
-];
-const DELIVERY_STATUS_ACCEPTED = ['aceito', 'accepted', 'accept'];
-const DELIVERY_STATUS_CANCELLED = ['cancelado', 'canceled', 'cancelled', 'cancel'];
-
-const normalizeDeliveryStatusKey = value => normalizeText(value).toLowerCase();
-const includesDeliveryStatusKey = (value, keys) =>
-  keys.some(key => normalizeDeliveryStatusKey(value).includes(key));
-
-const resolveDeliveryStatusLabel = value => {
-  const normalized = normalizeDeliveryStatusKey(value);
-
-  if (!normalized) {
-    return 'Status nao informado';
-  }
-
-  if (includesDeliveryStatusKey(normalized, DELIVERY_STATUS_AWAITING_ACCEPTANCE)) {
-    return 'Aguardando aceite';
-  }
-
-  if (DELIVERY_STATUS_ACCEPTED.includes(normalized)) {
-    return 'Aceito';
-  }
-
-  if (DELIVERY_STATUS_CANCELLED.includes(normalized)) {
-    return 'Cancelado';
-  }
-
-  return normalizeText(value);
-};
-
-const resolveDeliveryStatusTone = value => {
-  const normalized = normalizeDeliveryStatusKey(value);
-
-  if (includesDeliveryStatusKey(normalized, DELIVERY_STATUS_AWAITING_ACCEPTANCE)) {
-    return 'warning';
-  }
-
-  if (DELIVERY_STATUS_CANCELLED.includes(normalized)) {
-    return 'danger';
-  }
-
-  if (DELIVERY_STATUS_ACCEPTED.includes(normalized)) {
-    return 'success';
-  }
-
-  return 'success';
-};
 
 const GENERIC_ERROR_MESSAGES = new Set([
   'request failed',
@@ -1121,19 +1073,27 @@ const OrderLogisticsPage = ({navigation, route}) => {
   const pageStyles = useMemo(() => createStyles(ppcColors), [ppcColors]);
   const insets = useSafeAreaInsets();
   const ordersStore = useStore('orders');
+  const deliveryOrdersStore = useStore('delivery_orders');
+  const authStore = useStore('auth');
   const websocketStore = useStore('websocket');
   const peopleStore = useStore('people');
   const addressStore = useStore('address');
   const ordersActions = ordersStore.actions;
   const ordersActionsRef = useRef(ordersActions);
+  const deliveryOrdersActions = deliveryOrdersStore?.actions || {};
   const addressActions = addressStore?.actions || {};
   const peopleActions = peopleStore?.actions || {};
-  const routeOrder = route?.params?.order || null;
-  const order = ordersStore.getters.item || routeOrder;
-  const orderId = useMemo(
-    () => normalizeOrderId(route?.params?.id || order?.id),
-    [order?.id, route?.params?.id],
+  const currentPeopleIri = useMemo(
+    () => resolveCurrentPeopleIri(authStore?.getters?.user || null),
+    [authStore?.getters?.user],
   );
+  const routeOrder = route?.params?.order || null;
+  const orderId = useMemo(
+    () => normalizeOrderId(route?.params?.id || routeOrder?.id),
+    [route?.params?.id, routeOrder?.id],
+  );
+  const storeOrder = ordersStore.getters.item || null;
+  const order = routeOrder || (normalizeOrderId(storeOrder?.id) === orderId ? storeOrder : null);
   const websocketMessages = Array.isArray(websocketStore.getters.messages)
     ? websocketStore.getters.messages
     : [];
@@ -1206,6 +1166,20 @@ const OrderLogisticsPage = ({navigation, route}) => {
     return normalized;
   }, [orderId]);
 
+  const refreshDeliveryQueue = useCallback(async () => {
+    if (
+      !currentPeopleIri ||
+      typeof deliveryOrdersActions.getItems !== 'function'
+    ) {
+      return null;
+    }
+
+    return deliveryOrdersActions.getItems({
+      orderType: 'delivery',
+      provider: currentPeopleIri,
+    });
+  }, [currentPeopleIri, deliveryOrdersActions.getItems]);
+
   const loadPageData = useCallback(async () => {
     if (!orderId) {
       return null;
@@ -1233,6 +1207,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
 
     try {
       await loadPageData();
+      await refreshDeliveryQueue();
     } catch (error) {
       showError?.(formatApiError(error));
       setLoadFailed(true);
@@ -1240,7 +1215,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
     } finally {
       setIsRefreshing(false);
     }
-  }, [loadPageData, orderId]);
+  }, [loadPageData, orderId, refreshDeliveryQueue]);
 
   useFocusEffect(
     useCallback(() => {
@@ -1255,7 +1230,9 @@ const OrderLogisticsPage = ({navigation, route}) => {
       setIsRefreshing(true);
       setLoadFailed(false);
 
-      loadLogisticsData()
+      const loadInitialData = routeOrder ? loadLogisticsData() : loadPageData()
+
+      loadInitialData
         .catch(error => {
           if (active) {
             setLoadFailed(true);
@@ -1271,7 +1248,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
       return () => {
         active = false;
       };
-    }, [loadLogisticsData, orderId]),
+    }, [loadLogisticsData, loadPageData, orderId, routeOrder]),
   );
 
   useEffect(() => {
@@ -1939,6 +1916,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
         }
 
         await refreshAll();
+        await refreshDeliveryQueue();
         showSuccess?.(successMessage);
       } catch (error) {
         showError?.(formatApiError(error));
@@ -1946,7 +1924,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
         setRequestLoading(false);
       }
     },
-    [orderId, refreshAll, requestLoading, showError, showSuccess],
+    [orderId, refreshAll, refreshDeliveryQueue, requestLoading, showError, showSuccess],
   );
 
   const handleAcceptDelivery = useCallback(() => {
