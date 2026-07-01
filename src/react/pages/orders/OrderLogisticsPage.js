@@ -12,7 +12,6 @@
  */
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
-  ActivityIndicator,
   Image,
   Linking,
   Modal,
@@ -27,6 +26,7 @@ import {useFocusEffect} from '@react-navigation/native';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import {MaterialCommunityIcons} from '@expo/vector-icons';
 import {useStore} from '@store';
+import StateStore from '@controleonline/ui-layout/src/react/components/StateStore';
 import {api} from '@controleonline/ui-common/src/api';
 import Formatter from '@controleonline/ui-common/src/utils/formatter';
 import {useMessage} from '@controleonline/ui-common/src/react/components/MessageService';
@@ -633,7 +633,7 @@ const CustomerAssignmentModal = ({
                   style={styles.assignmentSearchInput}
                 />
                 {customerSearchLoading ? (
-                  <ActivityIndicator size="small" color={ppcColors?.accentInfo} />
+                  <Text style={styles.assignmentOptionBadge}>Buscando</Text>
                 ) : null}
               </View>
 
@@ -646,7 +646,6 @@ const CustomerAssignmentModal = ({
                 </View>
               ) : customerSearchLoading ? (
                 <View style={styles.assignmentEmptyState}>
-                  <ActivityIndicator size="small" color={ppcColors?.accentInfo} />
                   <Text style={styles.assignmentEmptyStateText}>Buscando clientes...</Text>
                 </View>
               ) : customerSearchResults.length > 0 ? (
@@ -678,7 +677,7 @@ const CustomerAssignmentModal = ({
                       </View>
 
                       {isSaving ? (
-                        <ActivityIndicator size="small" color={ppcColors?.accentInfo} />
+                        <Text style={styles.assignmentOptionBadge}>Salvando</Text>
                       ) : isCurrent ? (
                         <Text style={styles.assignmentOptionBadge}>Atual</Text>
                       ) : (
@@ -801,7 +800,6 @@ const AddressAssignmentModal = ({
 
               {addressOptionsLoading ? (
                 <View style={styles.assignmentEmptyState}>
-                  <ActivityIndicator size="small" color={ppcColors?.accentInfo} />
                   <Text style={styles.assignmentEmptyStateText}>Carregando enderecos...</Text>
                 </View>
               ) : addressOptions.length > 0 ? (
@@ -832,7 +830,7 @@ const AddressAssignmentModal = ({
                       </View>
 
                       {isSaving ? (
-                        <ActivityIndicator size="small" color={ppcColors?.accentInfo} />
+                        <Text style={styles.assignmentOptionBadge}>Salvando</Text>
                       ) : isCurrent ? (
                         <Text style={styles.assignmentOptionBadge}>Atual</Text>
                       ) : (
@@ -1095,6 +1093,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
     try {
       await loadPageData();
     } catch (error) {
+      showError?.(formatApiError(error));
       setLoadFailed(true);
       throw error;
     } finally {
@@ -1116,9 +1115,10 @@ const OrderLogisticsPage = ({navigation, route}) => {
       setLoadFailed(false);
 
       loadLogisticsData()
-        .catch(() => {
+        .catch(error => {
           if (active) {
             setLoadFailed(true);
+            showError?.(formatApiError(error));
           }
         })
         .finally(() => {
@@ -1967,19 +1967,12 @@ const OrderLogisticsPage = ({navigation, route}) => {
             )}
             </SectionCard>
 
-          {loadFailed ? (
-            <View style={pageStyles.errorBanner}>
-              <Text style={pageStyles.errorText}>
-                Nao foi possivel atualizar as cotacoes. Tente novamente.
-              </Text>
-            </View>
-          ) : null}
-
-          {isRefreshing ? (
-            <View style={pageStyles.loadingWrap}>
-              <ActivityIndicator color={ppcColors?.accentInfo} />
-            </View>
-          ) : null}
+          <StateStore
+            loading={isRefreshing ? 'Atualizando logística...' : false}
+            error={
+              loadFailed ? 'Nao foi possivel atualizar as cotacoes. Tente novamente.' : false
+            }
+          />
         </View>
       </ScrollView>
       <CustomerAssignmentModal

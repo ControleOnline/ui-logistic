@@ -1,9 +1,10 @@
 import React, { useCallback, useMemo } from 'react';
-import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useStore } from '@store';
 import DefaultTable from '@controleonline/ui-default/src/react/components/table/DefaultTable';
+import StateStore from '@controleonline/ui-layout/src/react/components/StateStore';
 import OrderHeader from '@controleonline/ui-orders/src/react/components/OrderHeader';
 import { buildOrderDetailsRouteParams } from '@controleonline/ui-orders/src/react/utils/orderRoute';
 import { resolveThemePalette } from '@controleonline/../../src/styles/branding';
@@ -38,12 +39,10 @@ export default function DeliveryOrdersPage() {
   const themeStore = useStore('theme');
   const peopleStore = useStore('people');
   const deliveryStore = useStore('delivery_orders');
-  const ordersStore = useStore('orders');
 
   const { user, sessionChecked } = authStore.getters || {};
   const { colors: themeColors } = themeStore.getters || {};
   const { currentCompany } = peopleStore.getters || {};
-  const { actions: orderActions } = ordersStore;
   const { getters: deliveryGetters } = deliveryStore;
 
   const currentPeopleId = useMemo(
@@ -70,10 +69,9 @@ export default function DeliveryOrdersPage() {
     order => {
       if (!order) return;
 
-      orderActions.syncOrder?.(order);
       navigation.navigate('OrderDetails', buildOrderDetailsRouteParams(order));
     },
-    [navigation, orderActions],
+    [navigation],
   );
 
   const renderCard = useCallback(
@@ -93,23 +91,15 @@ export default function DeliveryOrdersPage() {
   );
 
   if (!isBootstrapReady) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={primaryColor} />
-      </View>
-    );
+    return <StateStore loading="Carregando pedidos de entrega..." />;
   }
 
   if (!currentPeopleIri) {
     return (
-      <View style={styles.centerState}>
-        <Text style={styles.centerStateTitle}>
-          Nao foi possivel identificar o motoboy logado.
-        </Text>
-        <Text style={styles.centerStateText}>
-          Verifique o vinculo `people_link` do tipo `courier` para este usuario.
-        </Text>
-      </View>
+      <StateStore
+        error="Nao foi possivel identificar o motoboy logado."
+        errorText="Verifique o vinculo `people_link` do tipo `courier` para este usuario."
+      />
     );
   }
 
