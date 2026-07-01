@@ -50,12 +50,86 @@ import ShopNativeMap from '@controleonline/ui-shop/src/react/components/storefro
 import resolveOrderLogisticsSnapshot from './orderLogisticsPresentation';
 import createStyles from './orderLogisticsPage.styles';
 
+export const buildOrderLogisticsSnapshotSource = (order, payload) => ({
+  ...(payload || {}),
+  order:
+    order && typeof order === 'object'
+      ? (
+        String(order.orderType || '').trim().toLowerCase() === 'delivery'
+          ? order.addressOrigin && order.addressDestination
+            ? order
+            : payload?.order || null
+          : ['sale', 'cart'].includes(String(order.orderType || '').trim().toLowerCase())
+            ? Array.isArray(order.orderProducts)
+              ? order
+              : payload?.order || null
+            : payload?.order || order || null
+      )
+      : payload?.order || null,
+});
+
 const normalizeOrderId = value =>
   String(value ?? '')
     .replace(/\D+/g, '')
     .trim();
 
 const normalizeText = value => String(value ?? '').trim();
+const DELIVERY_STATUS_AWAITING_ACCEPTANCE = [
+  'aguardando aceite',
+  'awaiting acceptance',
+  'waiting acceptance',
+  'pending acceptance',
+  'acceptance pending',
+  'pending',
+  'pendente',
+];
+const DELIVERY_STATUS_ACCEPTED = ['aceito', 'accepted', 'accept'];
+const DELIVERY_STATUS_CANCELLED = ['cancelado', 'canceled', 'cancelled', 'cancel'];
+
+const normalizeDeliveryStatusKey = value => normalizeText(value).toLowerCase();
+const includesDeliveryStatusKey = (value, keys) =>
+  keys.some(key => normalizeDeliveryStatusKey(value).includes(key));
+
+const resolveDeliveryStatusLabel = value => {
+  const normalized = normalizeDeliveryStatusKey(value);
+
+  if (!normalized) {
+    return 'Status nao informado';
+  }
+
+  if (includesDeliveryStatusKey(normalized, DELIVERY_STATUS_AWAITING_ACCEPTANCE)) {
+    return 'Aguardando aceite';
+  }
+
+  if (DELIVERY_STATUS_ACCEPTED.includes(normalized)) {
+    return 'Aceito';
+  }
+
+  if (DELIVERY_STATUS_CANCELLED.includes(normalized)) {
+    return 'Cancelado';
+  }
+
+  return normalizeText(value);
+};
+
+const resolveDeliveryStatusTone = value => {
+  const normalized = normalizeDeliveryStatusKey(value);
+
+  if (includesDeliveryStatusKey(normalized, DELIVERY_STATUS_AWAITING_ACCEPTANCE)) {
+    return 'warning';
+  }
+
+  if (DELIVERY_STATUS_CANCELLED.includes(normalized)) {
+    return 'danger';
+  }
+
+  if (DELIVERY_STATUS_ACCEPTED.includes(normalized)) {
+    return 'success';
+  }
+
+  return 'success';
+};
+
 const GENERIC_ERROR_MESSAGES = new Set([
   'request failed',
   'failed to fetch',
@@ -324,6 +398,7 @@ const StatusPill = ({styles, label, tone = 'default'}) => (
     style={[
       styles.statusPill,
       tone === 'muted' && styles.statusPillMuted,
+      tone === 'warning' && styles.statusPillWarning,
       tone === 'success' && styles.statusPillSuccess,
       tone === 'danger' && styles.statusPillDanger,
     ]}
@@ -332,6 +407,7 @@ const StatusPill = ({styles, label, tone = 'default'}) => (
       style={[
         styles.statusPillText,
         tone === 'muted' && styles.statusPillTextMuted,
+        tone === 'warning' && styles.statusPillTextWarning,
         tone === 'success' && styles.statusPillTextSuccess,
         tone === 'danger' && styles.statusPillTextDanger,
       ]}
@@ -349,6 +425,9 @@ const ActionButton = ({
   disabled = false,
   primary = false,
   secondary = false,
+  success = false,
+  danger = false,
+  style = null,
 }) => (
   <TouchableOpacity
     onPress={onPress}
@@ -357,7 +436,10 @@ const ActionButton = ({
       styles.actionButton,
       primary && styles.actionButtonPrimary,
       secondary && styles.actionButtonSecondary,
+      success && styles.actionButtonSuccess,
+      danger && styles.actionButtonDanger,
       disabled && styles.actionButtonDisabled,
+      style,
     ]}
   >
     {icon ? icon : null}
@@ -366,6 +448,8 @@ const ActionButton = ({
         styles.actionButtonText,
         primary && styles.actionButtonTextPrimary,
         secondary && styles.actionButtonTextSecondary,
+        success && styles.actionButtonTextSuccess,
+        danger && styles.actionButtonTextDanger,
       ]}
     >
       {label}
@@ -377,6 +461,7 @@ const CompactInfoChip = ({styles, icon, label, tone = 'default', ppcColors}) => 
   <View
     style={[
       styles.compactChip,
+      tone === 'warning' && styles.compactChipWarning,
       tone === 'success' && styles.compactChipSuccess,
       tone === 'danger' && styles.compactChipDanger,
       tone === 'muted' && styles.compactChipMuted,
@@ -385,19 +470,22 @@ const CompactInfoChip = ({styles, icon, label, tone = 'default', ppcColors}) => 
     <MaterialCommunityIcons
       name={icon}
       size={12}
-      color={
-        tone === 'success'
-          ? styles.iconColorSuccess.color
-          : tone === 'danger'
-            ? styles.iconColorDanger.color
-            : tone === 'muted'
-              ? ppcColors?.textSecondary
-              : ppcColors?.accentInfo
+        color={
+        tone === 'warning'
+          ? styles.iconColorWarning.color
+          : tone === 'success'
+            ? styles.iconColorSuccess.color
+            : tone === 'danger'
+              ? styles.iconColorDanger.color
+              : tone === 'muted'
+                ? ppcColors?.textSecondary
+                : ppcColors?.accentInfo
       }
     />
     <Text
       style={[
         styles.compactChipText,
+        tone === 'warning' && styles.compactChipTextWarning,
         tone === 'success' && styles.compactChipTextSuccess,
         tone === 'danger' && styles.compactChipTextDanger,
         tone === 'muted' && styles.compactChipTextMuted,
@@ -1202,7 +1290,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
   }, [currentCompanyId, orderId, refreshAll, websocketMessages]);
 
   const logistics = useMemo(
-    () => resolveOrderLogisticsSnapshot({order, ...(payload || {})}),
+    () => resolveOrderLogisticsSnapshot(buildOrderLogisticsSnapshotSource(order, payload)),
     [order, payload],
   );
 
@@ -1604,7 +1692,22 @@ const OrderLogisticsPage = ({navigation, route}) => {
     logistics.canQuote && !hasDeliveryOrder && !isClosedOrder && hasDeliveryAddress,
   );
   const quoteActionLabel = logistics.quotes.length > 0 ? 'Atualizar cotações' : 'Solicitar cotações';
-  const headerStatusLabel = loadFailed ? 'Falha ao atualizar' : isRefreshing ? 'Atualizando' : isClosedOrder ? 'Fechado' : 'Online';
+  const headerStatusLabel = loadFailed
+    ? 'Falha ao atualizar'
+    : isRefreshing
+      ? 'Atualizando'
+      : isClosedOrder
+        ? 'Fechado'
+        : includesDeliveryStatusKey(
+            logistics.order?.status?.status ||
+              logistics.order?.status?.realStatus ||
+              logistics.delivery?.status ||
+              selectedQuote?.status?.status ||
+              '',
+            DELIVERY_STATUS_AWAITING_ACCEPTANCE,
+          )
+          ? 'Aguardando aceite'
+          : 'Online';
   const helpMessage = useMemo(
     () =>
       [
@@ -1708,15 +1811,13 @@ const OrderLogisticsPage = ({navigation, route}) => {
 
     return 'Pedido nao informado';
   }, [logistics.order?.mainOrder?.externalCode, logistics.order?.mainOrderId, logistics.order?.main_order_id]);
-  const deliveryStatusLabel = useMemo(
+  const deliveryStatusSource = useMemo(
     () =>
-      normalizeText(
-        logistics.delivery?.status ||
-          selectedQuote?.status?.status ||
-          logistics.order?.status?.status ||
-          logistics.order?.status?.realStatus ||
-          '',
-      ) || 'Status nao informado',
+      logistics.order?.status?.status ||
+      logistics.order?.status?.realStatus ||
+      logistics.delivery?.status ||
+      selectedQuote?.status?.status ||
+      '',
     [
       logistics.delivery?.status,
       logistics.order?.status?.realStatus,
@@ -1724,6 +1825,24 @@ const OrderLogisticsPage = ({navigation, route}) => {
       selectedQuote?.status?.status,
     ],
   );
+  const deliveryStatusLabel = useMemo(
+    () => resolveDeliveryStatusLabel(deliveryStatusSource),
+    [deliveryStatusSource],
+  );
+  const deliveryStatusTone = useMemo(
+    () => resolveDeliveryStatusTone(deliveryStatusSource),
+    [deliveryStatusSource],
+  );
+  const isAwaitingAcceptance = useMemo(
+    () =>
+      includesDeliveryStatusKey(
+        deliveryStatusSource,
+        DELIVERY_STATUS_AWAITING_ACCEPTANCE,
+      ),
+    [deliveryStatusSource],
+  );
+  const showDeliveryAcceptanceActions = Boolean(orderId && isAwaitingAcceptance && !isClosedOrder);
+
   const pickupMapMarker = useMemo(
     () =>
       buildDeliveryMapMarker({
@@ -1802,6 +1921,41 @@ const OrderLogisticsPage = ({navigation, route}) => {
     },
     [orderId, refreshAll, showError, showSuccess],
   );
+
+  const runDeliveryAction = useCallback(
+    async (path, successMessage) => {
+      if (!orderId || requestLoading) {
+        return;
+      }
+
+      try {
+        setRequestLoading(true);
+        const response = await api.fetch(path, {
+          method: 'POST',
+        });
+        const result = normalizeActionResult(response);
+        if (String(result?.errno ?? '0') !== '0') {
+          throw result || response;
+        }
+
+        await refreshAll();
+        showSuccess?.(successMessage);
+      } catch (error) {
+        showError?.(formatApiError(error));
+      } finally {
+        setRequestLoading(false);
+      }
+    },
+    [orderId, refreshAll, requestLoading, showError, showSuccess],
+  );
+
+  const handleAcceptDelivery = useCallback(() => {
+    void runDeliveryAction(`/orders/${orderId}/confirm`, 'Entrega aceita com sucesso.');
+  }, [orderId, runDeliveryAction]);
+
+  const handleCancelDelivery = useCallback(() => {
+    void runDeliveryAction(`/orders/${orderId}/cancel`, 'Entrega cancelada com sucesso.');
+  }, [orderId, runDeliveryAction]);
 
   const handleOpenTracking = useCallback(
     async url => {
@@ -1917,10 +2071,41 @@ const OrderLogisticsPage = ({navigation, route}) => {
                 styles={pageStyles}
                 icon="check-circle-outline"
                 label={deliveryStatusLabel}
-                tone="success"
+                tone={deliveryStatusTone}
                 ppcColors={ppcColors}
               />
             </View>
+
+            {showDeliveryAcceptanceActions ? (
+              <View style={pageStyles.deliveryAcceptanceCard}>
+                <View style={pageStyles.deliveryAcceptanceTextWrap}>
+                  <Text style={pageStyles.deliveryAcceptanceTitle}>Aguardando aceite</Text>
+                  <Text style={pageStyles.deliveryAcceptanceSubtitle}>
+                    Aceite a corrida para assumir a entrega ou cancele se nao puder atender.
+                  </Text>
+                </View>
+                <View style={pageStyles.deliveryAcceptanceActions}>
+                  <ActionButton
+                    styles={pageStyles}
+                    label="Aceitar corrida"
+                    icon={<MaterialCommunityIcons name="check" size={18} color="#FFFFFF" />}
+                    onPress={handleAcceptDelivery}
+                    disabled={requestLoading}
+                    success
+                    style={pageStyles.deliveryAcceptanceButton}
+                  />
+                  <ActionButton
+                    styles={pageStyles}
+                    label="Cancelar corrida"
+                    icon={<MaterialCommunityIcons name="close" size={18} color="#B91C1C" />}
+                    onPress={handleCancelDelivery}
+                    disabled={requestLoading}
+                    danger
+                    style={pageStyles.deliveryAcceptanceButton}
+                  />
+                </View>
+              </View>
+            ) : null}
 
             <View style={pageStyles.sectionActionRow}>
               <ActionButton

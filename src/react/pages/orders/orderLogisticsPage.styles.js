@@ -397,6 +397,10 @@ const createStyles = palette =>
       borderColor: palette?.borderSoft,
       backgroundColor: '#F8FAFC',
     },
+    statusPillWarning: {
+      borderColor: '#F59E0B',
+      backgroundColor: '#FFFBEB',
+    },
     statusPillSuccess: {
       borderColor: '#16A34A',
       backgroundColor: '#F0FDF4',
@@ -414,6 +418,9 @@ const createStyles = palette =>
     },
     statusPillTextMuted: {
       color: palette?.textSecondary,
+    },
+    statusPillTextWarning: {
+      color: '#D97706',
     },
     statusPillTextSuccess: {
       color: '#16A34A',
@@ -440,6 +447,14 @@ const createStyles = palette =>
     actionButtonSecondary: {
       backgroundColor: palette?.cardBgSoft,
     },
+    actionButtonSuccess: {
+      backgroundColor: '#16A34A',
+      borderColor: '#16A34A',
+    },
+    actionButtonDanger: {
+      backgroundColor: '#FEF2F2',
+      borderColor: '#FCA5A5',
+    },
     actionButtonDisabled: {
       opacity: 0.55,
     },
@@ -455,6 +470,45 @@ const createStyles = palette =>
     },
     actionButtonTextSecondary: {
       color: palette?.accentInfo,
+    },
+    actionButtonTextSuccess: {
+      color: '#FFFFFF',
+    },
+    actionButtonTextDanger: {
+      color: '#B91C1C',
+    },
+    deliveryAcceptanceCard: {
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: '#86EFAC',
+      backgroundColor: '#F0FDF4',
+      padding: 12,
+      gap: 10,
+    },
+    deliveryAcceptanceTextWrap: {
+      gap: 3,
+    },
+    deliveryAcceptanceTitle: {
+      color: '#166534',
+      fontSize: 14,
+      fontWeight: '900',
+      textTransform: 'uppercase',
+      letterSpacing: 0.2,
+    },
+    deliveryAcceptanceSubtitle: {
+      color: '#15803D',
+      fontSize: 11,
+      fontWeight: '700',
+      lineHeight: 14,
+    },
+    deliveryAcceptanceActions: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    deliveryAcceptanceButton: {
+      flexGrow: 1,
+      flexBasis: 140,
     },
     routeGrid: {
       flexDirection: 'row',
@@ -582,11 +636,18 @@ const createStyles = palette =>
       borderColor: palette?.borderSoft,
       backgroundColor: '#F8FAFC',
     },
+    compactChipWarning: {
+      borderColor: '#FDE68A',
+      backgroundColor: '#FFFBEB',
+    },
     compactChipText: {
       color: palette?.textPrimary,
       fontSize: 10,
       fontWeight: '800',
       lineHeight: 12,
+    },
+    compactChipTextWarning: {
+      color: '#D97706',
     },
     compactChipTextSuccess: {
       color: '#166534',
@@ -666,6 +727,9 @@ const createStyles = palette =>
     },
     iconColorMuted: {
       color: palette?.textSecondary,
+    },
+    iconColorWarning: {
+      color: '#D97706',
     },
     iconColorSuccess: {
       color: '#16A34A',

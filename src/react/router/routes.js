@@ -17,7 +17,7 @@ export const WrappedOrderLogistics = ({navigation, route}) => {
     navigation.setOptions({
       headerShown: false,
       showBottomCart: false,
-      showBottomToolBar: false,
+      showBottomToolBar: true,
     });
   }, [navigation]);
 
@@ -31,7 +31,7 @@ const logisticRoutes = [
     options: {
       headerShown: false,
       showBottomCart: false,
-      showBottomToolBar: false,
+      showBottomToolBar: true,
       title: () => global.t?.t('orders', 'title', 'logistics') || 'Logistica',
     },
     path: 'order-logistics-page',
@@ -43,7 +43,7 @@ const logisticRoutes = [
     options: {
       headerShown: true,
       showBottomCart: false,
-      showBottomToolBar: false,
+      showBottomToolBar: true,
       showCompanyFilter: false,
       title: () => global.t?.t('orders', 'title', 'deliveryOrders') || 'Pedidos de entrega',
     },
@@ -55,7 +55,7 @@ const logisticRoutes = [
     options: {
       headerShown: true,
       showBottomCart: false,
-      showBottomToolBar: false,
+      showBottomToolBar: true,
       showCompanyFilter: false,
       title: () => global.t?.t('invoice', 'title', 'deliveryReceivables') || 'Recebiveis',
     },
@@ -67,7 +67,7 @@ const logisticRoutes = [
     options: {
       headerShown: true,
       showBottomCart: false,
-      showBottomToolBar: false,
+      showBottomToolBar: true,
       showCompanyFilter: false,
       title: () => global.t?.t('people', 'title', 'deliveryCompanies') || 'Empresas homologadas',
     },
@@ -79,7 +79,7 @@ const logisticRoutes = [
     options: {
       headerShown: true,
       showBottomCart: false,
-      showBottomToolBar: false,
+      showBottomToolBar: true,
       showCompanyFilter: false,
       title: 'Cadastro do veículo',
     },
@@ -91,7 +91,7 @@ const logisticRoutes = [
     options: {
       headerShown: true,
       showBottomCart: false,
-      showBottomToolBar: false,
+      showBottomToolBar: true,
       showCompanyFilter: false,
       title: 'Minhas tabelas',
     },
@@ -103,7 +103,7 @@ const logisticRoutes = [
     options: {
       headerShown: true,
       showBottomCart: false,
-      showBottomToolBar: false,
+      showBottomToolBar: true,
       showCompanyFilter: false,
       title: 'Nova tabela',
     },
@@ -115,7 +115,7 @@ const logisticRoutes = [
     options: {
       headerShown: true,
       showBottomCart: false,
-      showBottomToolBar: false,
+      showBottomToolBar: true,
       showCompanyFilter: false,
       title: 'Associar empresas',
     },
@@ -127,7 +127,7 @@ const logisticRoutes = [
     options: {
       headerShown: true,
       showBottomCart: false,
-      showBottomToolBar: false,
+      showBottomToolBar: true,
       showCompanyFilter: false,
       title: 'Horarios do motoboy',
     },
@@ -139,7 +139,7 @@ const logisticRoutes = [
     options: {
       headerShown: true,
       showBottomCart: false,
-      showBottomToolBar: false,
+      showBottomToolBar: true,
       showCompanyFilter: false,
       title: 'Horario do motoboy',
     },
@@ -151,7 +151,7 @@ const logisticRoutes = [
     options: {
       headerShown: true,
       showBottomCart: false,
-      showBottomToolBar: false,
+      showBottomToolBar: true,
       showCompanyFilter: false,
       title: 'Presenca por empresa',
     },
@@ -163,7 +163,7 @@ const logisticRoutes = [
     options: {
       headerShown: true,
       showBottomCart: false,
-      showBottomToolBar: false,
+      showBottomToolBar: true,
       showCompanyFilter: false,
       title: 'Historico da presenca',
     },
