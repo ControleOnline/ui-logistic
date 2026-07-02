@@ -36,6 +36,7 @@ import {
   buildCustomerSearchMeta,
   createEmptyAddressForm,
   normalizePostalCodeInput,
+  resolveAddressDisplayParts,
   normalizeText as normalizeDisplayText,
 } from '@controleonline/ui-common/src/react/utils/entityDisplay';
 import {normalizeEntityId, toEntityIri} from '@controleonline/ui-common/src/react/utils/commercialDocumentOrders';
@@ -51,6 +52,8 @@ import {
 import {resolveCurrentPeopleIri} from '@controleonline/ui-logistic/src/react/utils/deliveryIdentity';
 import ContextHelpButton from '@controleonline/ui-common/src/react/components/ContextHelpButton';
 import DefaultMap from '@controleonline/ui-default/src/react/components/map/DefaultMap';
+import DeliveryAcceptanceCard from './DeliveryAcceptanceCard';
+import OrderLogisticsQuotesList from './OrderLogisticsQuotesList';
 import resolveOrderLogisticsSnapshot from './orderLogisticsPresentation';
 import createStyles from './orderLogisticsPage.styles';
 
@@ -59,16 +62,21 @@ export const buildOrderLogisticsSnapshotSource = (order, payload) => ({
   order:
     order && typeof order === 'object'
       ? (
-        String(order.orderType || '').trim().toLowerCase() === 'delivery'
-          ? order.addressOrigin && order.addressDestination
-            ? order
-            : payload?.order || null
-          : ['sale', 'cart'].includes(String(order.orderType || '').trim().toLowerCase())
-            ? Array.isArray(order.orderProducts)
-              ? order
-              : payload?.order || null
-            : payload?.order || order || null
-      )
+          String(order.orderType || payload?.order?.orderType || '').trim().toLowerCase() === 'delivery'
+            ? payload?.order && typeof payload.order === 'object'
+              ? {
+                  ...payload.order,
+                  ...order,
+                }
+              : order
+            : ['sale', 'cart'].includes(
+                String(order.orderType || payload?.order?.orderType || '').trim().toLowerCase(),
+              )
+              ? Array.isArray(order.orderProducts)
+                ? order
+                : payload?.order || order || null
+              : payload?.order || order || null
+        )
       : payload?.order || null,
 });
 
@@ -158,8 +166,9 @@ const renderAddressLines = parts => {
 
   const primary = normalizeDisplayText(parts.primary || parts.streetLine || parts.nickname);
   const secondary = normalizeDisplayText(parts.secondary);
+  const postalCode = normalizeDisplayText(parts.postalCode);
   const complement = normalizeDisplayText(parts.complement);
-  const lines = [primary, secondary, complement].filter(Boolean);
+  const lines = [primary, secondary, postalCode, complement].filter(Boolean);
 
   return lines.length ? lines : ['Endereco nao informado.'];
 };
@@ -332,43 +341,6 @@ const SectionCard = ({styles, title, subtitle = '', action = null, headerRight =
     {action ? <View style={styles.sectionActionRow}>{action}</View> : null}
 
     <View style={styles.sectionBody}>{children}</View>
-  </View>
-);
-
-const DeliveryAcceptanceCard = ({
-  styles,
-  requestLoading,
-  onAccept,
-  onCancel,
-  containerStyle = null,
-}) => (
-  <View style={[styles.deliveryAcceptanceCard, containerStyle]}>
-    <View style={styles.deliveryAcceptanceTextWrap}>
-      <Text style={styles.deliveryAcceptanceTitle}>Aguardando aceite</Text>
-      <Text style={styles.deliveryAcceptanceSubtitle}>
-        Aceite a corrida para assumir a entrega ou cancele se nao puder atender.
-      </Text>
-    </View>
-    <View style={styles.deliveryAcceptanceActions}>
-      <ActionButton
-        styles={styles}
-        label="Aceitar corrida"
-        icon={<MaterialCommunityIcons name="check" size={18} color="#FFFFFF" />}
-        onPress={onAccept}
-        disabled={requestLoading}
-        success
-        style={styles.deliveryAcceptanceButton}
-      />
-      <ActionButton
-        styles={styles}
-        label="Cancelar corrida"
-        icon={<MaterialCommunityIcons name="close" size={18} color="#B91C1C" />}
-        onPress={onCancel}
-        disabled={requestLoading}
-        danger
-        style={styles.deliveryAcceptanceButton}
-      />
-    </View>
   </View>
 );
 
@@ -579,7 +551,7 @@ const ProviderBadge = ({styles, quote}) => {
   );
 };
 
-const QuoteCard = ({
+export const QuoteCard = ({
   styles,
   quote,
   onSelect,
@@ -1119,6 +1091,8 @@ const OrderLogisticsPage = ({navigation, route}) => {
     () => normalizeOrderId(route?.params?.id || routeOrder?.id),
     [route?.params?.id, routeOrder?.id],
   );
+  const isDeliveryDetailMode = Boolean(routeOrder);
+  const isManagerOverviewMode = !isDeliveryDetailMode;
   const storeOrder = ordersStore.getters.item || null;
   const order = routeOrder || (normalizeOrderId(storeOrder?.id) === orderId ? storeOrder : null);
   const websocketMessages = Array.isArray(websocketStore.getters.messages)
@@ -1131,6 +1105,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
   const [payload, setPayload] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [requestLoading, setRequestLoading] = useState(false);
+  const [quotesRefreshKey, setQuotesRefreshKey] = useState(0);
   const [loadFailed, setLoadFailed] = useState(false);
   const [customerModalVisible, setCustomerModalVisible] = useState(false);
   const [customerCreateModalVisible, setCustomerCreateModalVisible] = useState(false);
@@ -1235,6 +1210,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
     try {
       await loadPageData();
       await refreshDeliveryQueue();
+      setQuotesRefreshKey(previous => previous + 1);
     } catch (error) {
       showError?.(formatApiError(error));
       setLoadFailed(true);
@@ -1298,13 +1274,31 @@ const OrderLogisticsPage = ({navigation, route}) => {
     [order, payload],
   );
 
+  const pickupAddressParts = useMemo(
+    () =>
+      isDeliveryDetailMode
+        ? order?.addressOrigin
+          ? resolveAddressDisplayParts(order.addressOrigin)
+          : logistics.pickupAddressParts
+        : logistics.pickupAddressParts,
+    [isDeliveryDetailMode, logistics.pickupAddressParts, order?.addressOrigin],
+  );
+  const dropoffAddressParts = useMemo(
+    () =>
+      isDeliveryDetailMode
+        ? order?.addressDestination
+          ? resolveAddressDisplayParts(order.addressDestination)
+          : logistics.dropoffAddressParts
+        : logistics.dropoffAddressParts,
+    [isDeliveryDetailMode, logistics.dropoffAddressParts, order?.addressDestination],
+  );
   const pickupAddressLines = useMemo(
-    () => renderAddressLines(logistics.pickupAddressParts),
-    [logistics.pickupAddressParts],
+    () => renderAddressLines(pickupAddressParts),
+    [pickupAddressParts],
   );
   const dropoffAddressLines = useMemo(
-    () => renderAddressLines(logistics.dropoffAddressParts),
-    [logistics.dropoffAddressParts],
+    () => renderAddressLines(dropoffAddressParts),
+    [dropoffAddressParts],
   );
   const hasDeliveryAddress = useMemo(
     () => dropoffAddressLines.some(line => line !== 'Endereco nao informado.'),
@@ -1693,7 +1687,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
     logistics.currentIntegration ||
     null;
   const canRequestQuotes = Boolean(
-    logistics.canQuote && !hasDeliveryOrder && !isClosedOrder && hasDeliveryAddress,
+    isManagerOverviewMode && logistics.canQuote && !hasDeliveryOrder && !isClosedOrder && hasDeliveryAddress,
   );
   const quoteActionLabel = logistics.quotes.length > 0 ? 'Atualizar cotações' : 'Solicitar cotações';
   const headerStatusLabel = loadFailed
@@ -1712,66 +1706,6 @@ const OrderLogisticsPage = ({navigation, route}) => {
           )
           ? 'Aguardando aceite'
           : 'Online';
-  const emptyStateMessage = hasDeliveryAddress
-    ? 'Solicite cotações para exibir as opções vinculadas.'
-    : 'Informe um endereço de entrega válido para solicitar cotações.';
-  const displayQuotes = useMemo(() => {
-    if (logistics.quotes.length > 0) {
-      return logistics.quotes;
-    }
-
-    if (!hasDeliveryOrder) {
-      return [];
-    }
-
-    const fallbackProviderKey = normalizeText(
-      logistics.delivery?.currentIntegrationKey || selectedQuote?.providerKey || order?.app || 'food99',
-    );
-    const fallbackProviderLabel =
-      resolveProviderLabel({
-        providerKey: fallbackProviderKey,
-        app: logistics.delivery?.currentIntegrationKey || order?.app || '',
-        providerLabel: selectedQuote?.providerLabel || '',
-      }) || 'Integracao';
-
-    return [
-      {
-        id:
-          selectedQuote?.id ||
-          logistics.selection.quoteOrderId ||
-          logistics.delivery?.deliveryPeopleId ||
-          orderId,
-        app: logistics.delivery?.currentIntegrationKey || order?.app || '',
-        providerKey: fallbackProviderKey,
-        providerLabel: fallbackProviderLabel,
-        price: selectedQuote?.price ?? logistics.selection.price ?? null,
-        eta: selectedQuote?.eta || '',
-        quoteState: selectedQuote?.quoteState || 'selected',
-        quoteStateLabel:
-          selectedQuote?.quoteStateLabel ||
-          normalizeText(logistics.delivery?.status || 'Entrega definida'),
-        quoteMessage: selectedQuote?.quoteMessage || '',
-        summary:
-          selectedQuote?.summary || normalizeText(logistics.delivery?.status || 'Entrega definida'),
-        trackingUrl: selectedQuote?.trackingUrl || logistics.delivery?.trackingUrl || null,
-        selected: true,
-        available: true,
-        requestable: false,
-        deliveryPeople: logistics.delivery?.deliveryPeople || null,
-      },
-    ];
-  }, [
-    hasDeliveryOrder,
-    logistics.delivery,
-    logistics.quotes,
-    logistics.selection.price,
-    logistics.selection.quoteOrderId,
-    order?.app,
-    orderId,
-    selectedQuote,
-  ]);
-
-
   const deliveryValueLabel = useMemo(
     () =>
       formatQuotePrice(
@@ -1820,23 +1754,34 @@ const OrderLogisticsPage = ({navigation, route}) => {
       ),
     [deliveryStatusSource],
   );
-  const showDeliveryAcceptanceActions = Boolean(orderId && isAwaitingAcceptance && !isClosedOrder);
+  const showDeliveryAcceptanceActions = Boolean(
+    isDeliveryDetailMode && orderId && isAwaitingAcceptance && !isClosedOrder,
+  );
   const deliveryAcceptanceSpacer = showDeliveryAcceptanceActions ? 188 : 0;
   const helpMessage = useMemo(
     () =>
-      showDeliveryAcceptanceActions
-        ? [
-            'Resumo da corrida, rota e mapa da entrega.',
-            'Aceite ou recuse a corrida para continuar.',
-          ]
+      isDeliveryDetailMode
+        ? showDeliveryAcceptanceActions
+          ? [
+              'Resumo desta entrega, rota e mapa.',
+              'Aceite ou recuse a corrida para continuar.',
+            ]
+          : [
+              'Resumo desta entrega, rota e mapa.',
+              'Os dados exibidos pertencem a esta corrida.',
+            ]
         : [
-            'Resumo da corrida, rota e mapa da entrega.',
-            'Use as acoes rapidas para trocar cliente ou atualizar o endereco.',
+            'Resumo do pedido principal, rota e mapa.',
+            'A lista abaixo mostra as ordens vinculadas e o status de cada uma.',
           ],
-    [showDeliveryAcceptanceActions],
+    [isDeliveryDetailMode, showDeliveryAcceptanceActions],
   );
 
   useEffect(() => {
+    if (!isDeliveryDetailMode) {
+      return;
+    }
+
     if (route?.params?.hideBottomToolBar === showDeliveryAcceptanceActions) {
       return;
     }
@@ -1844,27 +1789,46 @@ const OrderLogisticsPage = ({navigation, route}) => {
     navigation?.setParams?.({
       hideBottomToolBar: showDeliveryAcceptanceActions,
     });
-  }, [navigation, route?.params?.hideBottomToolBar, showDeliveryAcceptanceActions]);
+  }, [
+    isDeliveryDetailMode,
+    navigation,
+    route?.params?.hideBottomToolBar,
+    showDeliveryAcceptanceActions,
+  ]);
 
+  const pickupMapAddress = useMemo(
+    () =>
+      isDeliveryDetailMode
+        ? order?.addressOrigin || null
+        : logistics.route?.pickupAddress || logistics.order?.addressOrigin || null,
+    [isDeliveryDetailMode, logistics.order?.addressOrigin, logistics.route?.pickupAddress, order?.addressOrigin],
+  );
+  const dropoffMapAddress = useMemo(
+    () =>
+      isDeliveryDetailMode
+        ? order?.addressDestination || null
+        : logistics.route?.dropoffAddress || logistics.order?.addressDestination || null,
+    [isDeliveryDetailMode, logistics.order?.addressDestination, logistics.route?.dropoffAddress, order?.addressDestination],
+  );
   const pickupMapMarker = useMemo(
     () =>
       buildDeliveryMapMarker({
         id: 'pickup',
         label: 'Origem',
-        address: logistics.route?.pickupAddress || logistics.order?.addressOrigin || null,
+        address: pickupMapAddress,
         addressLines: pickupAddressLines,
       }),
-    [logistics.order?.addressOrigin, logistics.route?.pickupAddress, pickupAddressLines],
+    [pickupAddressLines, pickupMapAddress],
   );
   const dropoffMapMarker = useMemo(
     () =>
       buildDeliveryMapMarker({
         id: 'dropoff',
         label: 'Destino',
-        address: logistics.route?.dropoffAddress || logistics.order?.addressDestination || null,
+        address: dropoffMapAddress,
         addressLines: dropoffAddressLines,
       }),
-    [dropoffAddressLines, logistics.order?.addressDestination, logistics.route?.dropoffAddress],
+    [dropoffAddressLines, dropoffMapAddress],
   );
   const deliveryMapMarkers = useMemo(
     () => [pickupMapMarker, dropoffMapMarker].filter(Boolean),
@@ -1927,16 +1891,16 @@ const OrderLogisticsPage = ({navigation, route}) => {
           },
         );
         const result = normalizeActionResult(response);
-        if (String(result?.errno ?? '0') !== '0') {
-          throw result || response;
-        }
+      if (String(result?.errno ?? '0') !== '0') {
+        throw result || response;
+      }
 
         await refreshAll();
         showSuccess?.('Entrega solicitada com sucesso.');
-      } catch (error) {
-        showError?.(formatApiError(error));
-      } finally {
-        setRequestLoading(false);
+    } catch (error) {
+      showError?.(formatApiError(error));
+    } finally {
+      setRequestLoading(false);
       }
     },
     [orderId, refreshAll, showError, showSuccess],
@@ -1992,7 +1956,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
     },
     [showError],
   );
-  const canManageCustomerAndAddress = !showDeliveryAcceptanceActions;
+  const canManageCustomerAndAddress = isManagerOverviewMode;
 
   return (
     <SafeAreaView style={pageStyles.pageRoot} edges={['bottom']}>
@@ -2100,15 +2064,6 @@ const OrderLogisticsPage = ({navigation, route}) => {
               />
             </View>
 
-            {showDeliveryAcceptanceActions ? null : (
-              <DeliveryAcceptanceCard
-                styles={pageStyles}
-                requestLoading={requestLoading}
-                onAccept={handleAcceptDelivery}
-                onCancel={handleCancelDelivery}
-              />
-            )}
-
             {canManageCustomerAndAddress ? (
               <View style={pageStyles.sectionActionRow}>
                 <ActionButton
@@ -2153,39 +2108,15 @@ const OrderLogisticsPage = ({navigation, route}) => {
             </View>
           </SectionCard>
 
-          {displayQuotes.length > 0 ? (
-            <View style={pageStyles.quoteGrid}>
-              {displayQuotes.map((quote, index) => {
-                const selectedById =
-                  Boolean(quote?.selected) ||
-                  normalizeOrderId(quote.id) ===
-                    normalizeOrderId(selectedQuote?.id || logistics.selection.quoteOrderId);
-                const quoteStatusLabel = resolveQuoteStatusLabel(quote);
-                const quoteHasDeliveryDetails = hasDeliveryOrder && (
-                  selectedById ||
-                  ['fechado', 'closed'].includes(quoteStatusLabel.toLowerCase())
-                );
-
-                return (
-                  <QuoteCard
-                    key={`${quote.id || quote.providerKey || 'quote'}-${index}`}
-                    styles={pageStyles}
-                    quote={quote}
-                    delivery={quoteHasDeliveryDetails ? logistics.delivery : null}
-                    onSelect={selectQuote}
-                    onOpenTracking={handleOpenTracking}
-                    requestLoading={requestLoading}
-                    allowSelectionActions={!isClosedOrder && !hasDeliveryOrder}
-                  />
-                );
-              })}
-            </View>
-          ) : (
-            <View style={pageStyles.emptyState}>
-              <Text style={pageStyles.emptyStateTitle}>Nenhuma cotacao ainda</Text>
-              <Text style={pageStyles.emptyStateText}>{emptyStateMessage}</Text>
-            </View>
-          )}
+          {isManagerOverviewMode ? (
+            <OrderLogisticsQuotesList
+              orderId={orderId}
+              order={order}
+              refreshKey={quotesRefreshKey}
+              onSelectQuote={selectQuote}
+              requestLoading={requestLoading}
+            />
+          ) : null}
 
           <StateStore
             loading={isRefreshing ? 'Atualizando logística...' : false}
