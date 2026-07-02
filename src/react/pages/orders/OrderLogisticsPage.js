@@ -54,6 +54,7 @@ import ContextHelpButton from '@controleonline/ui-common/src/react/components/Co
 import DefaultMap from '@controleonline/ui-default/src/react/components/map/DefaultMap';
 import DeliveryAcceptanceCard from './DeliveryAcceptanceCard';
 import OrderLogisticsQuotesList from './OrderLogisticsQuotesList';
+import useDeviceCoordinates from '../../hooks/useDeviceCoordinates';
 import resolveOrderLogisticsSnapshot from './orderLogisticsPresentation';
 import createStyles from './orderLogisticsPage.styles';
 
@@ -310,6 +311,36 @@ const buildDeliveryMapMarker = ({id, label, address, addressLines = []}) => {
   };
 };
 
+const haversineDistanceKm = (from, to) => {
+  const fromCoordinates = extractAddressCoordinates(from);
+  const toCoordinates = extractAddressCoordinates(to);
+
+  if (!fromCoordinates || !toCoordinates) {
+    return null;
+  }
+
+  const toRadians = value => (Number(value) * Math.PI) / 180;
+  const earthRadiusKm = 6371;
+  const deltaLatitude = toRadians(toCoordinates.latitude - fromCoordinates.latitude);
+  const deltaLongitude = toRadians(toCoordinates.longitude - fromCoordinates.longitude);
+  const latitude1 = toRadians(fromCoordinates.latitude);
+  const latitude2 = toRadians(toCoordinates.latitude);
+  const a =
+    Math.sin(deltaLatitude / 2) ** 2 +
+    Math.cos(latitude1) * Math.cos(latitude2) * Math.sin(deltaLongitude / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return Number.isFinite(c) ? earthRadiusKm * c : null;
+};
+
+const formatRouteDistanceLabel = distanceKm => {
+  if (!Number.isFinite(distanceKm) || distanceKm <= 0) {
+    return '';
+  }
+
+  return `~ ${Formatter.formatDecimal(distanceKm, 'pt-BR', 1)} km`;
+};
+
 const isRelevantOrdersMessage = (message, orderId, companyId) => {
   if (!message || normalizeText(message.store) !== 'orders') {
     return false;
@@ -488,32 +519,60 @@ const RouteSummaryStop = ({styles, icon, label, lines, tone = 'default', ppcColo
   );
 };
 
-const RouteSummaryStrip = ({styles, pickupAddressLines, dropoffAddressLines, ppcColors}) => (
-  <View style={styles.routeSummaryStrip}>
-    <RouteSummaryStop
-      styles={styles}
-      icon="map-marker-outline"
-      label="Coleta"
-      lines={pickupAddressLines}
-      ppcColors={ppcColors}
-    />
-    <View style={styles.routeSummaryDivider}>
-      <MaterialCommunityIcons
-        name="arrow-right-bold"
-        size={18}
-        color={ppcColors?.accentInfo || styles.iconColorPrimary.color}
+const RouteSummaryStrip = ({
+  styles,
+  currentPositionLines = [],
+  pickupAddressLines,
+  dropoffAddressLines,
+  ppcColors,
+}) => {
+  const hasCurrentPosition = Array.isArray(currentPositionLines) && currentPositionLines.length > 0;
+
+  return (
+    <View style={styles.routeSummaryStrip}>
+      {hasCurrentPosition ? (
+        <>
+          <RouteSummaryStop
+            styles={styles}
+            icon="crosshairs-gps"
+            label="Posição atual"
+            lines={currentPositionLines}
+            ppcColors={ppcColors}
+          />
+          <View style={styles.routeSummaryDivider}>
+            <MaterialCommunityIcons
+              name="arrow-right-bold"
+              size={18}
+              color={ppcColors?.accentInfo || styles.iconColorPrimary.color}
+            />
+          </View>
+        </>
+      ) : null}
+      <RouteSummaryStop
+        styles={styles}
+        icon="map-marker-outline"
+        label="Coleta"
+        lines={pickupAddressLines}
+        ppcColors={ppcColors}
+      />
+      <View style={styles.routeSummaryDivider}>
+        <MaterialCommunityIcons
+          name="arrow-right-bold"
+          size={18}
+          color={ppcColors?.accentInfo || styles.iconColorPrimary.color}
+        />
+      </View>
+      <RouteSummaryStop
+        styles={styles}
+        icon="map-marker"
+        label="Entrega"
+        lines={dropoffAddressLines}
+        tone="success"
+        ppcColors={ppcColors}
       />
     </View>
-    <RouteSummaryStop
-      styles={styles}
-      icon="map-marker"
-      label="Entrega"
-      lines={dropoffAddressLines}
-      tone="success"
-      ppcColors={ppcColors}
-    />
-  </View>
-);
+  );
+};
 
 const FieldBlock = ({styles, label, value}) => (
   <View style={styles.sectionField}>
@@ -1093,6 +1152,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
   );
   const isDeliveryDetailMode = Boolean(routeOrder);
   const isManagerOverviewMode = !isDeliveryDetailMode;
+  const courierCoordinates = useDeviceCoordinates(isDeliveryDetailMode);
   const storeOrder = ordersStore.getters.item || null;
   const order = routeOrder || (normalizeOrderId(storeOrder?.id) === orderId ? storeOrder : null);
   const websocketMessages = Array.isArray(websocketStore.getters.messages)
@@ -1810,6 +1870,86 @@ const OrderLogisticsPage = ({navigation, route}) => {
         : logistics.route?.dropoffAddress || logistics.order?.addressDestination || null,
     [isDeliveryDetailMode, logistics.order?.addressDestination, logistics.route?.dropoffAddress, order?.addressDestination],
   );
+  const courierMapCoordinates = useMemo(
+    () => extractAddressCoordinates(courierCoordinates),
+    [courierCoordinates],
+  );
+  const deliveryRouteDistanceKm = useMemo(() => {
+    if (!isDeliveryDetailMode) {
+      return null;
+    }
+
+    const pickupCoordinates = extractAddressCoordinates(pickupMapAddress);
+    const dropoffCoordinates = extractAddressCoordinates(dropoffMapAddress);
+
+    if (!pickupCoordinates || !dropoffCoordinates) {
+      return null;
+    }
+
+    const pickupToDropoffDistance = haversineDistanceKm(pickupCoordinates, dropoffCoordinates);
+
+    if (!courierMapCoordinates) {
+      return pickupToDropoffDistance;
+    }
+
+    const courierToPickupDistance = haversineDistanceKm(courierMapCoordinates, pickupCoordinates);
+
+    if (!Number.isFinite(courierToPickupDistance) || !Number.isFinite(pickupToDropoffDistance)) {
+      return pickupToDropoffDistance;
+    }
+
+    return courierToPickupDistance + pickupToDropoffDistance;
+  }, [courierMapCoordinates, dropoffMapAddress, pickupMapAddress]);
+  const routeDistanceLabel = useMemo(
+    () => formatRouteDistanceLabel(deliveryRouteDistanceKm),
+    [deliveryRouteDistanceKm],
+  );
+  const currentPositionLines = useMemo(
+    () =>
+      isDeliveryDetailMode && courierMapCoordinates
+        ? [
+            'GPS do aparelho',
+            routeDistanceLabel ? `Rota estimada: ${routeDistanceLabel}` : 'Posição capturada',
+          ]
+        : [],
+    [courierMapCoordinates, isDeliveryDetailMode, routeDistanceLabel],
+  );
+  const deliveryMapPaths = useMemo(() => {
+    if (!isDeliveryDetailMode) {
+      return [];
+    }
+
+    const pickupCoordinates = extractAddressCoordinates(pickupMapAddress);
+    const dropoffCoordinates = extractAddressCoordinates(dropoffMapAddress);
+    const routes = [];
+
+    if (courierMapCoordinates && pickupCoordinates) {
+      routes.push({
+        id: 'courier-to-pickup',
+        from: courierMapCoordinates,
+        to: pickupCoordinates,
+        color: ppcColors?.accentInfo || '#0EA5E9',
+      });
+    }
+
+    if (pickupCoordinates && dropoffCoordinates) {
+      routes.push({
+        id: 'pickup-to-dropoff',
+        from: pickupCoordinates,
+        to: dropoffCoordinates,
+        color: ppcColors?.accentSuccess || '#10B981',
+      });
+    }
+
+    return routes;
+  }, [
+    courierMapCoordinates,
+    dropoffMapAddress,
+    isDeliveryDetailMode,
+    pickupMapAddress,
+    ppcColors?.accentInfo,
+    ppcColors?.accentSuccess,
+  ]);
   const pickupMapMarker = useMemo(
     () =>
       buildDeliveryMapMarker({
@@ -2036,6 +2176,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
 
             <RouteSummaryStrip
               styles={pageStyles}
+              currentPositionLines={currentPositionLines}
               pickupAddressLines={pickupAddressLines}
               dropoffAddressLines={dropoffAddressLines}
               ppcColors={ppcColors}
@@ -2062,6 +2203,15 @@ const OrderLogisticsPage = ({navigation, route}) => {
                 tone={deliveryStatusTone}
                 ppcColors={ppcColors}
               />
+              {routeDistanceLabel ? (
+                <CompactInfoChip
+                  styles={pageStyles}
+                  icon="map-marker-distance"
+                  label={routeDistanceLabel}
+                  tone="muted"
+                  ppcColors={ppcColors}
+                />
+              ) : null}
             </View>
 
             {canManageCustomerAndAddress ? (
@@ -2091,6 +2241,8 @@ const OrderLogisticsPage = ({navigation, route}) => {
               <View style={pageStyles.mapViewportWrap}>
                 <DefaultMap
                   config={mapConfig}
+                  paths={deliveryMapPaths}
+                  userCoordinates={courierMapCoordinates}
                 />
               </View>
             </SectionCard>
