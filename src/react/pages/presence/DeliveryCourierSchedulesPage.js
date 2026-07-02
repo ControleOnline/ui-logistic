@@ -219,13 +219,21 @@ export default function DeliveryCourierSchedulesPage() {
         <View style={styles.buttonRow}>
           <TouchableOpacity
             activeOpacity={0.86}
+            accessibilityLabel="Novo horario"
+            accessibilityRole="button"
             style={styles.primaryButton}
             onPress={() => navigation.navigate('DeliveryCourierScheduleFormPage')}
           >
             <Text style={styles.primaryButtonText}>Novo horario</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity activeOpacity={0.86} style={styles.secondaryButton} onPress={loadSchedules}>
+          <TouchableOpacity
+            activeOpacity={0.86}
+            accessibilityLabel="Atualizar"
+            accessibilityRole="button"
+            style={styles.secondaryButton}
+            onPress={loadSchedules}
+          >
             <Text style={styles.secondaryButtonText}>Atualizar</Text>
           </TouchableOpacity>
         </View>
