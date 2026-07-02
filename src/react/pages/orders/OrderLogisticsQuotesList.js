@@ -1,4 +1,4 @@
-import React, {useEffect, useMemo, useState} from 'react';
+import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {Text, View} from 'react-native';
 import {api} from '@controleonline/ui-common/src/api';
 import {useMessage} from '@controleonline/ui-common/src/react/components/MessageService';
@@ -52,27 +52,37 @@ export default function OrderLogisticsQuotesList({
   const [payload, setPayload] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
+  const lastLoadSignatureRef = useRef('');
 
   useEffect(() => {
     let active = true;
+    const loadSignature = `${normalizeOrderId(orderId)}:${refreshKey}`;
 
     if (!orderId) {
+      lastLoadSignatureRef.current = '';
       setPayload(null);
       setLoadFailed(false);
       setIsLoading(false);
       return undefined;
     }
 
+    if (lastLoadSignatureRef.current === loadSignature) {
+      return undefined;
+    }
+
+    lastLoadSignatureRef.current = loadSignature;
+
     setIsLoading(true);
     setLoadFailed(false);
 
-    api
-      .fetch(`/marketplace/logistics/orders/${orderId}`, {
+    const loadQuotes = async () => {
+      try {
+        const response = await api.fetch(`/marketplace/logistics/orders/${orderId}`, {
         method: 'GET',
-      })
-      .then(response => {
+        });
+
         if (!active) {
-          return null;
+          return;
         }
 
         const normalized = Array.isArray(response?.member)
@@ -86,23 +96,22 @@ export default function OrderLogisticsQuotesList({
                 : response || null;
 
         setPayload(normalized);
-        return normalized;
-      })
-      .catch(error => {
+      } catch (error) {
         if (!active) {
-          return null;
+          return;
         }
 
         setPayload(null);
         setLoadFailed(true);
         showError?.(formatApiError(error));
-        return null;
-      })
-      .finally(() => {
+      } finally {
         if (active) {
           setIsLoading(false);
         }
-      });
+      }
+    };
+
+    void loadQuotes();
 
     return () => {
       active = false;
