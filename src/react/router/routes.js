@@ -24,6 +24,18 @@ export const WrappedOrderLogistics = ({navigation, route}) => {
   return <OrderLogisticsPage navigation={navigation} route={route} />;
 };
 
+export const WrappedDeliveryRun = ({navigation, route}) => {
+  React.useEffect(() => {
+    navigation.setOptions({
+      headerShown: false,
+      showBottomCart: false,
+      showBottomToolBar: false,
+    });
+  }, [navigation]);
+
+  return <OrderLogisticsPage navigation={navigation} route={route} />;
+};
+
 const logisticRoutes = [
   {
     name: 'OrderLogisticsPage',
@@ -36,6 +48,18 @@ const logisticRoutes = [
     },
     path: 'order-logistics-page',
     initialParams: {store: 'orders', showBottomToolBar: true},
+  },
+  {
+    name: 'DeliveryRunPage',
+    component: WrappedDeliveryRun,
+    options: {
+      headerShown: false,
+      showBottomCart: false,
+      showBottomToolBar: false,
+      title: () => global.t?.t('orders', 'title', 'deliveryRun') || 'Corrida',
+    },
+    path: 'delivery/run',
+    initialParams: {store: 'orders', showBottomToolBar: false},
   },
   {
     name: 'DeliveryOrdersPage',

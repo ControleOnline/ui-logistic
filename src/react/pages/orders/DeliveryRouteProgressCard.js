@@ -18,6 +18,8 @@ const ActionButton = ({
   <TouchableOpacity
     onPress={onPress}
     disabled={disabled}
+    accessibilityRole="button"
+    accessibilityLabel={label}
     style={[
       styles.actionButton,
       primary && styles.actionButtonPrimary,
@@ -123,6 +125,18 @@ export default function DeliveryRouteProgressCard({
               <Text style={styles.deliveryRunCurrentStopBadgeText}>Ativa</Text>
             </View>
           </View>
+
+          <View style={styles.deliveryRunActions}>
+            <ActionButton
+              styles={styles}
+              label={requestLoading ? 'Atualizando' : 'Marcar como entregue'}
+              icon={<MaterialCommunityIcons name="check" size={18} color="#FFFFFF" />}
+              onPress={onMarkDelivered}
+              disabled={requestLoading || !currentStop}
+              success
+              style={styles.deliveryRunActionButton}
+            />
+          </View>
         </View>
       ) : (
         <View style={styles.deliveryRunEmptyState}>
@@ -144,18 +158,6 @@ export default function DeliveryRouteProgressCard({
           ))}
         </View>
       ) : null}
-
-      <View style={styles.deliveryRunActions}>
-        <ActionButton
-          styles={styles}
-          label={requestLoading ? 'Atualizando' : 'Marcar como entregue'}
-          icon={<MaterialCommunityIcons name="check" size={18} color="#FFFFFF" />}
-          onPress={onMarkDelivered}
-          disabled={requestLoading || !currentStop}
-          success
-          style={styles.deliveryRunActionButton}
-        />
-      </View>
     </View>
   );
 }

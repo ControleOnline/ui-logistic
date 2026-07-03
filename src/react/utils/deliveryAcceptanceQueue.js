@@ -152,11 +152,27 @@ export const isDeliveryOrderInProgress = order => {
     return false;
   }
 
+  if (includesDeliveryStatusKey(statusSource, DELIVERY_STATUS_ACCEPTED)) {
+    return true;
+  }
+
   if (includesDeliveryStatusKey(statusSource, DELIVERY_STATUS_IN_ROUTE)) {
     return true;
   }
 
   return Boolean(order?.deliveryPeopleId || order?.deliveryPeople || order?.delivery?.trackingUrl);
+};
+
+export const resolveDeliveryWorkflowRouteName = order => {
+  if (isDeliveryOrderAwaitingAcceptance(order)) {
+    return 'OrderDetails';
+  }
+
+  if (isDeliveryOrderInProgress(order)) {
+    return 'DeliveryRunPage';
+  }
+
+  return null;
 };
 
 const resolveDeliveryRoutePriority = order => {
@@ -358,17 +374,62 @@ const chooseClosestRunStop = (origin, queue) => {
   return winner;
 };
 
+const resolveBestRunOriginCoordinates = queue => {
+  const entries = (Array.isArray(queue) ? queue : [])
+    .map(order => ({
+      order,
+      coordinates: resolveDeliveryStopCoordinates(order),
+    }))
+    .filter(entry => entry.coordinates);
+
+  if (entries.length === 0) {
+    return null;
+  }
+
+  if (entries.length === 1) {
+    return entries[0].coordinates;
+  }
+
+  let winner = entries[0];
+  let winnerScore = null;
+
+  entries.forEach(candidate => {
+    const score = entries.reduce((total, other) => {
+      if (other === candidate) {
+        return total;
+      }
+
+      const distance = haversineDistanceKm(candidate.coordinates, other.coordinates);
+      return Number.isFinite(distance) ? total + distance : total;
+    }, 0);
+
+    if (winnerScore === null || score < winnerScore) {
+      winner = candidate;
+      winnerScore = score;
+    }
+  });
+
+  return winner.coordinates;
+};
+
 export const resolveDeliveryRunQueue = (orders, context = {}) => {
   const queue = (Array.isArray(orders) ? orders : [])
     .filter(isDeliveryOrderInProgress)
     .slice();
+  const preferShortestDistance = Boolean(context?.preferShortestDistance);
+  const courierCoordinates =
+    context?.courierCoordinates ||
+    context?.currentCoordinates ||
+    context?.deviceCoordinates ||
+    null;
+  const canUseDistanceOptimization = queue.some(order => resolveDeliveryStopCoordinates(order));
 
   if (queue.length <= 1) {
     return queue.sort(compareRunQueueItemsByFallback);
   }
 
   const routePriorityExists = queue.some(order => Number.isFinite(resolveDeliveryRoutePriority(order)));
-  if (routePriorityExists) {
+  if (routePriorityExists && !(preferShortestDistance && canUseDistanceOptimization)) {
     return queue.sort((left, right) => {
       const leftPriority = resolveDeliveryRoutePriority(left);
       const rightPriority = resolveDeliveryRoutePriority(right);
@@ -387,6 +448,40 @@ export const resolveDeliveryRunQueue = (orders, context = {}) => {
 
       return compareRunQueueItemsByFallback(left, right);
     });
+  }
+
+  if (preferShortestDistance && canUseDistanceOptimization) {
+    const remaining = queue.slice();
+    const planned = [];
+    let origin =
+      courierCoordinates &&
+      Number.isFinite(courierCoordinates.latitude) &&
+      Number.isFinite(courierCoordinates.longitude)
+        ? courierCoordinates
+        : resolveBestRunOriginCoordinates(queue);
+
+    if (!origin) {
+      return queue.sort(compareRunQueueItemsByFallback);
+    }
+
+    while (remaining.length > 0) {
+      const nextStop = chooseClosestRunStop(origin, remaining) || remaining[0];
+      const nextIndex = remaining.indexOf(nextStop);
+      if (nextIndex >= 0) {
+        remaining.splice(nextIndex, 1);
+      } else {
+        remaining.shift();
+      }
+
+      planned.push(nextStop);
+
+      const nextCoordinates = resolveDeliveryStopCoordinates(nextStop);
+      if (nextCoordinates) {
+        origin = nextCoordinates;
+      }
+    }
+
+    return planned;
   }
 
   const etaPriorityExists = queue.some(order => Number.isFinite(resolveDeliveryEtaMinutes(order)));
@@ -411,37 +506,6 @@ export const resolveDeliveryRunQueue = (orders, context = {}) => {
     });
   }
 
-  const courierCoordinates =
-    context?.courierCoordinates ||
-    context?.currentCoordinates ||
-    context?.deviceCoordinates ||
-    null;
-
-  if (courierCoordinates && Number.isFinite(courierCoordinates.latitude) && Number.isFinite(courierCoordinates.longitude)) {
-    const remaining = queue.slice();
-    const planned = [];
-    let origin = courierCoordinates;
-
-    while (remaining.length > 0) {
-      const nextStop = chooseClosestRunStop(origin, remaining) || remaining[0];
-      const nextIndex = remaining.indexOf(nextStop);
-      if (nextIndex >= 0) {
-        remaining.splice(nextIndex, 1);
-      } else {
-        remaining.shift();
-      }
-
-      planned.push(nextStop);
-
-      const nextCoordinates = resolveDeliveryStopCoordinates(nextStop);
-      if (nextCoordinates) {
-        origin = nextCoordinates;
-      }
-    }
-
-    return planned;
-  }
-
   return queue.sort(compareRunQueueItemsByFallback);
 };
 
@@ -455,20 +519,18 @@ export const resolveDeliveryRunPlan = (orders, context = {}) => {
   const stops = resolveDeliveryRunQueue(orders, context);
   const routePriorityExists = stops.some(order => Number.isFinite(resolveDeliveryRoutePriority(order)));
   const etaExists = stops.some(order => Number.isFinite(resolveDeliveryEtaMinutes(order)));
-  const hasCourierCoordinates = Boolean(
-    context?.courierCoordinates &&
-    Number.isFinite(context.courierCoordinates.latitude) &&
-    Number.isFinite(context.courierCoordinates.longitude),
-  );
+  const preferShortestDistance = Boolean(context?.preferShortestDistance);
+  const canUseDistanceOptimization = stops.some(order => resolveDeliveryStopCoordinates(order));
 
   return {
-    strategy: routePriorityExists
-      ? 'manual'
-      : hasCourierCoordinates && stops.some(order => resolveDeliveryStopCoordinates(order))
+    strategy:
+      preferShortestDistance && canUseDistanceOptimization
         ? 'distance'
-        : etaExists
-          ? 'eta'
-          : 'timestamp',
+        : routePriorityExists
+          ? 'manual'
+          : etaExists
+            ? 'eta'
+            : 'timestamp',
     totalStops: stops.length,
     currentStop: stops[0] || null,
     nextStops: stops.slice(1),

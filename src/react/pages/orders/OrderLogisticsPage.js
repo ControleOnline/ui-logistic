@@ -49,6 +49,7 @@ import {
   resolveDeliveryRunPlan,
   resolveDeliveryStatusLabel,
   resolveDeliveryStatusTone,
+  resolveDeliveryWorkflowHead,
 } from '@controleonline/ui-logistic/src/react/utils/deliveryAcceptanceQueue';
 import {resolveCurrentPeopleIri} from '@controleonline/ui-logistic/src/react/utils/deliveryIdentity';
 import ContextHelpButton from '@controleonline/ui-common/src/react/components/ContextHelpButton';
@@ -590,7 +591,7 @@ const resolveDeliveryRunStrategyLabel = strategy => {
     case 'eta':
       return 'Rota por menor tempo';
     case 'distance':
-      return 'Rota por menor trajeto';
+      return 'Rota por menor distância';
     case 'timestamp':
       return 'Rota por ordem recebida';
     default:
@@ -1174,11 +1175,25 @@ const OrderLogisticsPage = ({navigation, route}) => {
     () => normalizeOrderId(route?.params?.id || routeOrder?.id),
     [route?.params?.id, routeOrder?.id],
   );
-  const isDeliveryDetailMode = Boolean(routeOrder);
-  const isManagerOverviewMode = !isDeliveryDetailMode;
-  const courierCoordinates = useDeviceCoordinates(isDeliveryDetailMode);
+  const isDeliveryRunMode = route?.name === 'DeliveryRunPage' || route?.params?.deliveryRunMode === true;
+  const isDeliveryDetailMode = Boolean(routeOrder) && !isDeliveryRunMode;
+  const isManagerOverviewMode = !isDeliveryDetailMode && !isDeliveryRunMode;
+  const courierCoordinates = useDeviceCoordinates(isDeliveryDetailMode || isDeliveryRunMode);
   const storeOrder = ordersStore.getters.item || null;
   const order = routeOrder || (normalizeOrderId(storeOrder?.id) === orderId ? storeOrder : null);
+  const orderHeaderOrder = useMemo(
+    () =>
+      order
+        ? {
+            ...order,
+            status: {
+              ...(order?.status || {}),
+              color: normalizeText(order?.status?.color) || ppcColors?.accentInfo,
+            },
+          }
+        : null,
+    [order],
+  );
   const websocketMessages = Array.isArray(websocketStore.getters.messages)
     ? websocketStore.getters.messages
     : [];
@@ -1221,30 +1236,24 @@ const OrderLogisticsPage = ({navigation, route}) => {
     return items;
   }, [deliveryQueueItems, order, orderId]);
   const deliveryRunPlan = useMemo(
-    () => resolveDeliveryRunPlan(deliveryQueueSourceItems, {courierCoordinates}),
-    [courierCoordinates, deliveryQueueSourceItems],
+    () =>
+      resolveDeliveryRunPlan(deliveryQueueSourceItems, {
+        courierCoordinates,
+        preferShortestDistance: isDeliveryRunMode,
+      }),
+    [courierCoordinates, deliveryQueueSourceItems, isDeliveryRunMode],
   );
   const activeRunStops = deliveryRunPlan.stops || [];
   const activeRunCurrentStop = deliveryRunPlan.currentStop || null;
   const activeRunNextStops = deliveryRunPlan.nextStops || [];
+  const deliveryRunDisplayOrder = useMemo(
+    () => (isDeliveryRunMode ? activeRunCurrentStop || null : orderHeaderOrder),
+    [activeRunCurrentStop, isDeliveryRunMode, orderHeaderOrder],
+  );
 
   useEffect(() => {
     ordersActionsRef.current = ordersActions;
   }, [ordersActions]);
-
-  const orderHeaderOrder = useMemo(
-    () =>
-      order
-        ? {
-            ...order,
-            status: {
-              ...(order?.status || {}),
-              color: normalizeText(order?.status?.color) || ppcColors?.accentInfo,
-            },
-          }
-        : null,
-    [order],
-  );
 
   const refreshOrder = useCallback(async () => {
     const currentOrdersActions = ordersActionsRef.current;
@@ -1289,24 +1298,32 @@ const OrderLogisticsPage = ({navigation, route}) => {
   }, [currentPeopleIri, deliveryOrdersActions.getItems]);
 
   const loadPageData = useCallback(async () => {
+    if (isDeliveryRunMode && !orderId) {
+      return refreshDeliveryQueue();
+    }
+
     if (!orderId) {
       return null;
     }
 
     const [, logisticsResponse] = await Promise.all([refreshOrder(), refreshLogistics()]);
     return logisticsResponse;
-  }, [orderId, refreshLogistics, refreshOrder]);
+  }, [isDeliveryRunMode, orderId, refreshDeliveryQueue, refreshLogistics, refreshOrder]);
 
   const loadLogisticsData = useCallback(async () => {
+    if (isDeliveryRunMode && !orderId) {
+      return refreshDeliveryQueue();
+    }
+
     if (!orderId) {
       return null;
     }
 
     return refreshLogistics();
-  }, [orderId, refreshLogistics]);
+  }, [isDeliveryRunMode, orderId, refreshDeliveryQueue, refreshLogistics]);
 
   const refreshAll = useCallback(async () => {
-    if (!orderId) {
+    if (!orderId && !isDeliveryRunMode) {
       return;
     }
 
@@ -1315,7 +1332,9 @@ const OrderLogisticsPage = ({navigation, route}) => {
 
     try {
       await loadPageData();
-      await refreshDeliveryQueue();
+      if (!isDeliveryRunMode || orderId) {
+        await refreshDeliveryQueue();
+      }
       setQuotesRefreshKey(previous => previous + 1);
     } catch (error) {
       showError?.(formatApiError(error));
@@ -1324,13 +1343,13 @@ const OrderLogisticsPage = ({navigation, route}) => {
     } finally {
       setIsRefreshing(false);
     }
-  }, [loadPageData, orderId, refreshDeliveryQueue]);
+  }, [isDeliveryRunMode, loadPageData, orderId, refreshDeliveryQueue, showError]);
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
 
-      if (!orderId) {
+      if (!orderId && !isDeliveryRunMode) {
         return () => {
           active = false;
         };
@@ -1357,23 +1376,40 @@ const OrderLogisticsPage = ({navigation, route}) => {
       return () => {
         active = false;
       };
-    }, [loadLogisticsData, loadPageData, orderId, routeOrder]),
+    }, [isDeliveryRunMode, loadLogisticsData, loadPageData, orderId, routeOrder]),
   );
 
   useEffect(() => {
-    if (!orderId || websocketMessages.length <= lastProcessedMessageCountRef.current) {
+    if (
+      (!orderId && !isDeliveryRunMode) ||
+      websocketMessages.length <= lastProcessedMessageCountRef.current
+    ) {
       return;
     }
 
     const newMessages = websocketMessages.slice(lastProcessedMessageCountRef.current);
     lastProcessedMessageCountRef.current = websocketMessages.length;
 
-    if (
-      newMessages.some(message => isRelevantOrdersMessage(message, orderId, currentCompanyId))
-    ) {
+    const shouldRefresh = isDeliveryRunMode
+      ? newMessages.some(message => {
+          const storeName = normalizeText(message?.store).toLowerCase();
+
+          if (storeName !== 'orders' && storeName !== 'delivery_orders') {
+            return false;
+          }
+
+          const messageCompanyId = normalizeText(
+            message?.company?.id || message?.companyId || message?.company,
+          );
+
+          return !currentCompanyId || !messageCompanyId || messageCompanyId === currentCompanyId;
+        })
+      : newMessages.some(message => isRelevantOrdersMessage(message, orderId, currentCompanyId));
+
+    if (shouldRefresh) {
       refreshAll().catch(() => {});
     }
-  }, [currentCompanyId, orderId, refreshAll, websocketMessages]);
+  }, [currentCompanyId, isDeliveryRunMode, orderId, refreshAll, websocketMessages]);
 
   const logistics = useMemo(
     () => resolveOrderLogisticsSnapshot(buildOrderLogisticsSnapshotSource(order, payload)),
@@ -1799,13 +1835,27 @@ const OrderLogisticsPage = ({navigation, route}) => {
   const deliveryValueLabel = useMemo(
     () =>
       formatQuotePrice(
-        selectedQuote?.price ?? logistics.selection.price ?? logistics.order?.price ?? null,
+        selectedQuote?.price ??
+          logistics.selection.price ??
+          deliveryRunDisplayOrder?.price ??
+          logistics.order?.price ??
+          null,
       ),
-    [logistics.order?.price, logistics.selection.price, selectedQuote?.price],
+    [
+      deliveryRunDisplayOrder?.price,
+      logistics.order?.price,
+      logistics.selection.price,
+      selectedQuote?.price,
+    ],
   );
   const deliveryOrderLabel = useMemo(() => {
     const orderDisplayId = normalizeText(
-      logistics.order?.displayId || logistics.order?.id || orderId || '',
+      deliveryRunDisplayOrder?.displayId ||
+        deliveryRunDisplayOrder?.id ||
+        logistics.order?.displayId ||
+        logistics.order?.id ||
+        orderId ||
+        '',
     );
 
     if (orderDisplayId) {
@@ -1813,15 +1863,25 @@ const OrderLogisticsPage = ({navigation, route}) => {
     }
 
     return 'Pedido nao informado';
-  }, [logistics.order?.displayId, logistics.order?.id, orderId]);
+  }, [
+    deliveryRunDisplayOrder?.displayId,
+    deliveryRunDisplayOrder?.id,
+    logistics.order?.displayId,
+    logistics.order?.id,
+    orderId,
+  ]);
   const deliveryStatusSource = useMemo(
     () =>
+      deliveryRunDisplayOrder?.status?.status ||
+      deliveryRunDisplayOrder?.status?.realStatus ||
       logistics.order?.status?.status ||
       logistics.order?.status?.realStatus ||
       logistics.delivery?.status ||
       selectedQuote?.status?.status ||
       '',
     [
+      deliveryRunDisplayOrder?.status?.realStatus,
+      deliveryRunDisplayOrder?.status?.status,
       logistics.delivery?.status,
       logistics.order?.status?.realStatus,
       logistics.order?.status?.status,
@@ -1848,8 +1908,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
     isDeliveryDetailMode && orderId && isAwaitingAcceptance && !isClosedOrder,
   );
   const showDeliveryRunProgress = Boolean(
-    isDeliveryDetailMode &&
-      orderId &&
+    isDeliveryRunMode &&
       !isClosedOrder &&
       !showDeliveryAcceptanceActions &&
       activeRunStops.length > 0,
@@ -1877,7 +1936,17 @@ const OrderLogisticsPage = ({navigation, route}) => {
   const deliveryAcceptanceSpacer = showDeliveryAcceptanceActions ? 188 : 0;
   const helpMessage = useMemo(
     () =>
-      isDeliveryDetailMode
+      isDeliveryRunMode
+        ? showDeliveryRunProgress
+          ? [
+              'Resumo desta corrida, rota e mapa.',
+              'Marque a parada atual como entregue para liberar a próxima.',
+            ]
+          : [
+              'Resumo desta corrida, rota e mapa.',
+              'A corrida aparece quando houver paradas aceitas para cumprir.',
+            ]
+        : isDeliveryDetailMode
         ? showDeliveryAcceptanceActions
           ? [
               'Resumo desta entrega, rota e mapa.',
@@ -1896,11 +1965,11 @@ const OrderLogisticsPage = ({navigation, route}) => {
             'Resumo do pedido principal, rota e mapa.',
             'A lista abaixo mostra as ordens vinculadas e o status de cada uma.',
           ],
-    [isDeliveryDetailMode, showDeliveryAcceptanceActions, showDeliveryRunProgress],
+    [isDeliveryDetailMode, isDeliveryRunMode, showDeliveryAcceptanceActions, showDeliveryRunProgress],
   );
 
   useEffect(() => {
-    if (!isDeliveryDetailMode) {
+    if (!isDeliveryDetailMode && !isDeliveryRunMode) {
       return;
     }
 
@@ -1913,6 +1982,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
     });
   }, [
     isDeliveryDetailMode,
+    isDeliveryRunMode,
     navigation,
     route?.params?.hideBottomToolBar,
     deliveryScreenBottomToolbarHidden,
@@ -1954,7 +2024,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
     [activeRunStops],
   );
   const deliveryRouteDistanceKm = useMemo(() => {
-    if (!isDeliveryDetailMode) {
+    if (!isDeliveryDetailMode && !isDeliveryRunMode) {
       return null;
     }
 
@@ -1999,6 +2069,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
     dropoffMapAddress,
     pickupMapAddress,
     isDeliveryDetailMode,
+    isDeliveryRunMode,
     showDeliveryRunProgress,
   ]);
   const routeDistanceLabel = useMemo(
@@ -2007,7 +2078,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
   );
   const currentPositionLines = useMemo(
     () => {
-      if (!isDeliveryDetailMode || !courierMapCoordinates) {
+      if ((!isDeliveryDetailMode && !isDeliveryRunMode) || !courierMapCoordinates) {
         return [];
       }
 
@@ -2030,12 +2101,13 @@ const OrderLogisticsPage = ({navigation, route}) => {
       activeRunNextStops.length,
       courierMapCoordinates,
       isDeliveryDetailMode,
+      isDeliveryRunMode,
       routeDistanceLabel,
       showDeliveryRunProgress,
     ],
   );
   const deliveryMapPaths = useMemo(() => {
-    if (!isDeliveryDetailMode) {
+    if (!isDeliveryDetailMode && !isDeliveryRunMode) {
       return [];
     }
 
@@ -2088,6 +2160,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
     deliveryRunStopMarkers,
     dropoffMapAddress,
     isDeliveryDetailMode,
+    isDeliveryRunMode,
     pickupMapAddress,
     ppcColors?.accentInfo,
     ppcColors?.accentSuccess,
@@ -2211,7 +2284,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
 
   const runDeliveryAction = useCallback(
     async (path, successMessage) => {
-      if (!orderId || requestLoading) {
+      if ((!orderId && !isDeliveryRunMode) || requestLoading) {
         return;
       }
 
@@ -2226,7 +2299,29 @@ const OrderLogisticsPage = ({navigation, route}) => {
         }
 
         await refreshAll();
-        await refreshDeliveryQueue();
+        const nextQueueResponse = await refreshDeliveryQueue();
+        if (isDeliveryRunMode && path.endsWith('/delivered')) {
+          const nextQueueItems = extractCollectionItems(nextQueueResponse);
+          const nextWorkflowHead = resolveDeliveryWorkflowHead(nextQueueItems);
+
+          if (!nextWorkflowHead) {
+            if (typeof navigation?.replace === 'function') {
+              navigation.replace('DeliveryOrdersPage');
+            } else {
+              navigation.reset({
+                index: 0,
+                routes: [
+                  {
+                    name: 'DeliveryOrdersPage',
+                  },
+                ],
+              });
+            }
+
+            showSuccess?.(successMessage);
+            return;
+          }
+        }
         showSuccess?.(successMessage);
       } catch (error) {
         showError?.(formatApiError(error));
@@ -2234,7 +2329,16 @@ const OrderLogisticsPage = ({navigation, route}) => {
         setRequestLoading(false);
       }
     },
-    [orderId, refreshAll, refreshDeliveryQueue, requestLoading, showError, showSuccess],
+    [
+      isDeliveryRunMode,
+      navigation,
+      orderId,
+      refreshAll,
+      refreshDeliveryQueue,
+      requestLoading,
+      showError,
+      showSuccess,
+    ],
   );
 
   const handleAcceptDelivery = useCallback(() => {
@@ -2275,7 +2379,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
     <SafeAreaView style={pageStyles.pageRoot} edges={['bottom']}>
       <OrderStackedTopBar
         navigation={navigation}
-        order={orderHeaderOrder}
+        order={deliveryRunDisplayOrder}
         isKds
         showActions={false}
       />

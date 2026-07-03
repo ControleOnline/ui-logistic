@@ -9,7 +9,10 @@ import DefaultTable from '@controleonline/ui-default/src/react/components/table/
 import OrderHeader from '@controleonline/ui-orders/src/react/components/OrderHeader';
 import {buildOrderDetailsRouteParams} from '@controleonline/ui-orders/src/react/utils/orderRoute';
 import {getDateRange} from '@controleonline/ui-common/src/react/utils/dateRangeFilter';
-import {resolveDeliveryWorkflowHead} from '@controleonline/ui-logistic/src/react/utils/deliveryAcceptanceQueue';
+import {
+  resolveDeliveryWorkflowHead,
+  resolveDeliveryWorkflowRouteName,
+} from '@controleonline/ui-logistic/src/react/utils/deliveryAcceptanceQueue';
 import {filterDeliveryStatusItems} from '@controleonline/ui-logistic/src/react/utils/deliveryStatusFilters';
 import {resolveThemePalette} from '@controleonline/../../src/styles/branding';
 import {colors} from '@controleonline/../../src/styles/colors';
@@ -176,6 +179,7 @@ export default function DeliveryOrdersPage() {
   const deliveryQueueHead = resolveDeliveryWorkflowHead(
     loadedDeliveryQueueItems.length > 0 ? loadedDeliveryQueueItems : deliveryQueueItems,
   );
+  const deliveryWorkflowRouteName = resolveDeliveryWorkflowRouteName(deliveryQueueHead);
 
   const deliverySort = useMemo(
     () => ({
@@ -268,21 +272,30 @@ export default function DeliveryOrdersPage() {
   ]);
 
   useEffect(() => {
-    if (!isFocused || !currentPeopleIri || !deliveryQueueHead?.id) {
+    if (!isFocused || !currentPeopleIri || !deliveryQueueHead?.id || !deliveryWorkflowRouteName) {
       return;
     }
 
-    const nextParams = buildOrderDetailsRouteParams(deliveryQueueHead.id, {
-      store: 'orders',
-    });
-    const nextHref = `/order-details?${new URLSearchParams(nextParams).toString()}`;
+    const nextParams =
+      deliveryWorkflowRouteName === 'DeliveryRunPage'
+        ? {
+            store: 'orders',
+            showBottomToolBar: false,
+          }
+        : buildOrderDetailsRouteParams(deliveryQueueHead.id, {
+            store: 'orders',
+          });
+    const nextHref =
+      deliveryWorkflowRouteName === 'DeliveryRunPage'
+        ? `/delivery/run?${new URLSearchParams(nextParams).toString()}`
+        : `/order-details?${new URLSearchParams(nextParams).toString()}`;
 
     if (replaceWebLocation(nextHref)) {
       return;
     }
 
     if (typeof navigation.replace === 'function') {
-      navigation.replace('OrderDetails', nextParams);
+      navigation.replace(deliveryWorkflowRouteName, nextParams);
       return;
     }
 
@@ -290,12 +303,19 @@ export default function DeliveryOrdersPage() {
       index: 0,
       routes: [
         {
-          name: 'OrderDetails',
+          name: deliveryWorkflowRouteName,
           params: nextParams,
         },
       ],
     });
-  }, [currentPeopleIri, deliveryQueueHead?.id, isFocused, navigation, replaceWebLocation]);
+  }, [
+    currentPeopleIri,
+    deliveryQueueHead?.id,
+    deliveryWorkflowRouteName,
+    isFocused,
+    navigation,
+    replaceWebLocation,
+  ]);
 
   useEffect(() => {
     if (!isFocused || !currentCompany?.id || typeof statusActions?.getItems !== 'function') {
