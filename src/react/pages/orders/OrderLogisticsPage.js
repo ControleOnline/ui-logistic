@@ -46,6 +46,7 @@ import useOrderDetailsVisuals from '@controleonline/ui-orders/src/react/pages/or
 import {
   DELIVERY_STATUS_AWAITING_ACCEPTANCE,
   includesDeliveryStatusKey,
+  resolveDeliveryRunPlan,
   resolveDeliveryStatusLabel,
   resolveDeliveryStatusTone,
 } from '@controleonline/ui-logistic/src/react/utils/deliveryAcceptanceQueue';
@@ -53,6 +54,7 @@ import {resolveCurrentPeopleIri} from '@controleonline/ui-logistic/src/react/uti
 import ContextHelpButton from '@controleonline/ui-common/src/react/components/ContextHelpButton';
 import DefaultMap from '@controleonline/ui-default/src/react/components/map/DefaultMap';
 import DeliveryAcceptanceCard from './DeliveryAcceptanceCard';
+import DeliveryRouteProgressCard from './DeliveryRouteProgressCard';
 import OrderLogisticsQuotesList from './OrderLogisticsQuotesList';
 import useDeviceCoordinates from '../../hooks/useDeviceCoordinates';
 import resolveOrderLogisticsSnapshot from './orderLogisticsPresentation';
@@ -572,6 +574,28 @@ const RouteSummaryStrip = ({
       />
     </View>
   );
+};
+
+const resolveDeliveryStopAddress = stop =>
+  stop?.addressDestination ||
+  stop?.delivery?.addressDestination ||
+  stop?.route?.dropoffAddress ||
+  stop?.route?.destination ||
+  null;
+
+const resolveDeliveryRunStrategyLabel = strategy => {
+  switch (String(strategy || '').trim().toLowerCase()) {
+    case 'manual':
+      return 'Rota manual';
+    case 'eta':
+      return 'Rota por menor tempo';
+    case 'distance':
+      return 'Rota por menor trajeto';
+    case 'timestamp':
+      return 'Rota por ordem recebida';
+    default:
+      return '';
+  }
 };
 
 const FieldBlock = ({styles, label, value}) => (
@@ -1181,6 +1205,28 @@ const OrderLogisticsPage = ({navigation, route}) => {
   const [addressSaveLoading, setAddressSaveLoading] = useState(false);
   const [addressSelectingId, setAddressSelectingId] = useState('');
   const lastProcessedMessageCountRef = useRef(websocketMessages.length);
+  const deliveryQueueItems = Array.isArray(deliveryOrdersStore?.getters?.items)
+    ? deliveryOrdersStore.getters.items
+    : [];
+  const deliveryQueueSourceItems = useMemo(() => {
+    const items = Array.isArray(deliveryQueueItems) ? deliveryQueueItems.slice() : [];
+
+    if (
+      order &&
+      !items.some(item => normalizeOrderId(item?.id) === orderId)
+    ) {
+      items.unshift(order);
+    }
+
+    return items;
+  }, [deliveryQueueItems, order, orderId]);
+  const deliveryRunPlan = useMemo(
+    () => resolveDeliveryRunPlan(deliveryQueueSourceItems, {courierCoordinates}),
+    [courierCoordinates, deliveryQueueSourceItems],
+  );
+  const activeRunStops = deliveryRunPlan.stops || [];
+  const activeRunCurrentStop = deliveryRunPlan.currentStop || null;
+  const activeRunNextStops = deliveryRunPlan.nextStops || [];
 
   useEffect(() => {
     ordersActionsRef.current = ordersActions;
@@ -1750,22 +1796,6 @@ const OrderLogisticsPage = ({navigation, route}) => {
     isManagerOverviewMode && logistics.canQuote && !hasDeliveryOrder && !isClosedOrder && hasDeliveryAddress,
   );
   const quoteActionLabel = logistics.quotes.length > 0 ? 'Atualizar cotações' : 'Solicitar cotações';
-  const headerStatusLabel = loadFailed
-    ? 'Falha ao atualizar'
-    : isRefreshing
-      ? 'Atualizando'
-      : isClosedOrder
-        ? 'Fechado'
-        : includesDeliveryStatusKey(
-            logistics.order?.status?.status ||
-              logistics.order?.status?.realStatus ||
-              logistics.delivery?.status ||
-              selectedQuote?.status?.status ||
-              '',
-            DELIVERY_STATUS_AWAITING_ACCEPTANCE,
-          )
-          ? 'Aguardando aceite'
-          : 'Online';
   const deliveryValueLabel = useMemo(
     () =>
       formatQuotePrice(
@@ -1817,6 +1847,33 @@ const OrderLogisticsPage = ({navigation, route}) => {
   const showDeliveryAcceptanceActions = Boolean(
     isDeliveryDetailMode && orderId && isAwaitingAcceptance && !isClosedOrder,
   );
+  const showDeliveryRunProgress = Boolean(
+    isDeliveryDetailMode &&
+      orderId &&
+      !isClosedOrder &&
+      !showDeliveryAcceptanceActions &&
+      activeRunStops.length > 0,
+  );
+  const headerStatusLabel = loadFailed
+    ? 'Falha ao atualizar'
+    : isRefreshing
+      ? 'Atualizando'
+      : isClosedOrder
+        ? 'Fechado'
+        : showDeliveryRunProgress
+          ? 'Em rota'
+          : includesDeliveryStatusKey(
+              logistics.order?.status?.status ||
+                logistics.order?.status?.realStatus ||
+                logistics.delivery?.status ||
+                selectedQuote?.status?.status ||
+                '',
+              DELIVERY_STATUS_AWAITING_ACCEPTANCE,
+            )
+            ? 'Aguardando aceite'
+            : 'Online';
+  const deliveryScreenBottomToolbarHidden =
+    showDeliveryAcceptanceActions || showDeliveryRunProgress;
   const deliveryAcceptanceSpacer = showDeliveryAcceptanceActions ? 188 : 0;
   const helpMessage = useMemo(
     () =>
@@ -1826,6 +1883,11 @@ const OrderLogisticsPage = ({navigation, route}) => {
               'Resumo desta entrega, rota e mapa.',
               'Aceite ou recuse a corrida para continuar.',
             ]
+          : showDeliveryRunProgress
+            ? [
+                'Resumo desta entrega, rota e mapa.',
+                'A corrida fica travada aqui ate concluir a parada atual.',
+              ]
           : [
               'Resumo desta entrega, rota e mapa.',
               'Os dados exibidos pertencem a esta corrida.',
@@ -1834,7 +1896,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
             'Resumo do pedido principal, rota e mapa.',
             'A lista abaixo mostra as ordens vinculadas e o status de cada uma.',
           ],
-    [isDeliveryDetailMode, showDeliveryAcceptanceActions],
+    [isDeliveryDetailMode, showDeliveryAcceptanceActions, showDeliveryRunProgress],
   );
 
   useEffect(() => {
@@ -1842,18 +1904,18 @@ const OrderLogisticsPage = ({navigation, route}) => {
       return;
     }
 
-    if (route?.params?.hideBottomToolBar === showDeliveryAcceptanceActions) {
+    if (route?.params?.hideBottomToolBar === deliveryScreenBottomToolbarHidden) {
       return;
     }
 
     navigation?.setParams?.({
-      hideBottomToolBar: showDeliveryAcceptanceActions,
+      hideBottomToolBar: deliveryScreenBottomToolbarHidden,
     });
   }, [
     isDeliveryDetailMode,
     navigation,
     route?.params?.hideBottomToolBar,
-    showDeliveryAcceptanceActions,
+    deliveryScreenBottomToolbarHidden,
   ]);
 
   const pickupMapAddress = useMemo(
@@ -1874,9 +1936,41 @@ const OrderLogisticsPage = ({navigation, route}) => {
     () => extractAddressCoordinates(courierCoordinates),
     [courierCoordinates],
   );
+  const deliveryRunStopMarkers = useMemo(
+    () =>
+      activeRunStops
+        .map((stop, index) => {
+          const stopAddress = resolveDeliveryStopAddress(stop);
+          const stopLines = renderAddressLines(resolveAddressDisplayParts(stopAddress));
+
+          return buildDeliveryMapMarker({
+            id: `run-stop-${normalizeOrderId(stop?.id) || index + 1}`,
+            label: index === 0 ? 'Parada atual' : `Parada ${index + 1}`,
+            address: stopAddress,
+            addressLines: stopLines,
+          });
+        })
+        .filter(Boolean),
+    [activeRunStops],
+  );
   const deliveryRouteDistanceKm = useMemo(() => {
     if (!isDeliveryDetailMode) {
       return null;
+    }
+
+    if (showDeliveryRunProgress) {
+      const routePoints = [courierMapCoordinates, ...deliveryRunStopMarkers].filter(Boolean);
+
+      if (routePoints.length < 2) {
+        return null;
+      }
+
+      return routePoints.slice(1).reduce((total, point, index) => {
+        const previous = routePoints[index];
+        const distance = haversineDistanceKm(previous, point);
+
+        return Number.isFinite(distance) ? total + distance : total;
+      }, 0);
     }
 
     const pickupCoordinates = extractAddressCoordinates(pickupMapAddress);
@@ -1899,24 +1993,71 @@ const OrderLogisticsPage = ({navigation, route}) => {
     }
 
     return courierToPickupDistance + pickupToDropoffDistance;
-  }, [courierMapCoordinates, dropoffMapAddress, pickupMapAddress]);
+  }, [
+    courierMapCoordinates,
+    deliveryRunStopMarkers,
+    dropoffMapAddress,
+    pickupMapAddress,
+    isDeliveryDetailMode,
+    showDeliveryRunProgress,
+  ]);
   const routeDistanceLabel = useMemo(
     () => formatRouteDistanceLabel(deliveryRouteDistanceKm),
     [deliveryRouteDistanceKm],
   );
   const currentPositionLines = useMemo(
-    () =>
-      isDeliveryDetailMode && courierMapCoordinates
-        ? [
-            'GPS do aparelho',
-            routeDistanceLabel ? `Rota estimada: ${routeDistanceLabel}` : 'Posição capturada',
-          ]
-        : [],
-    [courierMapCoordinates, isDeliveryDetailMode, routeDistanceLabel],
+    () => {
+      if (!isDeliveryDetailMode || !courierMapCoordinates) {
+        return [];
+      }
+
+      if (showDeliveryRunProgress) {
+        return [
+          'GPS do aparelho',
+          routeDistanceLabel ? `Rota total: ${routeDistanceLabel}` : 'Corrida em andamento',
+          activeRunNextStops.length > 0
+            ? `${activeRunNextStops.length} parada(s) restantes`
+            : 'Ultima parada',
+        ];
+      }
+
+      return [
+        'GPS do aparelho',
+        routeDistanceLabel ? `Rota estimada: ${routeDistanceLabel}` : 'Posição capturada',
+      ];
+    },
+    [
+      activeRunNextStops.length,
+      courierMapCoordinates,
+      isDeliveryDetailMode,
+      routeDistanceLabel,
+      showDeliveryRunProgress,
+    ],
   );
   const deliveryMapPaths = useMemo(() => {
     if (!isDeliveryDetailMode) {
       return [];
+    }
+
+    if (showDeliveryRunProgress) {
+      const routePoints = [courierMapCoordinates, ...deliveryRunStopMarkers].filter(Boolean);
+      const routes = [];
+
+      for (let index = 0; index < routePoints.length - 1; index += 1) {
+        const from = routePoints[index];
+        const to = routePoints[index + 1];
+
+        routes.push({
+          id: `run-${index + 1}`,
+          from,
+          to,
+          color: index === 0
+            ? ppcColors?.accentInfo || '#0EA5E9'
+            : ppcColors?.accentSuccess || '#10B981',
+        });
+      }
+
+      return routes;
     }
 
     const pickupCoordinates = extractAddressCoordinates(pickupMapAddress);
@@ -1944,11 +2085,13 @@ const OrderLogisticsPage = ({navigation, route}) => {
     return routes;
   }, [
     courierMapCoordinates,
+    deliveryRunStopMarkers,
     dropoffMapAddress,
     isDeliveryDetailMode,
     pickupMapAddress,
     ppcColors?.accentInfo,
     ppcColors?.accentSuccess,
+    showDeliveryRunProgress,
   ]);
   const pickupMapMarker = useMemo(
     () =>
@@ -1970,25 +2113,45 @@ const OrderLogisticsPage = ({navigation, route}) => {
       }),
     [dropoffAddressLines, dropoffMapAddress],
   );
+  const courierMapMarker = useMemo(
+    () =>
+      showDeliveryRunProgress && courierMapCoordinates
+        ? buildDeliveryMapMarker({
+            id: 'courier',
+            label: 'Posicao atual',
+            address: courierCoordinates || courierMapCoordinates,
+            addressLines: currentPositionLines,
+          })
+        : null,
+    [courierCoordinates, courierMapCoordinates, currentPositionLines, showDeliveryRunProgress],
+  );
   const deliveryMapMarkers = useMemo(
-    () => [pickupMapMarker, dropoffMapMarker].filter(Boolean),
-    [dropoffMapMarker, pickupMapMarker],
+    () =>
+      showDeliveryRunProgress
+        ? [courierMapMarker, ...deliveryRunStopMarkers].filter(Boolean)
+        : [pickupMapMarker, dropoffMapMarker].filter(Boolean),
+    [courierMapMarker, deliveryRunStopMarkers, dropoffMapMarker, pickupMapMarker, showDeliveryRunProgress],
   );
   const mapConfig = useMemo(
     () => ({
       ...parseConfigObject(currentCompany?.configs || defaultCompany?.configs || {}),
       addresses: {
-        origin: pickupMapMarker,
-        destination: dropoffMapMarker,
+        origin: showDeliveryRunProgress ? courierMapMarker || deliveryRunStopMarkers[0] || pickupMapMarker : pickupMapMarker,
+        destination: showDeliveryRunProgress
+          ? deliveryRunStopMarkers[deliveryRunStopMarkers.length - 1] || dropoffMapMarker
+          : dropoffMapMarker,
         markers: deliveryMapMarkers,
       },
     }),
     [
       currentCompany?.configs,
+      courierMapMarker,
       defaultCompany?.configs,
       deliveryMapMarkers,
+      deliveryRunStopMarkers,
       dropoffMapMarker,
       pickupMapMarker,
+      showDeliveryRunProgress,
     ],
   );
 
@@ -2081,6 +2244,16 @@ const OrderLogisticsPage = ({navigation, route}) => {
   const handleCancelDelivery = useCallback(() => {
     void runDeliveryAction(`/orders/${orderId}/cancel`, 'Entrega cancelada com sucesso.');
   }, [orderId, runDeliveryAction]);
+
+  const handleMarkStopDelivered = useCallback(() => {
+    const targetOrderId = normalizeOrderId(activeRunCurrentStop?.id || orderId);
+
+    if (!targetOrderId) {
+      return;
+    }
+
+    void runDeliveryAction(`/orders/${targetOrderId}/delivered`, 'Parada concluida com sucesso.');
+  }, [activeRunCurrentStop?.id, orderId, runDeliveryAction]);
 
   const handleOpenTracking = useCallback(
     async url => {
@@ -2196,6 +2369,18 @@ const OrderLogisticsPage = ({navigation, route}) => {
                 />
               ) : null}
             </View>
+
+            {showDeliveryRunProgress ? (
+              <DeliveryRouteProgressCard
+                styles={pageStyles}
+                currentStop={activeRunCurrentStop || order}
+                nextStops={activeRunNextStops}
+                routeStrategyLabel={resolveDeliveryRunStrategyLabel(deliveryRunPlan.strategy)}
+                routeDistanceLabel={routeDistanceLabel}
+                requestLoading={requestLoading}
+                onMarkDelivered={handleMarkStopDelivered}
+              />
+            ) : null}
 
             {canManageCustomerAndAddress ? (
               <View style={pageStyles.sectionActionRow}>
