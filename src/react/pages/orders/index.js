@@ -1,12 +1,11 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
-import {Text, TouchableOpacity, View} from 'react-native';
+import {ActivityIndicator, Text, TouchableOpacity, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useIsFocused, useNavigation} from '@react-navigation/native';
 import {useStore} from '@store';
 import CompactFilterSelector from '@controleonline/ui-default/src/react/components/filters/CompactFilterSelector';
 import DateShortcutFilter from '@controleonline/ui-default/src/react/components/filters/DateShortcutFilter';
 import DefaultTable from '@controleonline/ui-default/src/react/components/table/DefaultTable';
-import StateStore from '@controleonline/ui-layout/src/react/components/StateStore';
 import OrderHeader from '@controleonline/ui-orders/src/react/components/OrderHeader';
 import {buildOrderDetailsRouteParams} from '@controleonline/ui-orders/src/react/utils/orderRoute';
 import {getDateRange} from '@controleonline/ui-common/src/react/utils/dateRangeFilter';
@@ -270,15 +269,24 @@ export default function DeliveryOrdersPage() {
   ]);
 
   if (!isBootstrapReady) {
-    return <StateStore loading="Carregando pedidos de entrega..." />;
+    return (
+      <View style={styles.centerState}>
+        <ActivityIndicator size="large" color={brandColors.primary || '#0EA5E9'} />
+        <Text style={styles.centerStateTitle}>Carregando pedidos de entrega...</Text>
+      </View>
+    );
   }
 
   if (!currentPeopleIri) {
     return (
-      <StateStore
-        error="Nao foi possivel identificar o motoboy logado."
-        errorText="Verifique o vinculo `people_link` do tipo `courier` para este usuario."
-      />
+      <View style={styles.centerState}>
+        <Text style={styles.centerStateTitle}>
+          Nao foi possivel identificar o motoboy logado.
+        </Text>
+        <Text style={styles.centerStateText}>
+          Verifique o vinculo `people_link` do tipo `courier` para este usuario.
+        </Text>
+      </View>
     );
   }
 
