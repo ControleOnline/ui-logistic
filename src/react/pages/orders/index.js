@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
-import {ActivityIndicator, Text, TouchableOpacity, View} from 'react-native';
+import {ActivityIndicator, Platform, Text, TouchableOpacity, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useIsFocused, useNavigation} from '@react-navigation/native';
 import {useStore} from '@store';
@@ -9,6 +9,8 @@ import DefaultTable from '@controleonline/ui-default/src/react/components/table/
 import OrderHeader from '@controleonline/ui-orders/src/react/components/OrderHeader';
 import {buildOrderDetailsRouteParams} from '@controleonline/ui-orders/src/react/utils/orderRoute';
 import {getDateRange} from '@controleonline/ui-common/src/react/utils/dateRangeFilter';
+import {resolveDeliveryWorkflowHead} from '@controleonline/ui-logistic/src/react/utils/deliveryAcceptanceQueue';
+import {filterDeliveryStatusItems} from '@controleonline/ui-logistic/src/react/utils/deliveryStatusFilters';
 import {resolveThemePalette} from '@controleonline/../../src/styles/branding';
 import {colors} from '@controleonline/../../src/styles/colors';
 import styles from './index.styles';
@@ -92,6 +94,7 @@ export default function DeliveryOrdersPage() {
   const navigation = useNavigation();
   const isFocused = useIsFocused();
   const authStore = useStore('auth');
+  const deliveryOrdersStore = useStore('delivery_orders');
   const themeStore = useStore('theme');
   const peopleStore = useStore('people');
   const statusStore = useStore('status');
@@ -120,6 +123,7 @@ export default function DeliveryOrdersPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
   const [customRange, setCustomRange] = useState({from: '', to: ''});
+  const [loadedDeliveryQueueItems, setLoadedDeliveryQueueItems] = useState([]);
   const hasCurrentCompany = !!currentCompany && Object.keys(currentCompany || {}).length > 0;
   const isBootstrapReady = Boolean(sessionChecked) && hasCurrentCompany && Boolean(themeColors);
 
@@ -134,8 +138,7 @@ export default function DeliveryOrdersPage() {
       label: normalizeText(global.t?.t('orders', 'label', 'all')) || 'Todos',
     };
     const seenKeys = new Set(['all']);
-    const mappedStatuses = statusItems
-      .filter(item => normalizeText(item?.context).toLowerCase() === 'delivery')
+    const mappedStatuses = filterDeliveryStatusItems(statusItems)
       .reduce((accumulator, status) => {
         const key = normalizeText(
           status?.['@id'] || (status?.id ? `/statuses/${status.id}` : ''),
@@ -165,6 +168,13 @@ export default function DeliveryOrdersPage() {
       resolvedStatusOptions[0]?.label ||
       'Todos',
     [resolvedStatusOptions, statusFilter],
+  );
+
+  const deliveryQueueItems = Array.isArray(deliveryOrdersStore?.getters?.items)
+    ? deliveryOrdersStore.getters.items
+    : [];
+  const deliveryQueueHead = resolveDeliveryWorkflowHead(
+    loadedDeliveryQueueItems.length > 0 ? loadedDeliveryQueueItems : deliveryQueueItems,
   );
 
   const deliverySort = useMemo(
@@ -213,6 +223,19 @@ export default function DeliveryOrdersPage() {
     [navigation],
   );
 
+  const replaceWebLocation = useCallback(href => {
+    if (
+      Platform.OS === 'web' &&
+      typeof window !== 'undefined' &&
+      typeof window.location?.replace === 'function'
+    ) {
+      window.location.replace(href);
+      return true;
+    }
+
+    return false;
+  }, []);
+
   const renderCard = useCallback(
     ({item: order, openRow}) => {
       return (
@@ -243,6 +266,36 @@ export default function DeliveryOrdersPage() {
     peopleActions,
     sessionChecked,
   ]);
+
+  useEffect(() => {
+    if (!isFocused || !currentPeopleIri || !deliveryQueueHead?.id) {
+      return;
+    }
+
+    const nextParams = buildOrderDetailsRouteParams(deliveryQueueHead.id, {
+      store: 'orders',
+    });
+    const nextHref = `/order-details?${new URLSearchParams(nextParams).toString()}`;
+
+    if (replaceWebLocation(nextHref)) {
+      return;
+    }
+
+    if (typeof navigation.replace === 'function') {
+      navigation.replace('OrderDetails', nextParams);
+      return;
+    }
+
+    navigation.reset({
+      index: 0,
+      routes: [
+        {
+          name: 'OrderDetails',
+          params: nextParams,
+        },
+      ],
+    });
+  }, [currentPeopleIri, deliveryQueueHead?.id, isFocused, navigation, replaceWebLocation]);
 
   useEffect(() => {
     if (!isFocused || !currentCompany?.id || typeof statusActions?.getItems !== 'function') {
@@ -342,6 +395,7 @@ export default function DeliveryOrdersPage() {
             accentColor={brandColors.primary}
             add={false}
             forceCardsOnCompact={false}
+            onDataLoaded={setLoadedDeliveryQueueItems}
             onRowPress={openOrder}
             requestParams={deliveryRequestParams}
             renderCard={renderCard}

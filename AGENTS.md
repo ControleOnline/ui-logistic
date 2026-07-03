@@ -5,3 +5,4 @@
 - Os dados visiveis da entrega devem vir do pedido corrente materializado e nunca de `mainOrder` como fallback visual.
 - Em `aguardando aceite`, o detalhe da delivery esconde troca de cliente/endereco e a barra inferior, mantendo a acao de aceite/recusa em card flutuante.
 - CEP e complemento precisam aparecer no resumo de endereco quando existirem no pedido corrente.
+- No detalhe da delivery, o estado pos-aceite e `aceito`, nao `preparando`; a corrida ativa precisa mostrar `Marcar como entregue` em cada parada aceita, seguir a ordem planejada e voltar ao estado inicial quando a fila acabar.
