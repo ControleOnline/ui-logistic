@@ -34,45 +34,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
   },
-  heroCard: {
-    backgroundColor: '#0F172A',
-    borderRadius: 22,
-    gap: 14,
-    overflow: 'hidden',
-    padding: 18,
-  },
-  heroEyebrow: {
-    color: '#7DD3FC',
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-  },
-  heroTitle: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: '900',
-    lineHeight: 28,
-  },
-  heroText: {
-    color: '#CBD5E1',
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  heroPillRow: {
+  summaryPillRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
   },
-  heroPill: {
-    borderColor: '#334155',
+  summaryPill: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#CBD5E1',
     borderRadius: 999,
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 7,
   },
-  heroPillText: {
-    color: '#E2E8F0',
+  summaryPillText: {
+    color: '#0F172A',
     fontSize: 12,
     fontWeight: '700',
   },

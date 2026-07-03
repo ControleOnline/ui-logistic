@@ -113,29 +113,6 @@ export default function DeliveryRateTablesPage() {
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.scrollContent}>
-        <View style={styles.heroCard}>
-          <Text style={styles.heroEyebrow}>Courier</Text>
-          <Text style={styles.heroTitle}>Minhas tabelas</Text>
-          <Text style={styles.heroText}>
-            Tabelas imutáveis com km por faixa, valor mínimo por viagem e valor mínimo da diária.
-          </Text>
-          <View style={styles.heroPillRow}>
-            <View style={styles.heroPill}>
-              <Text style={styles.heroPillText}>{visibleGroups.length} versões</Text>
-            </View>
-            <View style={styles.heroPill}>
-              <Text style={styles.heroPillText}>
-                {hasRegisteredVehicle ? 'Veículo liberado' : 'Veículo pendente'}
-              </Text>
-            </View>
-            <View style={styles.heroPill}>
-              <Text style={styles.heroPillText}>
-                {resolveCompanyLabel(currentCompany)}
-              </Text>
-            </View>
-          </View>
-        </View>
-
         {combinedError ? (
           <View style={styles.errorCard}>
             <Text style={styles.errorTitle}>Falha ao carregar</Text>

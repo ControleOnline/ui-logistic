@@ -325,30 +325,6 @@ export default function DeliveryCompaniesPage() {
       edges={['bottom']}
     >
       <View style={styles.scrollContent}>
-        <View style={styles.heroCard}>
-          <Text style={styles.heroEyebrow}>Courier</Text>
-          <Text style={styles.heroTitle}>Empresas homologadas</Text>
-          <Text style={styles.heroText}>
-            Cada empresa mostra o estado atual, o modo automatico/manual e os horarios associados.
-            Toque em uma linha para abrir o detalhe e usar as acoes rapidas.
-          </Text>
-          <View style={styles.heroPillRow}>
-            <View style={styles.heroPill}>
-              <Text style={styles.heroPillText}>{visibleCompanies.length} empresas</Text>
-            </View>
-            <View style={styles.heroPill}>
-              <Text style={styles.heroPillText}>
-                {visibleCompanies.filter(company => company.effectiveOnline).length} online
-              </Text>
-            </View>
-            <View style={styles.heroPill}>
-              <Text style={styles.heroPillText}>
-                {visibleCompanies.filter(company => normalizeText(company.availabilityMode) === 'manual').length} manual
-              </Text>
-            </View>
-          </View>
-        </View>
-
         {error ? (
           <View style={styles.errorCard}>
             <Text style={styles.errorTitle}>Falha ao carregar</Text>

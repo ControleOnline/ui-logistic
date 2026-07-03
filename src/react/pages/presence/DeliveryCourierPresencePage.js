@@ -462,31 +462,6 @@ export default function DeliveryCourierPresencePage({
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        <View style={styles.heroCard}>
-          <Text style={styles.heroEyebrow}>{isReadOnly ? 'Manager' : 'Courier'}</Text>
-          <Text style={styles.heroTitle}>
-            {targetCompanyLabel || 'Presenca da empresa'}
-          </Text>
-          <Text style={styles.heroText}>
-            {isReadOnly
-              ? 'A tela e apenas de leitura. O manager acompanha quem esta online e qual foi a ultima mudanca.'
-              : 'A tela controla o estado online por empresa e os horarios automaticos reutilizaveis.'}
-          </Text>
-          <View style={styles.heroPillRow}>
-            <View style={styles.heroPill}>
-              <Text style={styles.heroPillText}>{currentModeLabel}</Text>
-            </View>
-            <View style={styles.heroPill}>
-              <Text style={styles.heroPillText}>{currentStateLabel}</Text>
-            </View>
-            <View style={styles.heroPill}>
-              <Text style={styles.heroPillText}>
-                {currentEffectiveOnline ? 'Disponivel' : 'Indisponivel'}
-              </Text>
-            </View>
-          </View>
-        </View>
-
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Resumo da presenca</Text>
@@ -644,19 +619,19 @@ export default function DeliveryCourierPresencePage({
                       </View>
                     </View>
 
-                    <View style={styles.heroPillRow}>
-                      <View style={styles.heroPill}>
-                        <Text style={styles.heroPillText}>
+                    <View style={styles.summaryPillRow}>
+                      <View style={styles.summaryPill}>
+                        <Text style={styles.summaryPillText}>
                           {normalizeText(scheduleEntity?.weekdayLabel) || formatWeekdayLabel(scheduleEntity?.weekday)}
                         </Text>
                       </View>
-                      <View style={styles.heroPill}>
-                        <Text style={styles.heroPillText}>
+                      <View style={styles.summaryPill}>
+                        <Text style={styles.summaryPillText}>
                           {buildScheduleWindowLabel(scheduleEntity)}
                         </Text>
                       </View>
-                      <View style={styles.heroPill}>
-                        <Text style={styles.heroPillText}>
+                      <View style={styles.summaryPill}>
+                        <Text style={styles.summaryPillText}>
                           {scheduleEntity?.active ? 'Ativo' : 'Inativo'}
                         </Text>
                       </View>

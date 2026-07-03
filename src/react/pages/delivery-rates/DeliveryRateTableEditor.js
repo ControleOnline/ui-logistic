@@ -129,23 +129,6 @@ const DeliveryRateTableEditor = ({
 
   return (
     <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-      <View style={styles.heroCard}>
-        <Text style={styles.heroEyebrow}>Delivery</Text>
-        <Text style={styles.heroTitle}>{title}</Text>
-        <Text style={styles.heroText}>{subtitle}</Text>
-        <View style={styles.heroPillRow}>
-          {[
-            `Faixas: ${draft.bands.length}`,
-            `Veículo: ${normalizeText(draft.vehicleType) || 'pendente'}`,
-            lockVehicleType ? 'Veículo travado' : 'Veículo editável',
-          ].map(pill => (
-            <View key={pill} style={styles.heroPill}>
-              <Text style={styles.heroPillText}>{pill}</Text>
-            </View>
-          ))}
-        </View>
-      </View>
-
       <View style={styles.sectionCard}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Identificação</Text>

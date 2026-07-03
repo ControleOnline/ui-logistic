@@ -178,31 +178,6 @@ export default function DeliveryVehicleSetupPage() {
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.scrollContent}>
-        <View style={styles.heroCard}>
-          <Text style={styles.heroEyebrow}>Delivery</Text>
-          <Text style={styles.heroTitle}>Cadastro do veículo</Text>
-          <Text style={styles.heroText}>
-            Registre seu veículo em uma tabela própria com marca, modelo, ano e placa. Depois disso, as tabelas de frete ficam em outra tela.
-          </Text>
-          <View style={styles.heroPillRow}>
-            <View style={styles.heroPill}>
-              <Text style={styles.heroPillText}>
-                {canSave ? 'Cadastro pronto' : 'Cadastro pendente'}
-              </Text>
-            </View>
-            <View style={styles.heroPill}>
-              <Text style={styles.heroPillText}>
-                {VEHICLE_OPTIONS.find(option => option.value === draft.vehicleType)?.label || 'Moto'}
-              </Text>
-            </View>
-            <View style={styles.heroPill}>
-              <Text style={styles.heroPillText}>
-                {draft.plate ? `Placa ${draft.plate}` : 'Placa pendente'}
-              </Text>
-            </View>
-          </View>
-        </View>
-
         <ScrollView contentContainerStyle={{gap: 12}} keyboardShouldPersistTaps="handled">
           <View style={styles.sectionCard}>
             <View style={styles.sectionHeader}>

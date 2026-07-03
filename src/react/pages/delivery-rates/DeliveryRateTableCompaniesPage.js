@@ -200,25 +200,6 @@ export default function DeliveryRateTableCompaniesPage() {
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        <View style={styles.heroCard}>
-          <Text style={styles.heroEyebrow}>Courier</Text>
-          <Text style={styles.heroTitle}>Associar empresas</Text>
-          <Text style={styles.heroText}>
-            Escolha quais empresas poderão usar esta versão da tabela. As empresas já associadas ficam travadas como histórico.
-          </Text>
-          <View style={styles.heroPillRow}>
-            <View style={styles.heroPill}>
-              <Text style={styles.heroPillText}>{group.groupName}</Text>
-            </View>
-            <View style={styles.heroPill}>
-              <Text style={styles.heroPillText}>v{group.versionNumber}</Text>
-            </View>
-            <View style={styles.heroPill}>
-              <Text style={styles.heroPillText}>{group.vehicleType || '-'}</Text>
-            </View>
-          </View>
-        </View>
-
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Empresas disponíveis</Text>

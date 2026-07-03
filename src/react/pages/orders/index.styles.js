@@ -17,62 +17,39 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
-  heroCard: {
+  filtersCard: {
     backgroundColor: '#FFFFFF',
-    borderColor: '#D6E4F0',
-    borderRadius: 18,
+    borderColor: '#E2E8F0',
+    borderRadius: 14,
     borderWidth: 1,
-    padding: 14,
-    shadowColor: '#0F172A',
-    shadowOffset: {width: 0, height: 6},
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 2,
+    padding: 10,
   },
-  heroHeaderRow: {
-    alignItems: 'flex-start',
+  filtersHeaderRow: {
+    alignItems: 'center',
     flexDirection: 'row',
     gap: 10,
     justifyContent: 'space-between',
+    marginBottom: 8,
   },
-  heroTextWrap: {
-    flex: 1,
-    gap: 4,
-  },
-  heroTag: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#EFF6FF',
-    borderRadius: 999,
-    color: '#2563EB',
-    fontSize: 11,
-    fontWeight: '900',
-    letterSpacing: 0.2,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    textTransform: 'uppercase',
-  },
-  heroTitle: {
+  filtersTitle: {
     color: '#0F172A',
-    fontSize: 20,
-    fontWeight: '900',
-    letterSpacing: -0.3,
+    fontSize: 15,
+    fontWeight: '700',
   },
-  heroSubtitle: {
-    color: '#64748B',
-    fontSize: 12,
-    lineHeight: 18,
+  filterSelectorsRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: -8,
+    marginHorizontal: -4,
   },
-  heroCounterPill: {
-    alignSelf: 'flex-start',
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+  filterSelectorSlot: {
+    minWidth: 0,
+    paddingBottom: 8,
+    paddingHorizontal: 4,
   },
-  heroCounterText: {
-    fontSize: 11,
-    fontWeight: '900',
-    textTransform: 'uppercase',
+  filterSelectorSlotHalf: {
+    width: '50%',
   },
   centerState: {
     alignItems: 'center',
@@ -109,6 +86,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+  },
+  cardMetaRow: {
+    borderTopColor: '#F1F5F9',
+    borderTopWidth: 1,
+    paddingTop: 8,
+  },
+  channelText: {
+    color: '#475569',
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
   },
 });
 

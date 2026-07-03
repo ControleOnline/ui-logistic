@@ -2157,23 +2157,6 @@ const OrderLogisticsPage = ({navigation, route}) => {
               </View>
             }
           >
-            <View style={pageStyles.deliveryHeroHeader}>
-              <View style={pageStyles.deliveryHeroHeaderText}>
-                <Text style={pageStyles.deliveryHeroLabel}>Cliente</Text>
-                <Text style={pageStyles.deliveryHeroValue}>
-                  {clientSummaryLines[0] || 'Cliente nao informado.'}
-                </Text>
-                {clientSummaryLines[1] ? (
-                  <Text style={pageStyles.deliveryHeroMeta}>{clientSummaryLines[1]}</Text>
-                ) : null}
-              </View>
-              <StatusPill
-                styles={pageStyles}
-                label={selectedOrderClientIri ? 'Cliente vinculado' : 'Sem cliente'}
-                tone={selectedOrderClientIri ? 'success' : 'muted'}
-              />
-            </View>
-
             <RouteSummaryStrip
               styles={pageStyles}
               currentPositionLines={currentPositionLines}
@@ -2182,7 +2165,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
               ppcColors={ppcColors}
             />
 
-            <View style={pageStyles.deliveryHeroMetaRow}>
+            <View style={pageStyles.deliveryInfoMetaRow}>
               <CompactInfoChip
                 styles={pageStyles}
                 icon="cash"

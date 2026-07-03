@@ -197,28 +197,6 @@ export default function DeliveryCourierScheduleFormPage() {
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        <View style={styles.heroCard}>
-          <Text style={styles.heroEyebrow}>Courier</Text>
-          <Text style={styles.heroTitle}>
-            {scheduleId ? 'Editar horario' : 'Novo horario'}
-          </Text>
-          <Text style={styles.heroText}>
-            O label e opcional. Se ficar vazio, o backend monta um nome automatico com base no dia e na janela.
-          </Text>
-          <View style={styles.heroPillRow}>
-            <View style={styles.heroPill}>
-              <Text style={styles.heroPillText}>
-                {scheduleId ? `#${scheduleId}` : 'Novo registro'}
-              </Text>
-            </View>
-            <View style={styles.heroPill}>
-              <Text style={styles.heroPillText}>
-                {formatWeekdayLabel(draft.weekday)}
-              </Text>
-            </View>
-          </View>
-        </View>
-
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Identificacao</Text>
@@ -299,9 +277,9 @@ export default function DeliveryCourierScheduleFormPage() {
           </View>
 
           <View style={styles.fieldGroup}>
-            <View style={styles.heroPillRow}>
-              <View style={styles.heroPill}>
-                <Text style={styles.heroPillText}>
+            <View style={styles.summaryPillRow}>
+              <View style={styles.summaryPill}>
+                <Text style={styles.summaryPillText}>
                   {draft.active ? 'Ativo' : 'Inativo'}
                 </Text>
               </View>

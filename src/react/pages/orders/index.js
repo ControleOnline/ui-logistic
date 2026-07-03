@@ -1,19 +1,75 @@
-import React, { useCallback, useMemo } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
-import { useStore } from '@store';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import {Text, TouchableOpacity, View} from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
+import {useIsFocused, useNavigation} from '@react-navigation/native';
+import {useStore} from '@store';
+import CompactFilterSelector from '@controleonline/ui-default/src/react/components/filters/CompactFilterSelector';
+import DateShortcutFilter from '@controleonline/ui-default/src/react/components/filters/DateShortcutFilter';
 import DefaultTable from '@controleonline/ui-default/src/react/components/table/DefaultTable';
 import StateStore from '@controleonline/ui-layout/src/react/components/StateStore';
 import OrderHeader from '@controleonline/ui-orders/src/react/components/OrderHeader';
-import { buildOrderDetailsRouteParams } from '@controleonline/ui-orders/src/react/utils/orderRoute';
-import { resolveThemePalette } from '@controleonline/../../src/styles/branding';
-import { colors } from '@controleonline/../../src/styles/colors';
+import {buildOrderDetailsRouteParams} from '@controleonline/ui-orders/src/react/utils/orderRoute';
+import {getDateRange} from '@controleonline/ui-common/src/react/utils/dateRangeFilter';
+import {resolveThemePalette} from '@controleonline/../../src/styles/branding';
+import {colors} from '@controleonline/../../src/styles/colors';
 import styles from './index.styles';
 
 const DELIVERY_ORDER_TYPE = 'delivery';
 
 const normalizeText = value => String(value || '').trim();
+
+const resolveDateRangeFilter = value => {
+  if (!value || typeof value !== 'object') {
+    return {};
+  }
+
+  const shortcut = value.shortcut || value.value || 'all';
+  const customRange = value.customRange || {from: '', to: ''};
+  const dateRange = getDateRange(shortcut, customRange, {
+    relativeMode: 'rolling',
+    useCurrentMoment: true,
+  });
+
+  return {
+    after: dateRange?.after || '',
+    before: dateRange?.before || '',
+  };
+};
+
+const buildDeliveryRequestParams = ({
+  currentPeopleIri,
+  dateFilter,
+  customRange,
+  statusFilter,
+}) => {
+  if (!currentPeopleIri) {
+    return null;
+  }
+
+  const query = {
+    orderType: DELIVERY_ORDER_TYPE,
+    provider: currentPeopleIri,
+  };
+
+  if (statusFilter !== 'all') {
+    query.status = statusFilter;
+  }
+
+  const dateRange = resolveDateRangeFilter({
+    shortcut: dateFilter,
+    customRange,
+  });
+
+  if (dateRange.after) {
+    query['orderDate[after]'] = dateRange.after;
+  }
+
+  if (dateRange.before) {
+    query['orderDate[before]'] = dateRange.before;
+  }
+
+  return query;
+};
 
 const buildOrderMetaText = order => {
   const meta = [];
@@ -35,15 +91,17 @@ const buildOrderMetaText = order => {
 
 export default function DeliveryOrdersPage() {
   const navigation = useNavigation();
+  const isFocused = useIsFocused();
   const authStore = useStore('auth');
   const themeStore = useStore('theme');
   const peopleStore = useStore('people');
-  const deliveryStore = useStore('delivery_orders');
+  const statusStore = useStore('status');
 
-  const { user, sessionChecked } = authStore.getters || {};
-  const { colors: themeColors } = themeStore.getters || {};
-  const { currentCompany } = peopleStore.getters || {};
-  const { getters: deliveryGetters } = deliveryStore;
+  const {user, sessionChecked} = authStore.getters || {};
+  const {colors: themeColors} = themeStore.getters || {};
+  const {actions: peopleActions, getters: peopleGetters} = peopleStore;
+  const {currentCompany} = peopleGetters || {};
+  const {actions: statusActions, getters: statusGetters} = statusStore;
 
   const currentPeopleId = useMemo(
     () => normalizeText(user?.people || user?.peopleId || '').replace(/\D+/g, ''),
@@ -60,23 +118,91 @@ export default function DeliveryOrdersPage() {
     [currentCompany?.theme?.colors, themeColors],
   );
 
-  const primaryColor = brandColors.primary || '#2563EB';
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState('all');
+  const [customRange, setCustomRange] = useState({from: '', to: ''});
   const hasCurrentCompany = !!currentCompany && Object.keys(currentCompany || {}).length > 0;
   const isBootstrapReady = Boolean(sessionChecked) && hasCurrentCompany && Boolean(themeColors);
-  const orderCount = Number(deliveryGetters?.totalItems || deliveryGetters?.items?.length || 0);
-  const deliveryRequestParams = useMemo(
-    () => ({
-      orderType: DELIVERY_ORDER_TYPE,
-      provider: currentPeopleIri,
-    }),
-    [currentPeopleIri],
+
+  const statusItems = useMemo(
+    () => (Array.isArray(statusGetters.items) ? statusGetters.items : []),
+    [statusGetters.items],
   );
+
+  const resolvedStatusOptions = useMemo(() => {
+    const allStatusOption = {
+      key: 'all',
+      label: normalizeText(global.t?.t('orders', 'label', 'all')) || 'Todos',
+    };
+    const seenKeys = new Set(['all']);
+    const mappedStatuses = statusItems
+      .filter(item => normalizeText(item?.context).toLowerCase() === 'delivery')
+      .reduce((accumulator, status) => {
+        const key = normalizeText(
+          status?.['@id'] || (status?.id ? `/statuses/${status.id}` : ''),
+        );
+
+        if (!key || seenKeys.has(key)) {
+          return accumulator;
+        }
+
+        seenKeys.add(key);
+        accumulator.push({
+          key,
+          label:
+            normalizeText(global.t?.t('orders', 'status', status?.status)) ||
+            normalizeText(status?.status) ||
+            key,
+        });
+        return accumulator;
+      }, []);
+
+    return [allStatusOption, ...mappedStatuses];
+  }, [statusItems]);
+
+  const currentStatusLabel = useMemo(
+    () =>
+      resolvedStatusOptions.find(option => option.key === statusFilter)?.label ||
+      resolvedStatusOptions[0]?.label ||
+      'Todos',
+    [resolvedStatusOptions, statusFilter],
+  );
+
   const deliverySort = useMemo(
     () => ({
       direction: 'desc',
       field: 'orderDate',
     }),
     [],
+  );
+
+  const deliveryRequestParams = useMemo(
+    () =>
+      buildDeliveryRequestParams({
+        currentPeopleIri,
+        customRange,
+        dateFilter,
+        statusFilter,
+      }),
+    [currentPeopleIri, customRange, dateFilter, statusFilter],
+  );
+
+  const dateShortcutColors = useMemo(
+    () => ({
+      accent: brandColors.primary || '#2563EB',
+      appBg: 'transparent',
+      border: '#CBD5E1',
+      borderSoft: '#E2E8F0',
+      cardBg: '#FFFFFF',
+      cardBgSoft: '#F8FAFC',
+      danger: '#DC2626',
+      isLight: true,
+      panelBg: '#EFF6FF',
+      pillTextDark: '#FFFFFF',
+      textPrimary: '#0F172A',
+      textSecondary: '#64748B',
+    }),
+    [brandColors.primary],
   );
 
   const openOrder = useCallback(
@@ -89,7 +215,7 @@ export default function DeliveryOrdersPage() {
   );
 
   const renderCard = useCallback(
-    ({ item: order, openRow }) => {
+    ({item: order, openRow}) => {
       return (
         <TouchableOpacity
           key={order?.id}
@@ -103,6 +229,45 @@ export default function DeliveryOrdersPage() {
     },
     [openOrder],
   );
+
+  useEffect(() => {
+    if (!isFocused || !sessionChecked || typeof peopleActions?.myCompanies !== 'function') {
+      return;
+    }
+
+    if (!currentCompany?.id) {
+      peopleActions.myCompanies().catch(() => {});
+    }
+  }, [
+    currentCompany?.id,
+    isFocused,
+    peopleActions,
+    sessionChecked,
+  ]);
+
+  useEffect(() => {
+    if (!isFocused || !currentCompany?.id || typeof statusActions?.getItems !== 'function') {
+      return;
+    }
+
+    statusActions.getItems({context: 'delivery'}).catch(() => {});
+  }, [
+    currentCompany?.id,
+    isFocused,
+    statusActions,
+  ]);
+
+  useEffect(() => {
+    if (
+      statusFilter !== 'all' &&
+      !resolvedStatusOptions.some(option => option.key === statusFilter)
+    ) {
+      setStatusFilter('all');
+    }
+  }, [
+    resolvedStatusOptions,
+    statusFilter,
+  ]);
 
   if (!isBootstrapReady) {
     return <StateStore loading="Carregando pedidos de entrega..." />;
@@ -123,24 +288,43 @@ export default function DeliveryOrdersPage() {
       edges={['bottom']}
     >
       <View style={styles.content}>
-        <View style={styles.heroCard}>
-          <View style={styles.heroHeaderRow}>
-            <View style={styles.heroTextWrap}>
-              <Text style={styles.heroTag}>Delivery</Text>
-              <Text style={styles.heroTitle}>Pedidos atribuidos</Text>
-              <Text style={styles.heroSubtitle}>
-                A lista vem filtrada pelo `provider` do motoboy logado e pelo tipo `delivery`.
-              </Text>
+        <View style={styles.filtersCard}>
+          <View style={styles.filtersHeaderRow}>
+            <Text style={styles.filtersTitle}>
+              {global.t?.t('orders', 'title', 'filters') || 'Filtros'}
+            </Text>
+          </View>
+
+          <View style={styles.filterSelectorsRow}>
+            <View style={[styles.filterSelectorSlot, styles.filterSelectorSlotHalf]}>
+              <CompactFilterSelector
+                icon="check-circle"
+                label={currentStatusLabel}
+                labelCaption={global.t?.t('orders', 'label', 'status') || 'Status'}
+                accentColor={brandColors.primary}
+                active={statusFilter !== 'all'}
+                dense
+                title={global.t?.t('orders', 'label', 'status') || 'Status'}
+                options={resolvedStatusOptions}
+                selectedKey={statusFilter}
+                onSelect={optionKey => {
+                  setStatusFilter(optionKey);
+                  return true;
+                }}
+              />
             </View>
-            <View
-              style={[
-                styles.heroCounterPill,
-                { borderColor: primaryColor, backgroundColor: `${primaryColor}14` },
-              ]}
-            >
-              <Text style={[styles.heroCounterText, { color: primaryColor }]}>
-                {orderCount} pedidos
-              </Text>
+
+            <View style={[styles.filterSelectorSlot, styles.filterSelectorSlotHalf]}>
+              <DateShortcutFilter
+                value={dateFilter}
+                onChange={setDateFilter}
+                customRange={customRange}
+                onCustomRangeChange={setCustomRange}
+                dense
+                labelCaption={global.t?.t('orders', 'label', 'period') || 'Periodo'}
+                colors={dateShortcutColors}
+                optionKeys={['all', 'today', 'yesterday', '7d', '30d', 'custom']}
+              />
             </View>
           </View>
         </View>
@@ -154,7 +338,9 @@ export default function DeliveryOrdersPage() {
             requestParams={deliveryRequestParams}
             renderCard={renderCard}
             searchProps={{
-              placeholder: 'Buscar pedido, cliente ou recebedor',
+              placeholder:
+                global.t?.t('orders', 'placeholder', 'search_default') ||
+                'Buscar pedido, cliente ou recebedor',
             }}
             showRowActions={false}
             sort={deliverySort}

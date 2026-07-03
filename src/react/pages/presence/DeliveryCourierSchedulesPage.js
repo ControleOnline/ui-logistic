@@ -148,24 +148,6 @@ export default function DeliveryCourierSchedulesPage() {
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.scrollContent}>
-        <View style={styles.heroCard}>
-          <Text style={styles.heroEyebrow}>Courier</Text>
-          <Text style={styles.heroTitle}>Horarios do motoboy</Text>
-          <Text style={styles.heroText}>
-            Cadastre janelas semanais reutilizaveis e depois associe as mesmas janelas a varias empresas.
-          </Text>
-          <View style={styles.heroPillRow}>
-            <View style={styles.heroPill}>
-              <Text style={styles.heroPillText}>{visibleItems.length} horarios</Text>
-            </View>
-            <View style={styles.heroPill}>
-              <Text style={styles.heroPillText}>
-                {items.filter(item => Boolean(item?.active)).length} ativos
-              </Text>
-            </View>
-          </View>
-        </View>
-
         {error ? (
           <View style={styles.errorCard}>
             <Text style={styles.errorTitle}>Falha ao carregar</Text>

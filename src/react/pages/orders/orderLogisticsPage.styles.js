@@ -64,36 +64,7 @@ const createStyles = palette =>
       flexWrap: 'wrap',
       gap: 8,
     },
-    deliveryHeroHeader: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      justifyContent: 'space-between',
-      gap: 12,
-    },
-    deliveryHeroHeaderText: {
-      flex: 1,
-      gap: 2,
-    },
-    deliveryHeroLabel: {
-      color: palette?.accentInfo,
-      fontSize: 10,
-      fontWeight: '900',
-      textTransform: 'uppercase',
-      letterSpacing: 0.2,
-    },
-    deliveryHeroValue: {
-      color: palette?.textPrimary,
-      fontSize: 15,
-      fontWeight: '900',
-      lineHeight: 19,
-    },
-    deliveryHeroMeta: {
-      color: palette?.textSecondary,
-      fontSize: 11,
-      fontWeight: '700',
-      lineHeight: 14,
-    },
-    deliveryHeroMetaRow: {
+    deliveryInfoMetaRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 6,
