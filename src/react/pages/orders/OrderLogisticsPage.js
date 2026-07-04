@@ -49,7 +49,6 @@ import {
   resolveDeliveryRunPlan,
   resolveDeliveryStatusLabel,
   resolveDeliveryStatusTone,
-  resolveDeliveryWorkflowHead,
 } from '@controleonline/ui-logistic/src/react/utils/deliveryAcceptanceQueue';
 import {resolveCurrentPeopleIri} from '@controleonline/ui-logistic/src/react/utils/deliveryIdentity';
 import ContextHelpButton from '@controleonline/ui-common/src/react/components/ContextHelpButton';
@@ -2298,30 +2297,14 @@ const OrderLogisticsPage = ({navigation, route}) => {
           throw result || response;
         }
 
-        await refreshAll();
-        const nextQueueResponse = await refreshDeliveryQueue();
         if (isDeliveryRunMode && path.endsWith('/delivered')) {
-          const nextQueueItems = extractCollectionItems(nextQueueResponse);
-          const nextWorkflowHead = resolveDeliveryWorkflowHead(nextQueueItems);
-
-          if (!nextWorkflowHead) {
-            if (typeof navigation?.replace === 'function') {
-              navigation.replace('DeliveryOrdersPage');
-            } else {
-              navigation.reset({
-                index: 0,
-                routes: [
-                  {
-                    name: 'DeliveryOrdersPage',
-                  },
-                ],
-              });
-            }
-
-            showSuccess?.(successMessage);
-            return;
-          }
+          await refreshDeliveryQueue();
+          showSuccess?.(successMessage);
+          return;
         }
+
+        await refreshAll();
+        await refreshDeliveryQueue();
         showSuccess?.(successMessage);
       } catch (error) {
         showError?.(formatApiError(error));
@@ -2331,7 +2314,6 @@ const OrderLogisticsPage = ({navigation, route}) => {
     },
     [
       isDeliveryRunMode,
-      navigation,
       orderId,
       refreshAll,
       refreshDeliveryQueue,
