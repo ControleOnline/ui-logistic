@@ -369,7 +369,7 @@ const createStyles = palette =>
       backgroundColor: '#F8FAFC',
     },
     statusPillWarning: {
-      borderColor: '#F59E0B',
+      borderColor: '#e67e22',
       backgroundColor: '#FFFBEB',
     },
     statusPillSuccess: {
