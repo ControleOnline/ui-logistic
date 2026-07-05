@@ -27,6 +27,7 @@ import {
 import styles from '@controleonline/ui-logistic/src/react/pages/delivery-rates/styles';
 
 const PAGE_SIZE = 100;
+const COURIER_LINK_TYPE = 'courier';
 
 const COMPANY_PRESENCE_COLUMNS = [
   {
@@ -268,7 +269,11 @@ export default function DeliveryCompaniesPage() {
 
     try {
       const [companyList, presenceList] = await Promise.all([
-        peopleActions.myCompanies(),
+        peopleActions.myCompaniesByLinkType({
+          params: {
+            linkType: COURIER_LINK_TYPE,
+          },
+        }),
         presenceActions.getItems({
           courier: currentPeopleIri,
         }),
@@ -336,7 +341,7 @@ export default function DeliveryCompaniesPage() {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Lista de empresas</Text>
             <Text style={styles.sectionText}>
-              O estado e o historico sao resolvidos pelo backend com security filter. O manager consulta a mesma base em modo somente leitura.
+              A lista mostra apenas empresas com vinculo courier ativo do motoboy logado. O estado e o historico sao resolvidos pelo backend com security filter.
             </Text>
           </View>
 
