@@ -1,14 +1,14 @@
-import React, {useEffect, useMemo, useRef, useState} from 'react';
+import React, {useMemo} from 'react';
 import {Text, View} from 'react-native';
-import {api} from '@controleonline/ui-common/src/api';
-import {useMessage} from '@controleonline/ui-common/src/react/components/MessageService';
+import {useStore} from '@store';
 import StateStore from '@controleonline/ui-layout/src/react/components/StateStore';
+import DefaultErrors from '@controleonline/ui-default/src/react/components/errors/DefaultErrors';
+import resolveSystemErrorMessage from '@controleonline/ui-common/src/react/utils/systemErrorMessage';
 import useOrderDetailsVisuals from '@controleonline/ui-orders/src/react/pages/orders/sales/useOrderDetailsVisuals';
 import resolveOrderLogisticsSnapshot from './orderLogisticsPresentation';
 import createStyles from './orderLogisticsPage.styles';
 import {
   buildOrderLogisticsSnapshotSource,
-  formatApiError,
   QuoteCard,
 } from './OrderLogisticsPage';
 
@@ -42,85 +42,19 @@ const sortBySelection = quotes =>
 export default function OrderLogisticsQuotesList({
   orderId,
   order,
-  refreshKey = 0,
   onSelectQuote = null,
   requestLoading = false,
 }) {
-  const {showError} = useMessage() || {};
+  const orderLogisticsStore = useStore('order_logistics');
+  const logisticsItem = orderLogisticsStore?.getters?.item || null;
+  const isLoading = Boolean(orderLogisticsStore?.getters?.isLoading);
+  const loadError = resolveSystemErrorMessage(orderLogisticsStore?.getters?.error);
   const {ppcColors} = useOrderDetailsVisuals();
   const pageStyles = useMemo(() => createStyles(ppcColors), [ppcColors]);
-  const [payload, setPayload] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [loadFailed, setLoadFailed] = useState(false);
-  const lastLoadSignatureRef = useRef('');
-
-  useEffect(() => {
-    let active = true;
-    const loadSignature = `${normalizeOrderId(orderId)}:${refreshKey}`;
-
-    if (!orderId) {
-      lastLoadSignatureRef.current = '';
-      setPayload(null);
-      setLoadFailed(false);
-      setIsLoading(false);
-      return undefined;
-    }
-
-    if (lastLoadSignatureRef.current === loadSignature) {
-      return undefined;
-    }
-
-    lastLoadSignatureRef.current = loadSignature;
-
-    setIsLoading(true);
-    setLoadFailed(false);
-
-    const loadQuotes = async () => {
-      try {
-        const response = await api.fetch(`/marketplace/logistics/orders/${orderId}`, {
-        method: 'GET',
-        });
-
-        if (!active) {
-          return;
-        }
-
-        const normalized = Array.isArray(response?.member)
-          ? response.member[0] || null
-          : Array.isArray(response?.['hydra:member'])
-            ? response['hydra:member'][0] || null
-            : response?.result && typeof response.result === 'object'
-              ? response.result
-              : response?.data && typeof response.data === 'object'
-                ? response.data
-                : response || null;
-
-        setPayload(normalized);
-      } catch (error) {
-        if (!active) {
-          return;
-        }
-
-        setPayload(null);
-        setLoadFailed(true);
-        showError?.(formatApiError(error));
-      } finally {
-        if (active) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    void loadQuotes();
-
-    return () => {
-      active = false;
-    };
-  }, [orderId, refreshKey, showError]);
 
   const logistics = useMemo(
-    () => resolveOrderLogisticsSnapshot(buildOrderLogisticsSnapshotSource(order, payload)),
-    [order, payload],
+    () => resolveOrderLogisticsSnapshot(buildOrderLogisticsSnapshotSource(order, logisticsItem)),
+    [order, logisticsItem],
   );
 
   const selectedQuote =
@@ -186,15 +120,21 @@ export default function OrderLogisticsQuotesList({
   ]);
 
   if (!orderId) {
-    return <StateStore error="Pedido nao informado." />;
+    return <DefaultErrors compact title="Pedido nao informado." />;
   }
 
-  if (isLoading) {
-    return <StateStore loading="Carregando cotações..." />;
+  if (isLoading && !logisticsItem) {
+    return <StateStore mode="orders" compact loading="Carregando cotações..." />;
   }
 
-  if (loadFailed) {
-    return <StateStore error="Nao foi possivel carregar as cotações." />;
+  if (loadError && !logisticsItem) {
+    return (
+      <DefaultErrors
+        compact
+        error={loadError}
+        title="Nao foi possivel carregar as cotações."
+      />
+    );
   }
 
   if (displayQuotes.length === 0) {

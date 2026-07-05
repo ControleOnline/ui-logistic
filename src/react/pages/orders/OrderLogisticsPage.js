@@ -26,11 +26,11 @@ import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import {MaterialCommunityIcons} from '@expo/vector-icons';
 import {useStore} from '@store';
 import StateStore from '@controleonline/ui-layout/src/react/components/StateStore';
-import {api} from '@controleonline/ui-common/src/api';
 import Formatter from '@controleonline/ui-common/src/utils/formatter';
 import {useMessage} from '@controleonline/ui-common/src/react/components/MessageService';
 import AddCompanyModal from '@controleonline/ui-people/src/react/components/AddCompanyModal';
 import resolveSystemErrorMessage from '@controleonline/ui-common/src/react/utils/systemErrorMessage';
+import DefaultErrors from '@controleonline/ui-default/src/react/components/errors/DefaultErrors';
 import {
   buildAddressOptionSummary,
   buildCustomerSearchMeta,
@@ -1156,12 +1156,14 @@ const OrderLogisticsPage = ({navigation, route}) => {
   const insets = useSafeAreaInsets();
   const ordersStore = useStore('orders');
   const deliveryOrdersStore = useStore('delivery_orders');
+  const orderLogisticsStore = useStore('order_logistics');
   const authStore = useStore('auth');
   const websocketStore = useStore('websocket');
   const peopleStore = useStore('people');
   const addressStore = useStore('address');
   const ordersActions = ordersStore.actions;
   const ordersActionsRef = useRef(ordersActions);
+  const orderLogisticsActions = orderLogisticsStore?.actions || {};
   const deliveryOrdersActions = deliveryOrdersStore?.actions || {};
   const addressActions = addressStore?.actions || {};
   const peopleActions = peopleStore?.actions || {};
@@ -1200,11 +1202,18 @@ const OrderLogisticsPage = ({navigation, route}) => {
   const currentCompany = peopleGetters.currentCompany || null;
   const defaultCompany = peopleGetters.defaultCompany || null;
   const currentCompanyId = normalizeText(currentCompany?.id);
-  const [payload, setPayload] = useState(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [requestLoading, setRequestLoading] = useState(false);
-  const [quotesRefreshKey, setQuotesRefreshKey] = useState(0);
-  const [loadFailed, setLoadFailed] = useState(false);
+  const orderLoadError = resolveSystemErrorMessage(ordersStore?.getters?.error);
+  const logisticsPayload = orderLogisticsStore?.getters?.item || null;
+  const logisticsError = resolveSystemErrorMessage(orderLogisticsStore?.getters?.error);
+  const logisticsIsLoading = Boolean(orderLogisticsStore?.getters?.isLoading);
+  const logisticsIsSaving = Boolean(orderLogisticsStore?.getters?.isSaving);
+  const requestLoading = logisticsIsSaving;
+  const isRefreshing = Boolean(
+    logisticsIsLoading ||
+      Boolean(ordersStore?.getters?.isLoading) ||
+      Boolean(deliveryOrdersStore?.getters?.isLoading),
+  );
+  const loadFailed = Boolean((logisticsError || orderLoadError) && !logisticsPayload);
   const [customerModalVisible, setCustomerModalVisible] = useState(false);
   const [customerCreateModalVisible, setCustomerCreateModalVisible] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
@@ -1265,6 +1274,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
       id: orderId,
       __storeMeta: {
         preserveItem: true,
+        skipSystemError: true,
       },
     });
   }, [orderId]);
@@ -1274,13 +1284,13 @@ const OrderLogisticsPage = ({navigation, route}) => {
       return null;
     }
 
-    const response = await api.fetch(`/marketplace/logistics/orders/${orderId}`, {
-      method: 'GET',
+    return orderLogisticsActions.get({
+      id: orderId,
+      __storeMeta: {
+        skipSystemError: true,
+      },
     });
-    const normalized = normalizeActionResult(response);
-    setPayload(normalized);
-    return normalized;
-  }, [orderId]);
+  }, [orderId, orderLogisticsActions]);
 
   const refreshDeliveryQueue = useCallback(async () => {
     if (
@@ -1326,55 +1336,24 @@ const OrderLogisticsPage = ({navigation, route}) => {
       return;
     }
 
-    setIsRefreshing(true);
-    setLoadFailed(false);
+    await loadPageData();
 
-    try {
-      await loadPageData();
-      if (!isDeliveryRunMode || orderId) {
-        await refreshDeliveryQueue();
-      }
-      setQuotesRefreshKey(previous => previous + 1);
-    } catch (error) {
-      showError?.(formatApiError(error));
-      setLoadFailed(true);
-      throw error;
-    } finally {
-      setIsRefreshing(false);
+    if (!isDeliveryRunMode || orderId) {
+      await refreshDeliveryQueue();
     }
-  }, [isDeliveryRunMode, loadPageData, orderId, refreshDeliveryQueue, showError]);
+  }, [isDeliveryRunMode, loadPageData, orderId, refreshDeliveryQueue]);
 
   useFocusEffect(
     useCallback(() => {
-      let active = true;
-
       if (!orderId && !isDeliveryRunMode) {
-        return () => {
-          active = false;
-        };
+        return undefined;
       }
 
-      setIsRefreshing(true);
-      setLoadFailed(false);
+      const loadInitialData = routeOrder ? loadLogisticsData() : loadPageData();
 
-      const loadInitialData = routeOrder ? loadLogisticsData() : loadPageData()
+      void loadInitialData.catch(() => {});
 
-      loadInitialData
-        .catch(error => {
-          if (active) {
-            setLoadFailed(true);
-            showError?.(formatApiError(error));
-          }
-        })
-        .finally(() => {
-          if (active) {
-            setIsRefreshing(false);
-          }
-        });
-
-      return () => {
-        active = false;
-      };
+      return undefined;
     }, [isDeliveryRunMode, loadLogisticsData, loadPageData, orderId, routeOrder]),
   );
 
@@ -1411,8 +1390,8 @@ const OrderLogisticsPage = ({navigation, route}) => {
   }, [currentCompanyId, isDeliveryRunMode, orderId, refreshAll, websocketMessages]);
 
   const logistics = useMemo(
-    () => resolveOrderLogisticsSnapshot(buildOrderLogisticsSnapshotSource(order, payload)),
-    [order, payload],
+    () => resolveOrderLogisticsSnapshot(buildOrderLogisticsSnapshotSource(order, logisticsPayload)),
+    [logisticsPayload, order],
   );
 
   const pickupAddressParts = useMemo(
@@ -2233,23 +2212,17 @@ const OrderLogisticsPage = ({navigation, route}) => {
     }
 
     try {
-      setRequestLoading(true);
-      const response = await api.fetch(`/marketplace/logistics/orders/${orderId}/quote`, {
-        method: 'POST',
+      await orderLogisticsActions.requestQuotes({
+        id: orderId,
+        __storeMeta: {
+          skipSystemError: true,
+        },
       });
-      const result = normalizeActionResult(response);
-      if (String(result?.errno ?? '0') !== '0') {
-        throw result || response;
-      }
-
       await refreshAll();
       showSuccess?.('Cotacoes solicitadas com sucesso.');
-    } catch (error) {
-      showError?.(formatApiError(error));
-    } finally {
-      setRequestLoading(false);
+    } catch {
     }
-  }, [orderId, refreshAll, showError, showSuccess]);
+  }, [orderId, orderLogisticsActions, refreshAll, showSuccess]);
 
   const selectQuote = useCallback(
     async quote => {
@@ -2258,27 +2231,19 @@ const OrderLogisticsPage = ({navigation, route}) => {
       }
 
       try {
-        setRequestLoading(true);
-        const response = await api.fetch(
-          `/marketplace/logistics/orders/${orderId}/quotes/${quote.id}/select`,
-          {
-            method: 'POST',
+        await orderLogisticsActions.selectQuote({
+          orderId,
+          quoteOrderId: quote.id,
+          __storeMeta: {
+            skipSystemError: true,
           },
-        );
-        const result = normalizeActionResult(response);
-      if (String(result?.errno ?? '0') !== '0') {
-        throw result || response;
-      }
-
+        });
         await refreshAll();
         showSuccess?.('Entrega solicitada com sucesso.');
-    } catch (error) {
-      showError?.(formatApiError(error));
-    } finally {
-      setRequestLoading(false);
+      } catch {
       }
     },
-    [orderId, refreshAll, showError, showSuccess],
+    [orderId, orderLogisticsActions, refreshAll, showSuccess],
   );
 
   const runDeliveryAction = useCallback(
@@ -2288,13 +2253,33 @@ const OrderLogisticsPage = ({navigation, route}) => {
       }
 
       try {
-        setRequestLoading(true);
-        const response = await api.fetch(path, {
-          method: 'POST',
-        });
-        const result = normalizeActionResult(response);
-        if (String(result?.errno ?? '0') !== '0') {
-          throw result || response;
+        const targetOrderId = normalizeOrderId(path);
+
+        if (!targetOrderId) {
+          return;
+        }
+
+        if (path.endsWith('/confirm')) {
+          await orderLogisticsActions.confirm({
+            id: targetOrderId,
+            __storeMeta: {
+              skipSystemError: true,
+            },
+          });
+        } else if (path.endsWith('/cancel')) {
+          await orderLogisticsActions.cancel({
+            id: targetOrderId,
+            __storeMeta: {
+              skipSystemError: true,
+            },
+          });
+        } else if (path.endsWith('/delivered')) {
+          await orderLogisticsActions.delivered({
+            id: targetOrderId,
+            __storeMeta: {
+              skipSystemError: true,
+            },
+          });
         }
 
         if (isDeliveryRunMode && path.endsWith('/delivered')) {
@@ -2306,19 +2291,16 @@ const OrderLogisticsPage = ({navigation, route}) => {
         await refreshAll();
         await refreshDeliveryQueue();
         showSuccess?.(successMessage);
-      } catch (error) {
-        showError?.(formatApiError(error));
-      } finally {
-        setRequestLoading(false);
+      } catch {
       }
     },
     [
+      orderLogisticsActions,
       isDeliveryRunMode,
       orderId,
       refreshAll,
       refreshDeliveryQueue,
       requestLoading,
-      showError,
       showSuccess,
     ],
   );
@@ -2355,6 +2337,19 @@ const OrderLogisticsPage = ({navigation, route}) => {
     },
     [showError],
   );
+  if (!logisticsPayload && isRefreshing) {
+    return <StateStore mode="orders" loading="Carregando logística..." />;
+  }
+
+  if (loadFailed) {
+    return (
+      <DefaultErrors
+        error={orderLogisticsStore?.getters?.error ?? ordersStore?.getters?.error}
+        title="Nao foi possivel carregar a logística do pedido."
+      />
+    );
+  }
+
   const canManageCustomerAndAddress = isManagerOverviewMode;
 
   return (
@@ -2518,18 +2513,14 @@ const OrderLogisticsPage = ({navigation, route}) => {
             <OrderLogisticsQuotesList
               orderId={orderId}
               order={order}
-              refreshKey={quotesRefreshKey}
               onSelectQuote={selectQuote}
               requestLoading={requestLoading}
             />
           ) : null}
 
-          <StateStore
-            loading={isRefreshing ? 'Atualizando logística...' : false}
-            error={
-              loadFailed ? 'Nao foi possivel atualizar as cotacoes. Tente novamente.' : false
-            }
-          />
+          {isRefreshing && logisticsPayload ? (
+            <StateStore compact loading="Atualizando logística..." />
+          ) : null}
         </View>
       </ScrollView>
       {showDeliveryAcceptanceActions ? (
@@ -2601,4 +2592,3 @@ const OrderLogisticsPage = ({navigation, route}) => {
 };
 
 export default OrderLogisticsPage;
-// TODO(store-first): quando este arquivo for mexido, mover a leitura para stores, remover api.fetch e evitar repassar dados em objetos quando o store ja resolver isso.
