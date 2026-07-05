@@ -124,7 +124,7 @@ export default function OrderLogisticsQuotesList({
   }
 
   if (isLoading && !logisticsItem) {
-    return <StateStore mode="orders" compact loading="Carregando cotações..." />;
+    return <StateStore mode="compact" loading="Carregando cotações..." />;
   }
 
   if (loadError && !logisticsItem) {

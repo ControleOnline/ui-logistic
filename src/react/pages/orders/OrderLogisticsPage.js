@@ -2338,7 +2338,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
     [showError],
   );
   if (!logisticsPayload && isRefreshing) {
-    return <StateStore mode="orders" loading="Carregando logística..." />;
+    return <StateStore mode="display" loading="Carregando logística..." />;
   }
 
   if (loadFailed) {
