@@ -130,6 +130,7 @@ export default function OrderLogisticsQuotesList({
   if (loadError && !logisticsItem) {
     return (
       <DefaultErrors
+        store="order_logistics"
         compact
         error={loadError}
         title="Nao foi possivel carregar as cotações."

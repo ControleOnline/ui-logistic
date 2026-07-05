@@ -2344,6 +2344,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
   if (loadFailed) {
     return (
       <DefaultErrors
+        stores={['order_logistics', 'orders']}
         error={orderLogisticsStore?.getters?.error ?? ordersStore?.getters?.error}
         title="Nao foi possivel carregar a logística do pedido."
       />
