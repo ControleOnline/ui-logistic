@@ -166,6 +166,10 @@ const buildSearchText = row =>
     .join(' ')
     .toLowerCase();
 
+const isCourierCompany = company =>
+  company?.user?.courier_enabled === true ||
+  (Array.isArray(company?.permission) && company.permission.includes('courier'));
+
 const buildCompanyPresenceRow = (company, presenceMap) => {
   const companyId = normalizeEntityId(company?.id);
   const presence = presenceMap.get(companyId) || null;
@@ -279,11 +283,15 @@ export default function DeliveryCompaniesPage() {
         }),
       ]);
 
-      setCompanies(Array.isArray(companyList) ? companyList : []);
+      const courierCompanies = Array.isArray(companyList)
+        ? companyList.filter(isCourierCompany)
+        : [];
+
+      setCompanies(courierCompanies);
       setPresenceRows(Array.isArray(presenceList) ? presenceList : []);
       setReportedTotalItems(
         Number(
-          (Array.isArray(companyList) ? companyList.length : 0) || presenceList?.length || 0,
+          courierCompanies.length || presenceList?.length || 0,
         ),
       );
     } catch (caughtError) {
