@@ -81,7 +81,6 @@ export default function DeliveryReceivablesPage() {
           <DefaultTable
             accentColor={brandColors.primary}
             add={false}
-            forceCardsOnCompact={false}
             onRowPress={openInvoice}
             requestParams={{
               invoiceType: 'invoice',

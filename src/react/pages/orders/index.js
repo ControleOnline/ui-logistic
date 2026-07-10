@@ -414,7 +414,6 @@ export default function DeliveryOrdersPage() {
           <DefaultTable
             accentColor={brandColors.primary}
             add={false}
-            forceCardsOnCompact={false}
             onDataLoaded={setLoadedDeliveryQueueItems}
             onRowPress={openOrder}
             requestParams={deliveryRequestParams}
