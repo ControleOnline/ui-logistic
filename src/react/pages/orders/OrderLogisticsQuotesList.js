@@ -1,7 +1,7 @@
 import React, {useMemo} from 'react';
 import {Text, View} from 'react-native';
 import {useStore} from '@store';
-import StateStore from '@controleonline/ui-layout/src/react/components/StateStore';
+import StateStore from '@controleonline/ui-common/src/react/components/StateStore';
 import DefaultErrors from '@controleonline/ui-default/src/react/components/errors/DefaultErrors';
 import resolveSystemErrorMessage from '@controleonline/ui-common/src/react/utils/systemErrorMessage';
 import useOrderDetailsVisuals from '@controleonline/ui-orders/src/react/pages/orders/sales/useOrderDetailsVisuals';

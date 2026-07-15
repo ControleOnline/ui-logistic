@@ -25,7 +25,7 @@ import {useFocusEffect} from '@react-navigation/native';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import {MaterialCommunityIcons} from '@expo/vector-icons';
 import {useStore} from '@store';
-import StateStore from '@controleonline/ui-layout/src/react/components/StateStore';
+import StateStore from '@controleonline/ui-common/src/react/components/StateStore';
 import Formatter from '@controleonline/ui-common/src/utils/formatter';
 import {useMessage} from '@controleonline/ui-common/src/react/components/MessageService';
 import AddCompanyModal from '@controleonline/ui-people/src/react/components/AddCompanyModal';
