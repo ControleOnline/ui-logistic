@@ -116,6 +116,7 @@ describe('deliveryAcceptanceQueue', () => {
           latitude: 0,
           longitude: 0,
         },
+        preferShortestDistance: true,
       },
     )
 
