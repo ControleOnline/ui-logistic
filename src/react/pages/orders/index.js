@@ -3,8 +3,7 @@ import {ActivityIndicator, Platform, Text, TouchableOpacity, View} from 'react-n
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useIsFocused, useNavigation} from '@react-navigation/native';
 import {useStore} from '@store';
-import CompactFilterSelector from '@controleonline/ui-default/src/react/components/filters/CompactFilterSelector';
-import DateShortcutFilter from '@controleonline/ui-default/src/react/components/filters/DateShortcutFilter';
+import DefaultExternalFilters from '@controleonline/ui-default/src/react/components/filters/DefaultExternalFilters';
 import DefaultTable from '@controleonline/ui-default/src/react/components/table/DefaultTable';
 import OrderHeader from '@controleonline/ui-orders/src/react/components/OrderHeader';
 import {buildOrderDetailsRouteParams} from '@controleonline/ui-orders/src/react/utils/orderRoute';
@@ -42,9 +41,7 @@ const resolveDateRangeFilter = value => {
 
 const buildDeliveryRequestParams = ({
   currentPeopleIri,
-  dateFilter,
-  customRange,
-  statusFilter,
+  filters,
 }) => {
   if (!currentPeopleIri) {
     return null;
@@ -55,14 +52,11 @@ const buildDeliveryRequestParams = ({
     provider: currentPeopleIri,
   };
 
-  if (statusFilter !== 'all') {
-    query.status = statusFilter;
+  if (filters?.status) {
+    query.status = filters.status;
   }
 
-  const dateRange = resolveDateRangeFilter({
-    shortcut: dateFilter,
-    customRange,
-  });
+  const dateRange = resolveDateRangeFilter(filters?.orderDate);
 
   if (dateRange.after) {
     query['orderDate[after]'] = dateRange.after;
@@ -123,9 +117,7 @@ export default function DeliveryOrdersPage() {
     [currentCompany?.theme?.colors, themeColors],
   );
 
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [dateFilter, setDateFilter] = useState('all');
-  const [customRange, setCustomRange] = useState({from: '', to: ''});
+  const [deliveryFilters, setDeliveryFilters] = useState({});
   const [loadedDeliveryQueueItems, setLoadedDeliveryQueueItems] = useState([]);
   const hasCurrentCompany = !!currentCompany && Object.keys(currentCompany || {}).length > 0;
   const isBootstrapReady = Boolean(sessionChecked) && hasCurrentCompany && Boolean(themeColors);
@@ -137,10 +129,10 @@ export default function DeliveryOrdersPage() {
 
   const resolvedStatusOptions = useMemo(() => {
     const allStatusOption = {
-      key: 'all',
+      value: '',
       label: normalizeText(global.t?.t('orders', 'label', 'all')) || 'Todos',
     };
-    const seenKeys = new Set(['all']);
+    const seenKeys = new Set(['']);
     const mappedStatuses = filterDeliveryStatusItems(statusItems)
       .reduce((accumulator, status) => {
         const key = normalizeText(
@@ -153,7 +145,7 @@ export default function DeliveryOrdersPage() {
 
         seenKeys.add(key);
         accumulator.push({
-          key,
+          value: key,
           label:
             normalizeText(global.t?.t('orders', 'status', status?.status)) ||
             normalizeText(status?.status) ||
@@ -164,14 +156,6 @@ export default function DeliveryOrdersPage() {
 
     return [allStatusOption, ...mappedStatuses];
   }, [statusItems]);
-
-  const currentStatusLabel = useMemo(
-    () =>
-      resolvedStatusOptions.find(option => option.key === statusFilter)?.label ||
-      resolvedStatusOptions[0]?.label ||
-      'Todos',
-    [resolvedStatusOptions, statusFilter],
-  );
 
   const deliveryQueueItems = Array.isArray(deliveryOrdersStore?.getters?.items)
     ? deliveryOrdersStore.getters.items
@@ -193,29 +177,38 @@ export default function DeliveryOrdersPage() {
     () =>
       buildDeliveryRequestParams({
         currentPeopleIri,
-        customRange,
-        dateFilter,
-        statusFilter,
+        filters: deliveryFilters,
       }),
-    [currentPeopleIri, customRange, dateFilter, statusFilter],
+    [currentPeopleIri, deliveryFilters],
   );
+  const deliveryExternalFilterColumns = useMemo(
+    () => (deliveryOrdersStore?.getters?.columns || []).map(column => {
+      const fieldName = column?.name || column?.key;
 
-  const dateShortcutColors = useMemo(
-    () => ({
-      accent: brandColors.primary || '#2563EB',
-      appBg: 'transparent',
-      border: '#CBD5E1',
-      borderSoft: '#E2E8F0',
-      cardBg: '#FFFFFF',
-      cardBgSoft: '#F8FAFC',
-      danger: '#DC2626',
-      isLight: true,
-      panelBg: '#EFF6FF',
-      pillTextDark: '#FFFFFF',
-      textPrimary: '#0F172A',
-      textSecondary: '#64748B',
+      if (fieldName === 'status') {
+        return {
+          ...column,
+          externalFilter: true,
+          emptyOptionLabel: resolvedStatusOptions[0]?.label,
+          list: resolvedStatusOptions,
+        };
+      }
+
+      if (fieldName === 'orderDate') {
+        return {
+          ...column,
+          externalFilter: true,
+          inputType: 'date-range',
+          label: 'period',
+        };
+      }
+
+      return {
+        ...column,
+        externalFilter: false,
+      };
     }),
-    [brandColors.primary],
+    [deliveryOrdersStore?.getters?.columns, resolvedStatusOptions],
   );
 
   const openOrder = useCallback(
@@ -330,16 +323,19 @@ export default function DeliveryOrdersPage() {
   ]);
 
   useEffect(() => {
-    if (
-      statusFilter !== 'all' &&
-      !resolvedStatusOptions.some(option => option.key === statusFilter)
-    ) {
-      setStatusFilter('all');
-    }
-  }, [
-    resolvedStatusOptions,
-    statusFilter,
-  ]);
+    setDeliveryFilters(current => {
+      if (
+        current.status &&
+        !resolvedStatusOptions.some(option => option.value === current.status || option.key === current.status)
+      ) {
+        const next = {...current};
+        delete next.status;
+        return next;
+      }
+
+      return current;
+    });
+  }, [resolvedStatusOptions]);
 
   if (!isBootstrapReady) {
     return (
@@ -369,46 +365,13 @@ export default function DeliveryOrdersPage() {
       edges={['bottom']}
     >
       <View style={styles.content}>
-        <View style={styles.filtersCard}>
-          <View style={styles.filtersHeaderRow}>
-            <Text style={styles.filtersTitle}>
-              {global.t?.t('orders', 'title', 'filters') || 'Filtros'}
-            </Text>
-          </View>
-
-          <View style={styles.filterSelectorsRow}>
-            <View style={[styles.filterSelectorSlot, styles.filterSelectorSlotHalf]}>
-              <CompactFilterSelector
-                icon="check-circle"
-                label={currentStatusLabel}
-                labelCaption={global.t?.t('orders', 'label', 'status') || 'Status'}
-                accentColor={brandColors.primary}
-                active={statusFilter !== 'all'}
-                dense
-                title={global.t?.t('orders', 'label', 'status') || 'Status'}
-                options={resolvedStatusOptions}
-                selectedKey={statusFilter}
-                onSelect={optionKey => {
-                  setStatusFilter(optionKey);
-                  return true;
-                }}
-              />
-            </View>
-
-            <View style={[styles.filterSelectorSlot, styles.filterSelectorSlotHalf]}>
-              <DateShortcutFilter
-                value={dateFilter}
-                onChange={setDateFilter}
-                customRange={customRange}
-                onCustomRangeChange={setCustomRange}
-                dense
-                labelCaption={global.t?.t('orders', 'label', 'period') || 'Periodo'}
-                colors={dateShortcutColors}
-                optionKeys={['all', 'today', 'yesterday', '7d', '30d', 'custom']}
-              />
-            </View>
-          </View>
-        </View>
+        <DefaultExternalFilters
+          accentColor={brandColors.primary}
+          columns={deliveryExternalFilterColumns}
+          filters={deliveryFilters}
+          onChangeFilters={setDeliveryFilters}
+          storeName="delivery_orders"
+        />
 
         <View style={styles.tableWrap}>
           <DefaultTable
