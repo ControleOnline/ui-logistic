@@ -97,6 +97,11 @@ export default {
         label: "status",
         align: "left",
         list: "status/getItems",
+        /*
+         * @agents
+         * Delivery status filters must stay scoped by column metadata so the
+         * default selector does not request unrelated statuses.
+         */
         listRequestParams: {context: "delivery"},
         emptyOptionLabel: "all",
         searchParam: "status",
