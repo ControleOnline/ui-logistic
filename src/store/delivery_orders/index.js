@@ -97,6 +97,8 @@ export default {
         label: "status",
         align: "left",
         list: "status/getItems",
+        listRequestParams: {context: "delivery"},
+        emptyOptionLabel: "all",
         searchParam: "status",
         externalFilter: true,
         sortField: "status.status",
@@ -116,7 +118,7 @@ export default {
         editable: false,
         name: "orderDate",
         align: "center",
-        label: "data",
+        label: "period",
         externalFilter: true,
         saveFormat: function (_value) {
           return undefined;

@@ -100,7 +100,7 @@ export default function DeliveryOrdersPage() {
   const {colors: themeColors} = themeStore.getters || {};
   const {actions: peopleActions, getters: peopleGetters} = peopleStore;
   const {currentCompany} = peopleGetters || {};
-  const {actions: statusActions, getters: statusGetters} = statusStore;
+  const {getters: statusGetters} = statusStore;
 
   const currentPeopleId = useMemo(
     () => normalizeText(user?.people || user?.peopleId || '').replace(/\D+/g, ''),
@@ -128,12 +128,8 @@ export default function DeliveryOrdersPage() {
   );
 
   const resolvedStatusOptions = useMemo(() => {
-    const allStatusOption = {
-      value: '',
-      label: normalizeText(global.t?.t('orders', 'label', 'all')) || 'Todos',
-    };
-    const seenKeys = new Set(['']);
-    const mappedStatuses = filterDeliveryStatusItems(statusItems)
+    const seenKeys = new Set();
+    return filterDeliveryStatusItems(statusItems)
       .reduce((accumulator, status) => {
         const key = normalizeText(
           status?.['@id'] || (status?.id ? `/statuses/${status.id}` : ''),
@@ -153,8 +149,6 @@ export default function DeliveryOrdersPage() {
         });
         return accumulator;
       }, []);
-
-    return [allStatusOption, ...mappedStatuses];
   }, [statusItems]);
 
   const deliveryQueueItems = Array.isArray(deliveryOrdersStore?.getters?.items)
@@ -181,34 +175,9 @@ export default function DeliveryOrdersPage() {
       }),
     [currentPeopleIri, deliveryFilters],
   );
-  const deliveryExternalFilterColumns = useMemo(
-    () => (deliveryOrdersStore?.getters?.columns || []).map(column => {
-      const fieldName = column?.name || column?.key;
-
-      if (fieldName === 'status') {
-        return {
-          ...column,
-          externalFilter: true,
-          emptyOptionLabel: resolvedStatusOptions[0]?.label,
-          list: resolvedStatusOptions,
-        };
-      }
-
-      if (fieldName === 'orderDate') {
-        return {
-          ...column,
-          externalFilter: true,
-          inputType: 'date-range',
-          label: 'period',
-        };
-      }
-
-      return {
-        ...column,
-        externalFilter: false,
-      };
-    }),
-    [deliveryOrdersStore?.getters?.columns, resolvedStatusOptions],
+  const getExternalFilterOptions = useCallback(
+    column => ((column?.name || column?.key) === 'status' ? resolvedStatusOptions : []),
+    [resolvedStatusOptions],
   );
 
   const openOrder = useCallback(
@@ -311,18 +280,6 @@ export default function DeliveryOrdersPage() {
   ]);
 
   useEffect(() => {
-    if (!isFocused || !currentCompany?.id || typeof statusActions?.getItems !== 'function') {
-      return;
-    }
-
-    statusActions.getItems({context: 'delivery'}).catch(() => {});
-  }, [
-    currentCompany?.id,
-    isFocused,
-    statusActions,
-  ]);
-
-  useEffect(() => {
     setDeliveryFilters(current => {
       if (
         current.status &&
@@ -367,8 +324,8 @@ export default function DeliveryOrdersPage() {
       <View style={styles.content}>
         <DefaultExternalFilters
           accentColor={brandColors.primary}
-          columns={deliveryExternalFilterColumns}
           filters={deliveryFilters}
+          getOptionsForColumn={getExternalFilterOptions}
           onChangeFilters={setDeliveryFilters}
           storeName="delivery_orders"
         />
