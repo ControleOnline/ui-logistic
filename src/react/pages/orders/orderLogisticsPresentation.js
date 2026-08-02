@@ -59,7 +59,7 @@ const shouldExposeIntegration = (integration, statusMap) => {
   return isConnectedValue(status.connected);
 };
 
-const resolveManagedByStore = (order, management = {}, uberState = {}, delivery = {}) => {
+const resolveManagedByStore = (order, management = {}, delivery = {}) => {
   if (normalizeKey(order?.app) === 'pos') {
     return true;
   }
@@ -79,13 +79,7 @@ const resolveManagedByStore = (order, management = {}, uberState = {}, delivery 
   return Boolean(
     delivery?.deliveryPeopleId ||
       delivery?.requestedAt ||
-      delivery?.trackingUrl ||
-      uberState?.managed_by_store ||
-      uberState?.managedByStore ||
-      uberState?.requested_at ||
-      uberState?.delivery_id ||
-      uberState?.estimate_id ||
-      uberState?.store_id,
+      delivery?.trackingUrl,
   );
 };
 
@@ -139,6 +133,10 @@ const resolveQuoteStateLabel = (quoteState, price) => {
     case 'selected':
     case 'requested':
       return 'Entrega solicitada';
+    case 'closed':
+    case 'delivered':
+    case 'finished':
+      return 'Entrega definida';
     case 'unavailable':
       return 'Cotacao indisponivel';
     case 'error':
@@ -153,6 +151,10 @@ const resolveQuoteSummary = (quoteState, price, eta, trackingUrl) => {
 
   if (normalizedState === 'selected' || normalizedState === 'requested') {
     return 'Entrega solicitada';
+  }
+
+  if (normalizedState === 'closed' || normalizedState === 'delivered' || normalizedState === 'finished') {
+    return 'Entrega definida';
   }
 
   if (normalizedState === 'ready' && price !== null) {
@@ -281,6 +283,71 @@ const normalizeQuoteCard = (quote, providerMap) => {
   };
 };
 
+const normalizeOrderStatusKey = status => {
+  if (!status) {
+    return '';
+  }
+
+  if (typeof status === 'string') {
+    return normalizeKey(status);
+  }
+
+  if (typeof status === 'object') {
+    return normalizeKey(status.realStatus || status.status || status.name || '');
+  }
+
+  return normalizeKey(status);
+};
+
+const isClosedOrderStatus = status => normalizeOrderStatusKey(status) === 'closed';
+
+const quoteProviderPriority = providerKey => {
+  switch (normalizeIntegrationKey(providerKey)) {
+    case 'ifood':
+      return 0;
+    case 'uber':
+      return 1;
+    case 'food99':
+      return 2;
+    default:
+      return 999;
+  }
+};
+
+const hasNumericPrice = value =>
+  value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value));
+
+const compareQuoteCards = (left, right) => {
+  const leftHasPrice = hasNumericPrice(left?.price);
+  const rightHasPrice = hasNumericPrice(right?.price);
+
+  if (leftHasPrice !== rightHasPrice) {
+    return leftHasPrice ? -1 : 1;
+  }
+
+  if (leftHasPrice && rightHasPrice) {
+    const leftPrice = Number(left.price);
+    const rightPrice = Number(right.price);
+    if (leftPrice !== rightPrice) {
+      return leftPrice - rightPrice;
+    }
+  }
+
+  const leftPriority = quoteProviderPriority(left?.providerKey);
+  const rightPriority = quoteProviderPriority(right?.providerKey);
+  if (leftPriority !== rightPriority) {
+    return leftPriority - rightPriority;
+  }
+
+  const leftId = Number(normalizeReferenceId(left?.id) || 0);
+  const rightId = Number(normalizeReferenceId(right?.id) || 0);
+  if (leftId !== rightId) {
+    return leftId - rightId;
+  }
+
+  return 0;
+};
+
 const buildQuoteStatusSummary = (providers, quotes) => {
   const summary = {
     providers: Array.isArray(providers) ? providers.length : 0,
@@ -307,6 +374,7 @@ const buildQuoteStatusSummary = (providers, quotes) => {
 const buildQuoteSnapshot = source => {
   const payload = normalizePayload(source);
   const order = payload.order || source.order || source;
+  const delivery = payload.delivery || {};
   const route = payload.route || {};
   const management = payload.management || {};
   const providersSource = Array.isArray(payload.providers) ? payload.providers : [];
@@ -341,11 +409,13 @@ const buildQuoteSnapshot = source => {
     });
   }
 
+  quotes.sort(compareQuoteCards);
+
   const selection = normalizeQuoteSelection(payload.selection || {});
   const selectedQuote =
     quotes.find(quote => normalizeReferenceId(quote.id) === normalizeReferenceId(selection.quoteOrderId)) ||
     null;
-  const pickupAddress = route.pickupAddress || order?.addressOrigin || order?.provider?.address?.[0] || null;
+  const pickupAddress = route.pickupAddress || order?.addressOrigin || null;
   const dropoffAddress = route.dropoffAddress || order?.addressDestination || null;
   const pickupContact = route.pickupContact || order?.retrieveContact || order?.provider || null;
   const dropoffContact = route.dropoffContact || order?.deliveryContact || order?.client || null;
@@ -360,13 +430,30 @@ const buildQuoteSnapshot = source => {
   const selectedProviderKey = selection.providerKey || selectedQuote?.providerKey || '';
   const selectedTrackingUrl = selection.trackingUrl || selectedQuote?.trackingUrl || null;
   const selectedPrice = selection.price !== null ? selection.price : selectedQuote?.price ?? null;
+  const courierContact = route.courierContact || order?.deliveryPeople || null;
+  const courierContactInfo = normalizePeopleContact(courierContact);
+  const deliveryPeopleId =
+    order?.deliveryPeopleId ??
+    order?.deliveryPeople?.id ??
+    route.courierContact?.id ??
+    null;
+  const hasDeliveryOrder = Boolean(
+    deliveryPeopleId ||
+      courierContactInfo.name ||
+      courierContactInfo.phone ||
+      courierContactInfo.email,
+  );
+  const isClosedOrder = isClosedOrderStatus(order?.status);
+  const showIntegrationSection = !isClosedOrder;
 
   return {
     order: {
       id: order?.id ?? null,
+      displayId: normalizeText(order?.displayId ?? order?.id ?? '') || null,
       orderType: normalizeText(order?.orderType || ''),
       app: normalizeText(order?.app || ''),
-      mainOrderId: order?.mainOrderId ?? null,
+      mainOrderId: order?.mainOrderId ?? order?.main_order_id ?? order?.mainOrder?.id ?? null,
+      mainOrder: order?.mainOrder ?? order?.main_order ?? null,
       price: order?.price !== undefined && order?.price !== null ? Number(order.price) : null,
       status: order?.status && typeof order.status === 'object' ? order.status : null,
       client: order?.client || null,
@@ -376,6 +463,8 @@ const buildQuoteSnapshot = source => {
       addressDestination: dropoffAddress,
       retrieveContact: pickupContact,
       deliveryContact: dropoffContact,
+      deliveryPeopleId,
+      deliveryPeople: courierContact,
       comments: normalizeText(order?.comments || ''),
       otherInformations: order?.otherInformations || {},
     },
@@ -386,16 +475,18 @@ const buildQuoteSnapshot = source => {
       dropoffAddressParts,
       pickupContact: pickupContactInfo,
       dropoffContact: dropoffContactInfo,
+      courierContact: courierContactInfo,
     },
     management: {
-      mode: managementMode || 'quote',
-      managedByStore:
-        typeof management.managedByStore === 'boolean'
+      mode: hasDeliveryOrder ? 'integration' : managementMode || 'quote',
+      managedByStore: hasDeliveryOrder
+        ? false
+        : typeof management.managedByStore === 'boolean'
           ? management.managedByStore
           : managementMode === 'quote' || normalizeKey(order?.app) === 'pos',
-      label: management.label || 'Cotacoes da loja',
+      label: hasDeliveryOrder ? 'Entrega gerenciada pela integracao' : management.label || 'Cotacoes da loja',
       source: normalizeText(management.source || order?.app || ''),
-      mainOrderId: management.mainOrderId ?? order?.id ?? null,
+      mainOrderId: management.mainOrderId ?? order?.mainOrderId ?? order?.main_order_id ?? order?.mainOrder?.id ?? order?.id ?? null,
     },
     providers: Array.from(providerMap.values()),
     quotes,
@@ -407,9 +498,13 @@ const buildQuoteSnapshot = source => {
       selectedAt: selection.selectedAt || '',
     },
     quoteStatus,
-    canQuote: Array.from(providerMap.values()).some(
-      provider => provider.connected && (provider.online !== false),
-    ),
+    canQuote: showIntegrationSection
+      && !hasDeliveryOrder
+      && Array.from(providerMap.values()).some(provider => provider.connected),
+    hasDeliveryOrder,
+    isClosedOrder,
+    showIntegrationSection,
+    showQuotesSection: Boolean(selectedQuote) || quotes.length > 0 || (!isClosedOrder && !hasDeliveryOrder),
     pickupAddressParts,
     dropoffAddressParts,
     pickupContact: pickupContactInfo,
@@ -418,45 +513,34 @@ const buildQuoteSnapshot = source => {
     integrations: quotes,
     currentIntegration: selectedQuote,
     delivery: {
+      deliveryPeopleId,
+      deliveryPeople: courierContactInfo,
       trackingUrl: selectedTrackingUrl,
       requestedAt: selection.selectedAt || '',
-      status: selectedQuote?.quoteStateLabel || '',
-      currentIntegrationKey: selectedProviderKey || selectedQuote?.providerKey || '',
+      status:
+        normalizeText(delivery.status || '') ||
+        (hasDeliveryOrder ? 'Entrega definida' : selectedQuote?.quoteStateLabel || ''),
+      currentIntegrationKey: selectedProviderKey || selectedQuote?.providerKey || (hasDeliveryOrder ? normalizeIntegrationKey(order?.app) || '' : ''),
     },
   };
 };
 
-const resolveUberState = order => {
-  const otherInformations = order?.otherInformations;
-
-  if (!otherInformations || typeof otherInformations !== 'object') {
-    return {};
-  }
-
-  if (otherInformations.Uber && typeof otherInformations.Uber === 'object') {
-    return otherInformations.Uber;
-  }
-
-  return otherInformations.uber && typeof otherInformations.uber === 'object'
-    ? otherInformations.uber
-    : {};
-};
-
 const buildLegacySnapshot = order => {
   const orderData = order?.order || order;
-  const uberState = resolveUberState(orderData);
-  const pickupAddress = orderData?.addressOrigin || orderData?.provider?.address?.[0] || null;
+  const delivery = order?.delivery || {};
+  const pickupAddress = orderData?.addressOrigin || null;
   const dropoffAddress = orderData?.addressDestination || null;
   const pickupContact = orderData?.retrieveContact || orderData?.provider || null;
   const dropoffContact = orderData?.deliveryContact || orderData?.client || null;
+  const courierContact = orderData?.deliveryPeople || null;
+  const courierContactInfo = normalizePeopleContact(courierContact);
   const pickupAddressParts = pickupAddress ? resolveAddressDisplayParts(pickupAddress) : null;
   const dropoffAddressParts = dropoffAddress ? resolveAddressDisplayParts(dropoffAddress) : null;
   const couriers = [];
   const integrations = [];
-  const managedByStore = resolveManagedByStore(orderData, {}, uberState, {
-    trackingUrl: uberState?.tracking_url,
-    requestedAt: uberState?.requested_at,
-    deliveryPeopleId: orderData?.deliveryPeople?.id || orderData?.deliveryPeopleId || null,
+  const deliveryPeopleId = orderData?.deliveryPeople?.id || orderData?.deliveryPeopleId || null;
+  const managedByStore = resolveManagedByStore(orderData, {}, {
+    deliveryPeopleId,
   });
 
   return {
@@ -464,27 +548,34 @@ const buildLegacySnapshot = order => {
     dropoffAddressParts,
     pickupContact: normalizePeopleContact(pickupContact),
     dropoffContact: normalizePeopleContact(dropoffContact),
+    route: {
+      pickupAddress,
+      dropoffAddress,
+      pickupAddressParts,
+      dropoffAddressParts,
+      pickupContact: normalizePeopleContact(pickupContact),
+      dropoffContact: normalizePeopleContact(dropoffContact),
+      courierContact: courierContactInfo,
+    },
     managedByStore,
     managedByStoreLabel: managedByStore ? 'Gerenciada pela loja' : 'Nao gerenciada pela loja',
     canRequestDriver: Boolean(
-      !uberState?.delivery_id &&
-        !uberState?.estimate_id &&
-        !uberState?.requested_at &&
-        (couriers.length > 0 || integrations.some(card => Boolean(card?.request?.enabled || card?.requestable))),
+      couriers.length > 0 ||
+        integrations.some(card => Boolean(card?.request?.enabled || card?.requestable)),
     ),
     hasDriver: Boolean(
-      uberState?.delivery_id ||
-        uberState?.rider_name ||
-        uberState?.rider_phone ||
-        uberState?.tracking_url,
+      deliveryPeopleId ||
+        courierContactInfo.name ||
+        courierContactInfo.phone ||
+        courierContactInfo.email,
     ),
-    uberState,
     couriers,
     delivery: {
-      deliveryPeopleId: orderData?.deliveryPeople?.id || orderData?.deliveryPeopleId || null,
-      trackingUrl: uberState?.tracking_url || null,
-      requestedAt: uberState?.requested_at || null,
-      status: uberState?.status || uberState?.order_status || uberState?.delivery_status || null,
+      deliveryPeopleId,
+      deliveryPeople: courierContactInfo,
+      trackingUrl: null,
+      requestedAt: null,
+      status: null,
     },
     management: {
       mode: managedByStore ? 'store' : 'integration',
@@ -513,6 +604,27 @@ const buildLegacySnapshot = order => {
     canQuote: false,
     integrations,
     currentIntegration: null,
+    order: {
+      id: orderData?.id ?? null,
+      displayId: normalizeText(orderData?.displayId ?? orderData?.id ?? '') || null,
+      orderType: normalizeText(orderData?.orderType || ''),
+      app: normalizeText(orderData?.app || ''),
+      mainOrderId: orderData?.mainOrderId ?? orderData?.main_order_id ?? orderData?.mainOrder?.id ?? null,
+      mainOrder: orderData?.mainOrder ?? orderData?.main_order ?? null,
+      price: orderData?.price !== undefined && orderData?.price !== null ? Number(orderData.price) : null,
+      status: orderData?.status && typeof orderData.status === 'object' ? orderData.status : null,
+      client: orderData?.client || null,
+      provider: orderData?.provider || null,
+      payer: orderData?.payer || null,
+      addressOrigin: pickupAddress,
+      addressDestination: dropoffAddress,
+      retrieveContact: pickupContact,
+      deliveryContact: dropoffContact,
+      deliveryPeopleId,
+      deliveryPeople: courierContact,
+      comments: normalizeText(orderData?.comments || ''),
+      otherInformations: orderData?.otherInformations || {},
+    },
   };
 };
 
@@ -556,7 +668,7 @@ const buildPayloadSnapshot = source => {
   const management = payload.management || {};
   const delivery = payload.delivery || {};
   const couriers = Array.isArray(payload.couriers) ? payload.couriers : [];
-  const managedByStore = resolveManagedByStore(order, management, resolveUberState(order), delivery);
+  const managedByStore = resolveManagedByStore(order, management, delivery);
   const rawIntegrations = Array.isArray(payload.integrations) ? payload.integrations : [];
   const integrationStatusesSource = payload.integrationStatuses ?? payload.companyIntegrations ?? null;
   const integrationStatuses = Array.isArray(integrationStatusesSource)
@@ -577,14 +689,14 @@ const buildPayloadSnapshot = source => {
     currentIntegrationCandidate,
     statusMap.get(normalizeIntegrationKey(currentIntegrationCandidate?.key)),
   );
-  const pickupAddress = order?.addressOrigin || order?.provider?.address?.[0] || null;
+  const pickupAddress = order?.addressOrigin || null;
   const dropoffAddress = order?.addressDestination || null;
   const pickupContact = order?.retrieveContact || order?.provider || null;
   const dropoffContact = order?.deliveryContact || order?.client || null;
   const pickupAddressParts = pickupAddress ? resolveAddressDisplayParts(pickupAddress) : null;
   const dropoffAddressParts = dropoffAddress ? resolveAddressDisplayParts(dropoffAddress) : null;
   const courierSelected = delivery?.deliveryPeople || order?.deliveryPeople || null;
-  const uberState = mergedIntegrations.find(card => card?.key === 'uber')?.state || {};
+  const isClosedOrder = isClosedOrderStatus(order?.status);
 
   return {
     pickupAddressParts,
@@ -606,7 +718,6 @@ const buildPayloadSnapshot = source => {
         currentIntegration?.trackingUrl ||
         currentIntegration?.active,
     ),
-    uberState,
     couriers,
     integrations,
     delivery: {
@@ -624,6 +735,29 @@ const buildPayloadSnapshot = source => {
       source: management.source || resolveText(order?.app),
     },
     currentIntegration,
+    isClosedOrder,
+    showIntegrationSection: !isClosedOrder,
+    order: {
+      id: order?.id ?? null,
+      displayId: normalizeText(order?.displayId ?? order?.id ?? '') || null,
+      orderType: normalizeText(order?.orderType || ''),
+      app: normalizeText(order?.app || ''),
+      mainOrderId: order?.mainOrderId ?? order?.main_order_id ?? order?.mainOrder?.id ?? null,
+      mainOrder: order?.mainOrder ?? order?.main_order ?? null,
+      price: order?.price !== undefined && order?.price !== null ? Number(order.price) : null,
+      status: order?.status && typeof order.status === 'object' ? order.status : null,
+      client: order?.client || null,
+      provider: order?.provider || null,
+      payer: order?.payer || null,
+      addressOrigin: pickupAddress,
+      addressDestination: dropoffAddress,
+      retrieveContact: pickupContact,
+      deliveryContact: dropoffContact,
+      deliveryPeopleId,
+      deliveryPeople: courierContact,
+      comments: normalizeText(order?.comments || ''),
+      otherInformations: order?.otherInformations || {},
+    },
   };
 };
 
