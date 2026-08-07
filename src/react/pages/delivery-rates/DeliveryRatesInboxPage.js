@@ -2,23 +2,19 @@
  * Contract imported from MODOS_OPERACAO.md
  * - The manager inbox lists immutable delivery-rate versions visible to the selected company.
  * - Managers can only inspect versions and activate/deactivate company links.
+ * - Listing is fully driven by DefaultTable + delivery_tax_groups store (no parallel client filter).
  */
 
-/* eslint-disable no-unused-vars */
-
-import React, {useMemo, useState} from 'react';
+import React, {useMemo} from 'react';
 import {ActivityIndicator, Text, TouchableOpacity, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import DefaultTable from '@controleonline/ui-default/src/react/components/table/DefaultTable';
 import {useStore} from '@store';
 import {
-  filterDeliveryRateGroups,
   normalizeEntityId,
   resolveCompanyLabel,
-  sortDeliveryRateGroups,
 } from '@controleonline/ui-logistic/src/shared/deliveryTaxGroups';
-import {useDeliveryRateGroupsCollection} from '@controleonline/ui-logistic/src/react/pages/delivery-rates/hooks';
 import styles from '@controleonline/ui-logistic/src/react/pages/delivery-rates/styles';
 
 const normalizePeopleId = user =>
@@ -34,24 +30,19 @@ export default function DeliveryRatesInboxPage() {
   const {user, sessionChecked} = authStore.getters;
   const {colors: themeColors} = themeStore.getters;
   const {currentCompany} = peopleStore.getters;
-  const {columns} = deliveryTaxGroupsStore.getters;
+  const {columns, items, isLoading, error, totalItems} = deliveryTaxGroupsStore.getters;
 
   const currentCompanyId = useMemo(
     () => normalizeEntityId(currentCompany?.id || currentCompany?.value || currentCompany),
     [currentCompany],
   );
   const currentCompanyIri = currentCompanyId ? `/people/${currentCompanyId}` : '';
+  const currentPeopleId = useMemo(() => normalizePeopleId(user), [user]);
 
-  const {items, isLoading, error, reload} = useDeliveryRateGroupsCollection(
-    useMemo(() => ({ company: currentCompanyIri}), [currentCompanyIri]),
-    Boolean(currentCompanyIri),
+  const requestParams = useMemo(
+    () => (currentCompanyIri ? {company: currentCompanyIri} : {}),
+    [currentCompanyIri],
   );
-
-  const [searchText, setSearchText] = useState('');
-  const [sortState, setSortState] = useState({
-    field: 'versionNumber',
-    direction: 'desc',
-  });
 
   const bootstrapReady =
     Boolean(sessionChecked) &&
@@ -59,19 +50,19 @@ export default function DeliveryRatesInboxPage() {
     Boolean(themeColors) &&
     Boolean(user);
 
-  const filteredGroups = useMemo(
-    () => filterDeliveryRateGroups(items, searchText),
-    [items, searchText],
-  );
+  const versionCount = typeof totalItems === 'number' && totalItems > 0
+    ? totalItems
+    : Array.isArray(items)
+      ? items.length
+      : 0;
 
-  const visibleGroups = useMemo(
-    () => sortDeliveryRateGroups(filteredGroups, sortState),
-    [filteredGroups, sortState],
-  );
+  const reload = () => {
+    if (currentCompanyIri && typeof deliveryTaxGroupsStore.actions?.getItems === 'function') {
+      deliveryTaxGroupsStore.actions.getItems(requestParams);
+    }
+  };
 
-  const currentPeopleId = useMemo(() => normalizePeopleId(user), [user]);
-
-  if (!bootstrapReady || isLoading) {
+  if (!bootstrapReady) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#0EA5E9" />
@@ -101,11 +92,12 @@ export default function DeliveryRatesInboxPage() {
           <Text style={styles.heroEyebrow}>Manager</Text>
           <Text style={styles.heroTitle}>Tabelas de entrega</Text>
           <Text style={styles.heroText}>
-            Tabelas visíveis para a empresa selecionada. Cada linha abre a versão read-only e o histórico.
+            Tabelas visíveis para a empresa selecionada. Cada linha abre a versão read-only e o
+            histórico.
           </Text>
           <View style={styles.heroPillRow}>
             <View style={styles.heroPill}>
-              <Text style={styles.heroPillText}>{visibleGroups.length} versões</Text>
+              <Text style={styles.heroPillText}>{versionCount} versões</Text>
             </View>
             <View style={styles.heroPill}>
               <Text style={styles.heroPillText}>{resolveCompanyLabel(currentCompany)}</Text>
@@ -119,7 +111,7 @@ export default function DeliveryRatesInboxPage() {
         {error ? (
           <View style={styles.errorCard}>
             <Text style={styles.errorTitle}>Falha ao carregar</Text>
-            <Text style={styles.errorText}>{error}</Text>
+            <Text style={styles.errorText}>{String(error)}</Text>
           </View>
         ) : null}
 
@@ -136,22 +128,24 @@ export default function DeliveryRatesInboxPage() {
               accentColor="#0EA5E9"
               add={false}
               columns={columns}
-              data={visibleGroups}
               initialViewMode="table"
-              isLoading={isLoading}
-              onRowPress={row => navigation.navigate('DeliveryRateVersionPage', { id: String(row?.id || '').replace(/\D+/g, '') })}
+              onRowPress={row =>
+                navigation.navigate('DeliveryRateVersionPage', {
+                  id: String(row?.id || '').replace(/\D+/g, ''),
+                })
+              }
+              requestParams={requestParams}
               searchProps={{
-                onSearch: setSearchText,
+                compact: true,
                 placeholder: 'Buscar tabela, código ou motoboy',
-                value: searchText,
+                searchKey: 'search',
+                storeName: 'delivery_tax_groups',
               }}
-              onSortChange={setSortState}
               showColumnFiltersButton={false}
               showRowActions={false}
-              sort={sortState}
               storeName="delivery_tax_groups"
-              totalItems={visibleGroups.length}
               totalItemsLabel="versões"
+              visibleColumnsPreferenceKey="delivery-rates-manager-inbox"
             />
           </View>
         </View>
