@@ -4,3 +4,9 @@
 - Regras transversais de qualidade, modularizacao e limites de componente vivem em `https://github.com/ControleOnline/agents-mcp/blob/master/skills/shared/code-quality.md`.
 - Quando houver detalhe especifico de implementacao, prefira comentar no codigo em ingles perto da regra.
 - Este arquivo deve ficar curto e servir apenas como ponte para as fontes oficiais.
+
+## Documentação versionada
+
+| Página | Destino |
+| --- | --- |
+| Recebíveis do motoboy / Pagamentos a motoboys | `docs/technical/Recebiveis-Motoboy-e-Pagamentos.md` |

@@ -1,8 +1,8 @@
 /*
  * Contract from MODOS_OPERACAO.md + ui-crm#25
- * - DELIVERY motoboy view: receivables where the logged courier is the invoice receiver.
- * - Extra filter: homologated companies (people_link link_type=courier) as payer.
- * - Distinct route/menu: DeliveryReceivablesPage / "Recebíveis do motoboy".
+ * - Company view: payments the current company makes to motoboys (payer = company).
+ * - Extra filter: motoboys linked via people_link link_type=courier.
+ * - Distinct route/menu: DeliveryMotoboyPaymentsPage / "Pagamentos a motoboys".
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -19,34 +19,40 @@ import { useStore } from '@store';
 import DefaultTable from '@controleonline/ui-default/src/react/components/table/DefaultTable';
 import { resolveThemePalette } from '@controleonline/../../src/styles/branding';
 import { colors } from '@controleonline/../../src/styles/colors';
-import { resolveCurrentPeopleIri } from '@controleonline/ui-logistic/src/react/utils/deliveryIdentity';
 import {
-  buildCompanyFilterOptions,
-  buildMotoboyReceivablesParams,
+  buildCompanyMotoboyPaymentsParams,
+  buildMotoboyFilterOptions,
   COURIER_LINK_TYPE,
-} from './receivablesHelpers';
+  normalizeEntityId,
+  toPeopleIri,
+} from '../receivables/receivablesHelpers';
 import styles from '../deliveryList.styles';
 
-const ALL_COMPANY_ID = '';
+const ALL_MOTOBOY_ID = '';
 
-export default function DeliveryReceivablesPage() {
+export default function DeliveryMotoboyPaymentsPage() {
   const navigation = useNavigation();
   const authStore = useStore('auth');
   const themeStore = useStore('theme');
   const peopleStore = useStore('people');
+  const peopleLinkStore = useStore('people_link');
 
-  const { user, sessionChecked } = authStore.getters || {};
+  const { sessionChecked } = authStore.getters || {};
   const { colors: themeColors } = themeStore.getters || {};
   const { currentCompany } = peopleStore.getters || {};
-  const peopleActions = peopleStore.actions || {};
+  const peopleLinkActions = peopleLinkStore?.actions || {};
 
-  const [selectedCompanyId, setSelectedCompanyId] = useState(ALL_COMPANY_ID);
-  const [companyOptions, setCompanyOptions] = useState([]);
-  const [companiesLoading, setCompaniesLoading] = useState(false);
+  const [selectedMotoboyId, setSelectedMotoboyId] = useState(ALL_MOTOBOY_ID);
+  const [motoboyOptions, setMotoboyOptions] = useState([]);
+  const [motoboysLoading, setMotoboysLoading] = useState(false);
 
-  const currentPeopleIri = useMemo(
-    () => resolveCurrentPeopleIri(user),
-    [user?.people, user?.peopleId, user?.person, user?.personId],
+  const currentCompanyId = useMemo(
+    () => normalizeEntityId(currentCompany),
+    [currentCompany],
+  );
+  const currentCompanyIri = useMemo(
+    () => toPeopleIri(currentCompanyId),
+    [currentCompanyId],
   );
 
   const brandColors = useMemo(
@@ -63,44 +69,48 @@ export default function DeliveryReceivablesPage() {
   const isBootstrapReady =
     Boolean(sessionChecked) && hasCurrentCompany && Boolean(themeColors);
 
-  const selectedCompanyIri = useMemo(() => {
-    if (!selectedCompanyId) return '';
-    const match = companyOptions.find(opt => opt.id === selectedCompanyId);
+  const selectedMotoboyIri = useMemo(() => {
+    if (!selectedMotoboyId) return '';
+    const match = motoboyOptions.find(opt => opt.id === selectedMotoboyId);
     return match?.iri || '';
-  }, [companyOptions, selectedCompanyId]);
+  }, [motoboyOptions, selectedMotoboyId]);
 
   const requestParams = useMemo(
     () =>
-      buildMotoboyReceivablesParams({
-        receiverIri: currentPeopleIri,
-        companyIri: selectedCompanyIri,
+      buildCompanyMotoboyPaymentsParams({
+        payerIri: currentCompanyIri,
+        motoboyIri: selectedMotoboyIri,
       }),
-    [currentPeopleIri, selectedCompanyIri],
+    [currentCompanyIri, selectedMotoboyIri],
   );
 
-  const loadCompanyOptions = useCallback(async () => {
-    if (typeof peopleActions.myCompaniesByLinkType !== 'function') {
-      setCompanyOptions([]);
+  const loadMotoboyOptions = useCallback(async () => {
+    if (
+      !currentCompanyIri ||
+      typeof peopleLinkActions.getItems !== 'function'
+    ) {
+      setMotoboyOptions([]);
       return;
     }
 
-    setCompaniesLoading(true);
+    setMotoboysLoading(true);
     try {
-      const companyList = await peopleActions.myCompaniesByLinkType({
-        params: { linkType: COURIER_LINK_TYPE },
+      const links = await peopleLinkActions.getItems({
+        company: currentCompanyIri,
+        linkType: COURIER_LINK_TYPE,
       });
-      setCompanyOptions(buildCompanyFilterOptions(companyList));
+      setMotoboyOptions(buildMotoboyFilterOptions(links));
     } catch (_err) {
-      setCompanyOptions([]);
+      setMotoboyOptions([]);
     } finally {
-      setCompaniesLoading(false);
+      setMotoboysLoading(false);
     }
-  }, [peopleActions]);
+  }, [currentCompanyIri, peopleLinkActions]);
 
   useEffect(() => {
-    if (!isBootstrapReady || !currentPeopleIri) return;
-    loadCompanyOptions();
-  }, [isBootstrapReady, currentPeopleIri, loadCompanyOptions]);
+    if (!isBootstrapReady || !currentCompanyIri) return;
+    loadMotoboyOptions();
+  }, [isBootstrapReady, currentCompanyIri, loadMotoboyOptions]);
 
   const openInvoice = useCallback(
     invoice => {
@@ -116,10 +126,10 @@ export default function DeliveryReceivablesPage() {
 
   const filterChips = useMemo(
     () => [
-      { id: ALL_COMPANY_ID, label: 'Todas empresas' },
-      ...companyOptions.map(opt => ({ id: opt.id, label: opt.label })),
+      { id: ALL_MOTOBOY_ID, label: 'Todos motoboys' },
+      ...motoboyOptions.map(opt => ({ id: opt.id, label: opt.label })),
     ],
-    [companyOptions],
+    [motoboyOptions],
   );
 
   if (!isBootstrapReady) {
@@ -133,15 +143,13 @@ export default function DeliveryReceivablesPage() {
     );
   }
 
-  if (!currentPeopleIri) {
+  if (!currentCompanyIri) {
     return (
       <View style={styles.centerState}>
-        <Text style={styles.centerStateTitle}>
-          Não foi possível identificar o motoboy logado.
-        </Text>
+        <Text style={styles.centerStateTitle}>Empresa não identificada</Text>
         <Text style={styles.centerStateText}>
-          O relatório de recebíveis depende do vínculo people_link do tipo
-          courier.
+          Selecione a empresa para ver os pagamentos a motoboys (invoices em
+          que a empresa é o payer).
         </Text>
       </View>
     );
@@ -164,12 +172,12 @@ export default function DeliveryReceivablesPage() {
               fontWeight: '800',
             }}
           >
-            Recebíveis do motoboy
+            Pagamentos a motoboys
           </Text>
           <Text style={{ color: '#64748B', fontSize: 12, lineHeight: 16 }}>
-            Invoices em que você é o receiver. Filtre por empresa homologada.
+            Invoices em que a empresa é o payer. Filtre por motoboy homologado.
           </Text>
-          {companiesLoading ? (
+          {motoboysLoading ? (
             <ActivityIndicator
               size="small"
               color={brandColors.primary || '#2563EB'}
@@ -182,10 +190,10 @@ export default function DeliveryReceivablesPage() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ gap: 8, paddingVertical: 4 }}
               renderItem={({ item }) => {
-                const active = selectedCompanyId === item.id;
+                const active = selectedMotoboyId === item.id;
                 return (
                   <TouchableOpacity
-                    onPress={() => setSelectedCompanyId(item.id)}
+                    onPress={() => setSelectedMotoboyId(item.id)}
                     style={{
                       backgroundColor: active
                         ? brandColors.primary || '#2563EB'
@@ -217,7 +225,7 @@ export default function DeliveryReceivablesPage() {
             onRowPress={openInvoice}
             requestParams={requestParams}
             searchProps={{
-              placeholder: 'Buscar recebível',
+              placeholder: 'Buscar pagamento',
             }}
             showRowActions={false}
             sort={{
