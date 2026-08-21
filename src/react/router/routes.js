@@ -2,6 +2,7 @@ import React from 'react';
 import OrderLogisticsPage from '@controleonline/ui-logistic/src/react/pages/orders/OrderLogisticsPage';
 import DeliveryOrdersPage from '@controleonline/ui-logistic/src/react/pages/orders/index';
 import DeliveryReceivablesPage from '@controleonline/ui-logistic/src/react/pages/receivables/index';
+import DeliveryMotoboyPaymentsPage from '@controleonline/ui-logistic/src/react/pages/motoboy-payments/index';
 import DeliveryCompaniesPage from '@controleonline/ui-logistic/src/react/pages/companies/index';
 import DeliveryVehicleSetupPage from '@controleonline/ui-logistic/src/react/pages/delivery-rates/DeliveryVehicleSetupPage';
 import DeliveryRateTablesPage from '@controleonline/ui-logistic/src/react/pages/delivery-rates/DeliveryRateTablesPage';
@@ -81,9 +82,22 @@ const logisticRoutes = [
       showBottomCart: false,
       showBottomToolBar: true,
       showCompanyFilter: false,
-      title: () => global.t?.t('invoice', 'title', 'deliveryReceivables') || 'Recebiveis',
+      title: () => global.t?.t('invoice', 'title', 'deliveryReceivables') || 'Recebíveis do motoboy',
     },
     path: 'delivery/receivables',
+  },
+  {
+    name: 'DeliveryMotoboyPaymentsPage',
+    component: DeliveryMotoboyPaymentsPage,
+    options: {
+      headerShown: true,
+      showBottomCart: false,
+      showBottomToolBar: true,
+      showCompanyFilter: true,
+      companyFilterMode: 'icon',
+      title: () => global.t?.t('invoice', 'title', 'motoboyPayments') || 'Pagamentos a motoboys',
+    },
+    path: 'delivery/motoboy-payments',
   },
   {
     name: 'DeliveryCompaniesPage',
