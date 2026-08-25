@@ -34,9 +34,22 @@ test.describe('delivery rates manager inbox smoke', () => {
       },
     ];
 
-    await page.route(`${API_ORIGIN}/**`, async route => {
+    await page.route('**/*', async route => {
       const method = route.request().method().toUpperCase();
-      const pathname = new URL(route.request().url()).pathname.replace(/^\/+/, '');
+      const url = new URL(route.request().url());
+      const pathname = url.pathname.replace(/^\/+/, '');
+      const isLocalWebServer = ['127.0.0.1', 'localhost'].includes(url.hostname) && url.port === '4173';
+      const isMockedApiPath = /^(people\/|companies|delivery_tax_groups|configs\/|devices|device_configs|runtime\/ip|themes-colors\.css)/.test(pathname);
+      if (isLocalWebServer && !isMockedApiPath) {
+        return route.continue();
+      }
+      if (
+        !isMockedApiPath &&
+        !url.href.startsWith(API_ORIGIN) &&
+        !['localhost', '127.0.0.1'].includes(url.hostname)
+      ) {
+        return route.continue();
+      }
       if (method === 'OPTIONS') {
         return route.fulfill({status: 204, headers: CORS_HEADERS, body: ''});
       }
@@ -45,6 +58,36 @@ test.describe('delivery rates manager inbox smoke', () => {
           status: 200,
           headers: jsonHeaders(),
           body: JSON.stringify(collection(groups)),
+        });
+      }
+      if (pathname === 'people/companies/my' || pathname === 'companies/my') {
+        return route.fulfill({
+          status: 200,
+          headers: jsonHeaders(),
+          body: JSON.stringify(
+            collection([
+              {
+                id: 3,
+                name: 'Empresa Teste',
+                alias: 'TESTE',
+                panel_enabled: true,
+                enabled: true,
+              },
+            ]),
+          ),
+        });
+      }
+      if (pathname === 'people/company/default') {
+        return route.fulfill({
+          status: 200,
+          headers: jsonHeaders(),
+          body: JSON.stringify({
+            id: 3,
+            name: 'Empresa Teste',
+            alias: 'TESTE',
+            panel_enabled: true,
+            enabled: true,
+          }),
         });
       }
       if (pathname === 'companies' || pathname.startsWith('people/')) {
@@ -103,6 +146,7 @@ test.describe('delivery rates manager inbox smoke', () => {
 
     await page.goto('/delivery/manager/rates');
     await expect(page.getByText(/Tabelas de entrega/i).first()).toBeVisible({timeout: 15000});
-    await expect(page.getByPlaceholder(/Buscar tabela/i)).toBeVisible();
+    await expect(page.getByText('TX-10', {exact: true})).toBeVisible();
+    await expect(page.getByText('1 Items', {exact: true})).toBeVisible();
   });
 });

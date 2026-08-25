@@ -84,6 +84,23 @@ async function installApiMocks(page, { userId = 7, companyId = 3 } = {}) {
     const request = route.request();
     const method = request.method();
     const url = request.url();
+    const parsedUrl = new URL(url);
+    const pathname = parsedUrl.pathname.replace(/^\/+/, '');
+    const isLocalWebServer =
+      ['127.0.0.1', 'localhost'].includes(parsedUrl.hostname) && parsedUrl.port === '4173';
+    const isMockedApiPath = /^(configs?\/|config|people\/|companies|people_links|invoices?|runtime\/ip|themes-colors\.css|devices|device_configs)/.test(pathname);
+
+    if (isLocalWebServer && !isMockedApiPath) {
+      return route.continue();
+    }
+
+    if (
+      !isMockedApiPath &&
+      !url.startsWith(API_ORIGIN) &&
+      !['localhost', '127.0.0.1'].includes(parsedUrl.hostname)
+    ) {
+      return route.continue();
+    }
 
     if (method === 'OPTIONS') {
       return route.fulfill({ status: 204, headers: CORS_HEADERS, body: '' });
@@ -160,6 +177,18 @@ async function seedSession(page, session) {
         window.localStorage.setItem('session', JSON.stringify(sessionPayload));
         window.localStorage.setItem('api_key', sessionPayload.api_key || '');
         window.localStorage.setItem('app_version', version);
+        window.localStorage.setItem('config', JSON.stringify({language: 'pt-br'}));
+        window.localStorage.setItem('app-type', 'DELIVERY');
+        window.localStorage.setItem(
+          'device',
+          JSON.stringify({
+            id: 'web-delivery',
+            device: 'web-delivery',
+            type: 'WEB',
+            appVersion: version,
+            buildNumber: version,
+          }),
+        );
       } catch (_e) {
         // ignore
       }
