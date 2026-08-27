@@ -97,7 +97,7 @@ test.describe('own delivery charge-on-delivery smoke', () => {
     const steps = [];
 
     await page.goto(`/order-details?store=orders&id=${scenario.readySale.id}`);
-    await expect(page.getByText(/ready/i).first()).toBeVisible();
+    await expect(page.getByText(/ready|pronto/i).first()).toBeVisible();
     steps.push({
       id: 'ready',
       print: await captureStep(page, '02-ready'),
