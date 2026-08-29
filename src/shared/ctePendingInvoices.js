@@ -19,6 +19,11 @@ export const CTE_PENDING_COLUMNS = [
     editable: false,
   },
   {
+    name: 'clientName',
+    label: 'Destinatário',
+    editable: false,
+  },
+  {
     name: 'invoiceNumber',
     label: 'NF',
     isIdentity: true,
