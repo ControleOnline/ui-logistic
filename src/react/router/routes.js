@@ -2,7 +2,6 @@ import React from 'react';
 import OrderLogisticsPage from '@controleonline/ui-logistic/src/react/pages/orders/OrderLogisticsPage';
 import DeliveryOrdersPage from '@controleonline/ui-logistic/src/react/pages/orders/index';
 import DeliveryReceivablesPage from '@controleonline/ui-logistic/src/react/pages/receivables/index';
-import DeliveryMotoboyPaymentsPage from '@controleonline/ui-logistic/src/react/pages/motoboy-payments/index';
 import DeliveryCompaniesPage from '@controleonline/ui-logistic/src/react/pages/companies/index';
 import DeliveryVehicleSetupPage from '@controleonline/ui-logistic/src/react/pages/delivery-rates/DeliveryVehicleSetupPage';
 import DeliveryRateTablesPage from '@controleonline/ui-logistic/src/react/pages/delivery-rates/DeliveryRateTablesPage';
@@ -12,6 +11,7 @@ import DeliveryCourierSchedulesPage from '@controleonline/ui-logistic/src/react/
 import DeliveryCourierScheduleFormPage from '@controleonline/ui-logistic/src/react/pages/presence/DeliveryCourierScheduleFormPage';
 import DeliveryCourierPresencePage from '@controleonline/ui-logistic/src/react/pages/presence/DeliveryCourierPresencePage';
 import DeliveryCourierPresenceHistoryPage from '@controleonline/ui-logistic/src/react/pages/presence/DeliveryCourierPresenceHistoryPage';
+import CtePendingInvoicesPage from '@controleonline/ui-logistic/src/react/pages/cte/CtePendingInvoicesPage';
 
 export const WrappedOrderLogistics = ({navigation, route}) => {
   React.useEffect(() => {
@@ -82,22 +82,9 @@ const logisticRoutes = [
       showBottomCart: false,
       showBottomToolBar: true,
       showCompanyFilter: false,
-      title: () => global.t?.t('invoice', 'title', 'deliveryReceivables') || 'Recebíveis do motoboy',
+      title: () => global.t?.t('invoice', 'title', 'deliveryReceivables') || 'Recebiveis',
     },
     path: 'delivery/receivables',
-  },
-  {
-    name: 'DeliveryMotoboyPaymentsPage',
-    component: DeliveryMotoboyPaymentsPage,
-    options: {
-      headerShown: true,
-      showBottomCart: false,
-      showBottomToolBar: true,
-      showCompanyFilter: true,
-      companyFilterMode: 'icon',
-      title: () => global.t?.t('invoice', 'title', 'motoboyPayments') || 'Pagamentos a motoboys',
-    },
-    path: 'delivery/motoboy-payments',
   },
   {
     name: 'DeliveryCompaniesPage',
@@ -206,6 +193,18 @@ const logisticRoutes = [
       title: 'Historico da presenca',
     },
     path: 'delivery/courier/presence/history',
+  },
+  {
+    name: 'CtePendingInvoicesPage',
+    component: CtePendingInvoicesPage,
+    options: {
+      headerShown: true,
+      showBottomCart: false,
+      showBottomToolBar: true,
+      showCompanyFilter: false,
+      title: 'NFs sem CT-e',
+    },
+    path: 'cte',
   },
 ];
 
