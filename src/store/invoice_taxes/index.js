@@ -17,7 +17,16 @@ export default {
     filters: {},
     reload: false,
     add: false,
+    selected: [],
     columns: CTE_PENDING_COLUMNS,
+    configs: {
+      selectable: true,
+      showRowActions: false,
+      summaryLabels: {
+        count: {invoices: 'NFs', groups: 'Grupos'},
+        sum: {invoiceTotal: 'Total da rota'},
+      },
+    },
   },
   actions,
   getters,
