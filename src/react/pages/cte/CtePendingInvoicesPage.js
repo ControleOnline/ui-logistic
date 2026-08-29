@@ -1,4 +1,4 @@
-import React, {useEffect, useMemo, useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
@@ -11,16 +11,20 @@ const TABS = [
   {key: 'emitted', label: 'Emitidos', storeName: 'invoice_tasks_emitted'},
 ];
 
+const toInvoiceIds = value =>
+  (Array.isArray(value) ? value : [value])
+    .flatMap(item => String(item || '').split(/[,\s]+/))
+    .map(item => String(item).replace(/\D+/g, ''))
+    .filter(Boolean);
+
 export default function CtePendingInvoicesPage() {
   const navigation = useNavigation();
   const [tab, setTab] = useState('pending');
   const current = TABS.find(item => item.key === tab) || TABS[0];
   const invoiceStore = useStore('invoice_taxes');
   const tableStore = useStore(current.storeName);
-  const selected = Array.isArray(invoiceStore?.getters?.selected) ? invoiceStore.getters.selected : [];
-  const showEmit = tab === 'pending' && selected.length > 1;
-  const items = useMemo(() => invoiceStore?.getters?.items || [], [invoiceStore?.getters?.items]);
-  const selectedRows = items.filter(row => selected.includes(String(row?.id)));
+  const selectedIds = toInvoiceIds(invoiceStore?.getters?.selected);
+  const showEmit = tab === 'pending' && selectedIds.length > 1;
 
   useEffect(() => {
     tableStore?.actions?.setReload?.(true);
@@ -44,9 +48,9 @@ export default function CtePendingInvoicesPage() {
         <Pressable
           testID="cte-emit-button"
           style={styles.emitButton}
-          onPress={() => navigation.navigate('CteEmitPage', {selectedIds: selected, rows: selectedRows})}
+          onPress={() => navigation.navigate('CteEmitPage', {ids: selectedIds.join(',')})}
         >
-          <Text style={styles.emitText}>Emitir CTE ({selected.length} NFs)</Text>
+          <Text style={styles.emitText}>Emitir CTE ({selectedIds.length} NFs)</Text>
         </Pressable>
       ) : null}
     </SafeAreaView>
