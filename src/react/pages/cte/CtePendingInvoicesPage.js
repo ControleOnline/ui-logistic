@@ -12,7 +12,7 @@ import {
 import {SafeAreaView} from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Feather';
 import {api} from '@controleonline/ui-common/src/api';
-import DefaultTableImportModal from '@controleonline/ui-default/src/react/components/table/DefaultTableImportModal';
+import AddImportModal from '@controleonline/ui-common/src/react/components/AddImportModal';
 import {useStore} from '@store';
 import {
   buildRouteSummary,
@@ -134,10 +134,13 @@ export default function CtePendingInvoicesPage() {
           </View>
         ))}
       </ScrollView>
-      <DefaultTableImportModal
-        onClose={() => setIsImportModalVisible(false)}
-        storeName="invoice_taxes"
+      <AddImportModal
         visible={isImportModalVisible}
+        onClose={() => setIsImportModalVisible(false)}
+        context={{ context: 'xml' }}
+        allowedExtensions={['xml', 'zip']}
+        importType="xml"
+        // UI strings fallback to defaults
       />
     </SafeAreaView>
   );
