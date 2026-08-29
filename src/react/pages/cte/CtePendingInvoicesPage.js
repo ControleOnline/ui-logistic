@@ -1,4 +1,4 @@
-import React, {useMemo, useState} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
@@ -14,13 +14,18 @@ const TABS = [
 export default function CtePendingInvoicesPage() {
   const navigation = useNavigation();
   const [tab, setTab] = useState('pending');
-  const invoiceStore = useStore('invoice_taxes');
-  const selected = Array.isArray(invoiceStore?.getters?.selected) ? invoiceStore.getters.selected : [];
   const current = TABS.find(item => item.key === tab) || TABS[0];
+  const invoiceStore = useStore('invoice_taxes');
+  const tableStore = useStore(current.storeName);
+  const selected = Array.isArray(invoiceStore?.getters?.selected) ? invoiceStore.getters.selected : [];
   const showEmit = tab === 'pending' && selected.length > 1;
-
   const items = useMemo(() => invoiceStore?.getters?.items || [], [invoiceStore?.getters?.items]);
   const selectedRows = items.filter(row => selected.includes(String(row?.id)));
+
+  useEffect(() => {
+    tableStore?.actions?.setReload?.(true);
+    tableStore?.actions?.getItems?.({page: 1, itemsPerPage: 50});
+  }, [current.storeName]);
 
   return (
     <SafeAreaView style={styles.screen} edges={['bottom']}>
@@ -34,7 +39,7 @@ export default function CtePendingInvoicesPage() {
           ))}
         </View>
       </View>
-      <DefaultTable storeName={current.storeName} />
+      <DefaultTable key={current.storeName} storeName={current.storeName} />
       {showEmit ? (
         <Pressable
           testID="cte-emit-button"
