@@ -1,10 +1,13 @@
 import React, {useEffect, useMemo, useState} from 'react';
 import {Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
+import {MaterialCommunityIcons} from '@expo/vector-icons';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {api} from '@controleonline/ui-common/src/api';
 import {useStore} from '@store';
 import {formatMoney} from '@controleonline/ui-logistic/src/shared/ctePendingInvoices';
+
+const HOMOLOG_LABEL = /homologa|sem valor fiscal/i;
 
 const toInvoiceIds = value =>
   (Array.isArray(value) ? value : [value])
@@ -23,10 +26,24 @@ const readIdsFromLocation = () => {
 
 const rowId = row => String(row?.id ?? row?.['@id'] ?? '').replace(/\D+/g, '');
 
-const Field = ({label, value}) => (
-  <View style={styles.field}>
-    <Text style={styles.label}>{label}</Text>
-    <Text style={styles.value}>{value || '—'}</Text>
+const cleanName = (value, fallback) => {
+  const text = String(value || '').trim();
+  if (!text || HOMOLOG_LABEL.test(text) || text === fallback) {
+    return fallback;
+  }
+  return text;
+};
+
+const PartyCard = ({icon, role, name, address, tone}) => (
+  <View style={[styles.partyCard, tone && {borderColor: tone}]}>
+    <View style={styles.partyHeader}>
+      <View style={[styles.partyIcon, tone && {backgroundColor: tone}]}>
+        <MaterialCommunityIcons name={icon} size={16} color="#fff" />
+      </View>
+      <Text style={styles.partyRole}>{role}</Text>
+    </View>
+    <Text style={styles.partyName}>{name}</Text>
+    <Text style={styles.partyAddress}>{address}</Text>
   </View>
 );
 
@@ -116,12 +133,12 @@ export default function CteEmitPage() {
     const total = rows.reduce((sum, row) => sum + Number(row?.invoiceTotal || 0), 0);
     const first = rows[0] || {};
     return {
-      issuerName: first.issuerName || first.companyName || 'Emitente não informado',
-      clientName: first.clientName || 'Destinatário não informado',
-      providerName: first.providerName || 'Remetente não informado',
-      carrierName: first.carrierName || 'Transportadora não informada',
+      issuerName: cleanName(first.issuerName || first.companyName, 'Emitente não informado'),
+      clientName: cleanName(first.clientName, 'Destinatário não informado'),
+      providerName: cleanName(first.providerName, 'Remetente não informado'),
+      carrierName: cleanName(first.carrierName, 'Transportadora não informada'),
       addressLabel: first.addressLabel || 'Endereço não informado',
-      providerAddressLabel: first.providerAddressLabel || first.addressLabel || 'Endereço não informado',
+      providerAddressLabel: first.providerAddressLabel || 'Endereço não informado',
       clientAddressLabel: first.clientAddressLabel || 'Endereço não informado',
       invoiceCount: rows.length,
       totalValue: total,
@@ -185,20 +202,31 @@ export default function CteEmitPage() {
     <SafeAreaView style={styles.screen} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Emitir CT-e</Text>
-        <Text style={styles.hint}>Dados das NFs em leitura. Preencha os campos do CT-e para enfileirar a emissão.</Text>
+        <Text style={styles.hint}>Confira os envolvidos das NFs e complete só os dados do transporte.</Text>
         {loading ? <Text style={styles.hint}>Carregando NFs {ids.join(', ')}...</Text> : null}
 
-        <View style={styles.card}>
-          <Text style={styles.section}>Dados das NFs</Text>
-          <Field label="Empresa / emitente" value={summary.issuerName} />
-          <Field label="Remetente" value={summary.providerName} />
-          <Field label="Destinatário" value={summary.clientName} />
-          <Field label="Transportadora" value={summary.carrierName} />
-          <Field label="Endereço do emitente" value={summary.addressLabel} />
-          <Field label="Endereço do remetente" value={summary.providerAddressLabel} />
-          <Field label="Endereço do destinatário" value={summary.clientAddressLabel} />
-          <Field label="Quantidade de NFs" value={String(summary.invoiceCount)} />
-          <Field label="Valor das NFs" value={formatMoney(summary.totalValue)} />
+        <View style={styles.summaryBar}>
+          <View style={styles.summaryItem}>
+            <MaterialCommunityIcons name="file-document-outline" size={18} color="#0F766E" />
+            <View>
+              <Text style={styles.summaryLabel}>Notas fiscais</Text>
+              <Text style={styles.summaryValue}>{summary.invoiceCount} NF(s)</Text>
+            </View>
+          </View>
+          <View style={styles.summaryItem}>
+            <MaterialCommunityIcons name="currency-brl" size={18} color="#0F766E" />
+            <View>
+              <Text style={styles.summaryLabel}>Valor das mercadorias</Text>
+              <Text style={styles.summaryValue}>{formatMoney(summary.totalValue)}</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.partyGrid}>
+          <PartyCard icon="office-building" role="Emitente da NF" name={summary.issuerName} address={summary.addressLabel} tone="#0F766E" />
+          <PartyCard icon="package-variant-closed" role="Remetente" name={summary.providerName} address={summary.providerAddressLabel} tone="#0369A1" />
+          <PartyCard icon="account-arrow-right" role="Destinatário" name={summary.clientName} address={summary.clientAddressLabel} tone="#7C3AED" />
+          <PartyCard icon="truck-delivery-outline" role="Transportadora" name={summary.carrierName} address="Usada na emissão do CT-e" tone="#C2410C" />
         </View>
 
         {rows.map(row => (
@@ -206,11 +234,12 @@ export default function CteEmitPage() {
             <View style={{flex: 1}}>
               <Text style={styles.nfTitle}>NF #{row.invoiceNumber || rowId(row)}</Text>
               <Text style={styles.nfMeta}>Modelo {row.invoiceModel || '—'} · {formatMoney(row.invoiceTotal)}</Text>
-              <Text style={styles.nfMeta}>Destinatário: {row.clientName || '—'}</Text>
-              <Text style={styles.nfMeta}>Remetente: {row.providerName || '—'}</Text>
+              <Text style={styles.nfMeta}>Destinatário: {cleanName(row.clientName, '—')}</Text>
+              <Text style={styles.nfMeta}>Remetente: {cleanName(row.providerName, '—')}</Text>
               <Text style={styles.nfMeta}>{row.invoiceKey || 'sem chave'}</Text>
             </View>
             <Pressable testID={`cte-nf-pdf-${rowId(row)}`} onPress={() => openNfPdf(row)} style={styles.pdfButton}>
+              <MaterialCommunityIcons name="file-pdf-box" size={16} color="#fff" />
               <Text style={styles.pdfButtonText}>Ver PDF</Text>
             </Pressable>
           </View>
@@ -262,15 +291,55 @@ const styles = StyleSheet.create({
   content: {padding: 16, paddingBottom: 40},
   title: {fontSize: 20, fontWeight: '800', color: '#0F172A'},
   hint: {marginTop: 6, marginBottom: 14, color: '#64748B'},
+  summaryBar: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+    flexWrap: 'wrap',
+  },
+  summaryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    minWidth: 180,
+    flexGrow: 1,
+  },
+  summaryLabel: {fontSize: 11, fontWeight: '700', color: '#047857', textTransform: 'uppercase'},
+  summaryValue: {fontSize: 16, fontWeight: '800', color: '#0F172A'},
+  partyGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 12,
+  },
+  partyCard: {
+    flexGrow: 1,
+    flexBasis: 220,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 12,
+  },
+  partyHeader: {flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8},
+  partyIcon: {width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#0F766E'},
+  partyRole: {fontSize: 11, fontWeight: '800', color: '#64748B', textTransform: 'uppercase'},
+  partyName: {fontSize: 14, fontWeight: '800', color: '#0F172A'},
+  partyAddress: {marginTop: 4, fontSize: 12, color: '#64748B', lineHeight: 16},
   card: {backgroundColor: '#fff', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 12},
   section: {fontSize: 13, fontWeight: '800', color: '#0F766E', textTransform: 'uppercase', marginBottom: 4},
   field: {marginTop: 8},
   label: {fontSize: 11, fontWeight: '800', color: '#64748B', textTransform: 'uppercase'},
-  value: {fontSize: 15, fontWeight: '700', color: '#0F172A'},
   nfCard: {backgroundColor: '#fff', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 12},
   nfTitle: {fontWeight: '800', color: '#0F172A'},
   nfMeta: {color: '#64748B', marginTop: 2, fontSize: 12},
-  pdfButton: {backgroundColor: '#0F766E', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 12},
+  pdfButton: {backgroundColor: '#0F766E', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 6},
   pdfButtonText: {color: '#fff', fontWeight: '800', fontSize: 12},
   input: {marginTop: 6, borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 10, padding: 12, backgroundColor: '#fff'},
   error: {color: '#B91C1C', marginTop: 10},
