@@ -7,7 +7,7 @@ import {api} from '@controleonline/ui-common/src/api';
 import DefaultTable from '@controleonline/ui-default/src/react/components/table/DefaultTable';
 import {useStore} from '@store';
 import {formatMoney} from '@controleonline/ui-logistic/src/shared/ctePendingInvoices';
-import CteEmitNfActions from './CteEmitNfActions';
+import CteEmitNfCard from './CteEmitNfCard';
 
 const HOMOLOG_LABEL = /homologa|sem valor fiscal/i;
 
@@ -49,8 +49,8 @@ const PartyCard = ({icon, role, name, address, tone}) => (
   </View>
 );
 
-const InputField = ({label, value, onChangeText, placeholder, keyboardType}) => (
-  <View style={styles.field}>
+const InputField = ({label, value, onChangeText, placeholder, keyboardType, wide}) => (
+  <View style={[styles.field, wide && styles.fieldWide]}>
     <Text style={styles.label}>{label}</Text>
     <TextInput value={value} onChangeText={onChangeText} placeholder={placeholder} keyboardType={keyboardType} style={styles.input} />
   </View>
@@ -229,15 +229,17 @@ export default function CteEmitPage() {
 
         <View style={styles.card}>
           <Text style={styles.section}>Dados do CT-e</Text>
-          <InputField label="CFOP" value={form.cfop} onChangeText={value => setField('cfop', value)} placeholder="5353" />
-          <InputField label="Modal (01 rodoviário)" value={form.modal} onChangeText={value => setField('modal', value)} placeholder="01" />
-          <InputField label="Tipo de serviço (0 normal)" value={form.tipoServico} onChangeText={value => setField('tipoServico', value)} placeholder="0" />
-          <InputField label="Tipo do CT-e (0 normal)" value={form.tipoCte} onChangeText={value => setField('tipoCte', value)} placeholder="0" />
-          <InputField label="Tomador (0 remetente, 3 destinatário)" value={form.tomador} onChangeText={value => setField('tomador', value)} placeholder="3" />
-          <InputField label="Natureza da prestação" value={form.natureza} onChangeText={value => setField('natureza', value)} />
-          <InputField label="Valor do frete" value={form.valorFrete} onChangeText={value => setField('valorFrete', value)} keyboardType="decimal-pad" placeholder="0,00" />
-          <InputField label="Valor a receber" value={form.valorReceber} onChangeText={value => setField('valorReceber', value)} keyboardType="decimal-pad" placeholder="0,00" />
-          <InputField label="Observação" value={form.observacao} onChangeText={value => setField('observacao', value)} placeholder="Informações complementares" />
+          <View style={styles.formGrid}>
+            <InputField label="CFOP" value={form.cfop} onChangeText={value => setField('cfop', value)} placeholder="5353" />
+            <InputField label="Modal" value={form.modal} onChangeText={value => setField('modal', value)} placeholder="01 rodoviário" />
+            <InputField label="Tipo de serviço" value={form.tipoServico} onChangeText={value => setField('tipoServico', value)} placeholder="0 normal" />
+            <InputField label="Tipo do CT-e" value={form.tipoCte} onChangeText={value => setField('tipoCte', value)} placeholder="0 normal" />
+            <InputField label="Tomador" value={form.tomador} onChangeText={value => setField('tomador', value)} placeholder="3 destinatário" />
+            <InputField label="Valor do frete" value={form.valorFrete} onChangeText={value => setField('valorFrete', value)} keyboardType="decimal-pad" placeholder="0,00" />
+            <InputField label="Valor a receber" value={form.valorReceber} onChangeText={value => setField('valorReceber', value)} keyboardType="decimal-pad" placeholder="0,00" />
+            <InputField label="Natureza da prestação" value={form.natureza} onChangeText={value => setField('natureza', value)} wide />
+            <InputField label="Observação" value={form.observacao} onChangeText={value => setField('observacao', value)} placeholder="Informações complementares" wide />
+          </View>
         </View>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -246,7 +248,17 @@ export default function CteEmitPage() {
         </Pressable>
 
         <Text style={styles.section}>NFs deste CT-e</Text>
-        <DefaultTable storeName="invoice_taxes_emit" />
+        <DefaultTable
+          storeName="invoice_taxes_emit"
+          initialViewMode="cards"
+          forceCardsOnCompact
+          compactBreakpoint={4000}
+          showRowActions={false}
+          cardListProps={{numColumns: cardColumns, columnWrapperStyle: styles.cardRow}}
+          renderCard={({row}) => (
+            <CteEmitNfCard row={row} onPreview={openNfPdf} onRemove={removeNf} />
+          )}
+        />
 
         {parkedRows.length ? (
           <View style={styles.parkedBox}>
@@ -304,12 +316,15 @@ const styles = StyleSheet.create({
   partyAddress: {marginTop: 4, fontSize: 12, color: '#64748B', lineHeight: 16},
   card: {backgroundColor: '#fff', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 12},
   section: {fontSize: 13, fontWeight: '800', color: '#0F766E', textTransform: 'uppercase', marginBottom: 8, marginTop: 8},
-  field: {marginTop: 8},
+  formGrid: {flexDirection: 'row', flexWrap: 'wrap', gap: 12},
+  field: {flexGrow: 1, flexBasis: 220, minWidth: 180},
+  fieldWide: {flexBasis: '100%', minWidth: '100%'},
   label: {fontSize: 11, fontWeight: '800', color: '#64748B', textTransform: 'uppercase'},
   input: {marginTop: 6, borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 10, padding: 12, backgroundColor: '#fff'},
   error: {color: '#B91C1C', marginTop: 10},
   button: {marginTop: 8, marginBottom: 16, backgroundColor: '#0F766E', borderRadius: 12, paddingVertical: 14, alignItems: 'center'},
   buttonText: {color: '#fff', fontWeight: '800'},
+  cardRow: {gap: 12, marginBottom: 12},
   parkedBox: {marginTop: 16, backgroundColor: '#FFF7ED', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#FED7AA'},
   parkedRow: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8},
   restore: {backgroundColor: '#0369A1', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 10},
