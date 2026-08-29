@@ -1,18 +1,82 @@
-import React, {useMemo, useState} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {Pressable, ScrollView, StyleSheet, Text, TextInput, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {api} from '@controleonline/ui-common/src/api';
+import {useStore} from '@store';
 import {formatMoney} from '@controleonline/ui-logistic/src/shared/ctePendingInvoices';
+
+const toInvoiceIds = value =>
+  (Array.isArray(value) ? value : [value])
+    .flatMap(item => String(item || '').split(/[,\s]+/))
+    .map(item => String(item).replace(/\D+/g, ''))
+    .filter(Boolean);
+
+const readIdsFromLocation = () => {
+  if (typeof window === 'undefined' || !window.location?.search) {
+    return [];
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  return toInvoiceIds(params.get('ids') || params.get('selectedIds'));
+};
+
+const rowId = row => String(row?.id ?? row?.['@id'] ?? '').replace(/\D+/g, '');
 
 export default function CteEmitPage() {
   const navigation = useNavigation();
   const route = useRoute();
-  const rows = Array.isArray(route.params?.rows) ? route.params.rows : [];
-  const selectedIds = Array.isArray(route.params?.selectedIds) ? route.params.selectedIds : rows.map(row => row.id);
+  const invoiceStore = useStore('invoice_taxes');
+  const ids = useMemo(() => {
+    const fromRoute = toInvoiceIds(route.params?.ids || route.params?.selectedIds);
+    return fromRoute.length ? fromRoute : readIdsFromLocation();
+  }, [route.params?.ids, route.params?.selectedIds]);
+  const [rows, setRows] = useState([]);
   const [cfop, setCfop] = useState('5353');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const storedItems = Array.isArray(invoiceStore?.getters?.items) ? invoiceStore.getters.items : [];
+        const fromStore = storedItems.filter(item => ids.includes(rowId(item)));
+        if (fromStore.length === ids.length && ids.length > 0) {
+          if (!cancelled) setRows(fromStore);
+          return;
+        }
+
+        const response = await api.fetch('invoice_taxes/without-cte', {
+          params: {itemsPerPage: 200, page: 1},
+        });
+        const collection = response?.member || response?.['hydra:member'] || response?.response?.member || [];
+        const nextRows = collection.filter(item => ids.includes(rowId(item)));
+        if (!cancelled) setRows(nextRows);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err?.message || String(err));
+          setRows([]);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    if (!ids.length) {
+      setRows([]);
+      setLoading(false);
+      return undefined;
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [ids.join(',')]);
 
   const summary = useMemo(() => {
     const total = rows.reduce((sum, row) => sum + Number(row?.invoiceTotal || 0), 0);
@@ -31,11 +95,11 @@ export default function CteEmitPage() {
       await api.fetch('invoice_tasks/emit-cte', {
         method: 'POST',
         body: {
-          invoiceTaxIds: selectedIds,
+          invoiceTaxIds: ids,
           cfop,
         },
       });
-      navigation.goBack();
+      navigation.navigate('CtePendingInvoicesPage');
     } catch (err) {
       setError(err?.message || String(err));
     } finally {
@@ -48,6 +112,7 @@ export default function CteEmitPage() {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Emitir CT-e</Text>
         <Text style={styles.hint}>Campos da NF são somente leitura. Informe o CFOP para enfileirar a emissão.</Text>
+        {loading ? <Text style={styles.hint}>Carregando NFs {ids.join(', ')}...</Text> : null}
         <View style={styles.card}>
           <Text style={styles.label}>Empresa</Text>
           <Text style={styles.value}>{summary.companyName}</Text>
@@ -59,8 +124,8 @@ export default function CteEmitPage() {
           <Text style={styles.value}>{formatMoney(summary.totalValue)}</Text>
         </View>
         {rows.map(row => (
-          <View key={String(row.id)} style={styles.nfCard}>
-            <Text style={styles.nfTitle}>NF #{row.invoiceNumber || row.id}</Text>
+          <View key={rowId(row) || String(row.invoiceNumber)} style={styles.nfCard}>
+            <Text style={styles.nfTitle}>NF #{row.invoiceNumber || rowId(row)}</Text>
             <Text style={styles.nfMeta}>Modelo {row.invoiceModel || '—'} · {formatMoney(row.invoiceTotal)}</Text>
             <Text style={styles.nfMeta}>{row.invoiceKey || 'sem chave'}</Text>
           </View>
@@ -68,7 +133,7 @@ export default function CteEmitPage() {
         <Text style={styles.label}>CFOP</Text>
         <TextInput value={cfop} onChangeText={setCfop} style={styles.input} placeholder="5353" />
         {error ? <Text style={styles.error}>{error}</Text> : null}
-        <Pressable disabled={saving} onPress={submit} style={styles.button}>
+        <Pressable disabled={saving || !ids.length} onPress={submit} style={styles.button}>
           <Text style={styles.buttonText}>{saving ? 'Enfileirando...' : 'Enviar para fila de integração'}</Text>
         </Pressable>
       </ScrollView>
