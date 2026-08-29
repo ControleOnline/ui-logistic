@@ -5,6 +5,45 @@ export const CTE_SMOKE_META = {
   steps: ['listar-nfs-sem-cte', 'agrupar-empresa-endereco', 'resumo-rota'],
 };
 
+export const CTE_PENDING_COLUMNS = [
+  {
+    name: 'companyName',
+    label: 'Empresa',
+    grouping: true,
+    editable: false,
+  },
+  {
+    name: 'addressLabel',
+    label: 'Endereço',
+    grouping: true,
+    editable: false,
+  },
+  {
+    name: 'invoiceNumber',
+    label: 'NF',
+    isIdentity: true,
+    editable: false,
+  },
+  {
+    name: 'invoiceModel',
+    label: 'Modelo',
+    editable: false,
+  },
+  {
+    name: 'invoiceKey',
+    label: 'Chave',
+    editable: false,
+  },
+  {
+    name: 'invoiceTotal',
+    label: 'Total',
+    type: 'money',
+    summary: 'sum',
+    editable: false,
+    align: 'right',
+  },
+];
+
 export const normalizeText = value => String(value ?? '').trim();
 
 export const normalizeEntityId = value => {
@@ -106,3 +145,13 @@ export const buildRouteSummary = (groups, selectedIds) => {
     addresses: selectedGroups.map(group => group.addressLabel),
   };
 };
+
+export const buildTableSummary = routeSummary => ({
+  count: {
+    invoices: routeSummary.invoiceCount,
+    groups: routeSummary.groupCount,
+  },
+  sum: {
+    invoiceTotal: routeSummary.totalValue,
+  },
+});
