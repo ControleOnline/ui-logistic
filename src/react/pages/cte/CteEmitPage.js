@@ -100,12 +100,8 @@ export default function CteEmitPage() {
   }, [navigation]);
 
   useEffect(() => {
-    emitStore?.actions?.setFilters?.({});
-    if (activeIds.length) {
-      emitStore?.actions?.getItems?.({id: activeIds, itemsPerPage: 200, page: 1});
-    } else {
-      emitStore?.actions?.setItems?.([]);
-    }
+    emitStore?.actions?.setFilters?.(activeIds.length ? {id: activeIds} : {id: ['-1']});
+    emitStore?.actions?.setReload?.(true);
   }, [activeIds.join(',')]);
 
   useEffect(() => {
@@ -250,17 +246,7 @@ export default function CteEmitPage() {
         </Pressable>
 
         <Text style={styles.section}>NFs deste CT-e</Text>
-        <DefaultTable
-          key={`emit-${activeIds.join('-')}-${cardColumns}`}
-          storeName="invoice_taxes_emit"
-          initialViewMode="cards"
-          forceCardsOnCompact
-          compactBreakpoint={4000}
-          cardListProps={{numColumns: cardColumns}}
-          rowActionsComponent={props => (
-            <CteEmitNfActions {...props} onPreview={openNfPdf} onRemove={removeNf} />
-          )}
-        />
+        <DefaultTable storeName="invoice_taxes_emit" />
 
         {parkedRows.length ? (
           <View style={styles.parkedBox}>
