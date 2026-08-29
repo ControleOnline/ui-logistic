@@ -22,6 +22,11 @@ export default {
     configs: {
       selectable: true,
       showRowActions: false,
+      import: {
+        enabled: true,
+        importType: 'invoice_tax',
+        allowedExtensions: ['xml', 'zip'],
+      },
       summaryLabels: {
         count: {invoices: 'NFs', groups: 'Grupos'},
         sum: {invoiceTotal: 'Total da rota'},
