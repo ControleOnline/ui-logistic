@@ -136,11 +136,18 @@ export default function CteEmitPage() {
       addressLabel: first.addressLabel || 'Endereço não informado',
       providerAddressLabel: first.providerAddressLabel || 'Endereço não informado',
       clientAddressLabel: first.clientAddressLabel || 'Endereço não informado',
+      rntrc: String(first.rntrc || '').trim(),
       invoiceCount: items.length,
       totalValue: items.reduce((sum, row) => sum + Number(row?.invoiceTotal || 0), 0),
       totalWeight: items.reduce((sum, row) => sum + Number(row?.weight || 0), 0),
     };
   }, [items]);
+
+  useEffect(() => {
+    if (summary.rntrc && summary.rntrc !== form.rntrc) {
+      setField('rntrc', summary.rntrc);
+    }
+  }, [summary.rntrc]);
 
   const openNfPdf = async row => {
     const id = rowId(row);
@@ -171,7 +178,7 @@ export default function CteEmitPage() {
     try {
       await api.fetch('invoice_tasks/emit-cte', {
         method: 'POST',
-        body: {invoiceTaxIds: activeIds, cfop: form.cfop, extra: form},
+        body: {invoiceTaxIds: activeIds, cfop: form.cfop, extra: {...form, rntrc: summary.rntrc || form.rntrc}},
       });
       navigation.navigate('CtePendingInvoicesPage');
     } catch (err) {
@@ -185,7 +192,7 @@ export default function CteEmitPage() {
     <SafeAreaView style={styles.screen} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Emitir CT-e</Text>
-        <Text style={styles.hint}>Complete os dados do transporte. As NFs ficam abaixo, com filtro, PDF e remoção até emitir.</Text>
+        <Text style={styles.hint}>Complete os dados do transporte. RNTRC vem do documento da transportadora ou da config fiscal.</Text>
 
         <View style={styles.summaryBar}>
           <View style={styles.summaryItem}>
@@ -215,7 +222,13 @@ export default function CteEmitPage() {
           <PartyCard icon="office-building" role="Emitente da NF" name={summary.issuerName} address={summary.addressLabel} tone="#0F766E" />
           <PartyCard icon="package-variant-closed" role="Remetente" name={summary.providerName} address={summary.providerAddressLabel} tone="#0369A1" />
           <PartyCard icon="account-arrow-right" role="Destinatário" name={summary.clientName} address={summary.clientAddressLabel} tone="#7C3AED" />
-          <PartyCard icon="truck-delivery-outline" role="Transportadora" name={summary.carrierName} address="Usada na emissão do CT-e" tone="#C2410C" />
+          <PartyCard
+            icon="truck-delivery-outline"
+            role="Transportadora"
+            name={summary.carrierName}
+            address={summary.rntrc ? `RNTRC ${summary.rntrc}` : 'Cadastre o RNTRC no documento da transportadora ou na aba Fiscal / CT-e'}
+            tone="#C2410C"
+          />
         </View>
 
         <View style={styles.card}>
@@ -226,7 +239,6 @@ export default function CteEmitPage() {
           <InputField label="Tipo do CT-e (0 normal)" value={form.tipoCte} onChangeText={value => setField('tipoCte', value)} placeholder="0" />
           <InputField label="Tomador (0 remetente, 3 destinatário)" value={form.tomador} onChangeText={value => setField('tomador', value)} placeholder="3" />
           <InputField label="Natureza da prestação" value={form.natureza} onChangeText={value => setField('natureza', value)} />
-          <InputField label="RNTRC" value={form.rntrc} onChangeText={value => setField('rntrc', value)} placeholder="RNTRC da transportadora" />
           <InputField label="Valor do frete" value={form.valorFrete} onChangeText={value => setField('valorFrete', value)} keyboardType="decimal-pad" placeholder="0,00" />
           <InputField label="Valor a receber" value={form.valorReceber} onChangeText={value => setField('valorReceber', value)} keyboardType="decimal-pad" placeholder="0,00" />
           <InputField label="Observação" value={form.observacao} onChangeText={value => setField('observacao', value)} placeholder="Informações complementares" />
