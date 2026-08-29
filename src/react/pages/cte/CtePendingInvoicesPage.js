@@ -1,18 +1,16 @@
-import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
   ActivityIndicator,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
-import Icon from 'react-native-vector-icons/Feather';
 import {api} from '@controleonline/ui-common/src/api';
-import AddImportModal from '@controleonline/ui-common/src/react/components/AddImportModal';
+import DefaultTableImportModal from '@controleonline/ui-default/src/react/components/table/DefaultTableImportModal';
+import DefaultToolbarAction from '@controleonline/ui-default/src/react/components/table/DefaultToolbarAction';
 import {useStore} from '@store';
 import {
   buildRouteSummary,
@@ -29,7 +27,6 @@ export default function CtePendingInvoicesPage() {
   const [error, setError] = useState('');
   const [groups, setGroups] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
-
   const [isImportModalVisible, setIsImportModalVisible] = useState(false);
 
   const load = useCallback(async () => {
@@ -45,7 +42,7 @@ export default function CtePendingInvoicesPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentCompany?.id]);
 
   useEffect(() => {
     load();
@@ -60,26 +57,25 @@ export default function CtePendingInvoicesPage() {
     );
   }, []);
 
-
-
   return (
     <SafeAreaView style={styles.screen} edges={['bottom']}>
       <View style={styles.header}>
         <View style={styles.headerTitleRow}>
-          <View>
+          <View style={{flex: 1}}>
             <Text style={styles.title}>NFs sem CT-e</Text>
             <Text style={styles.subtitle}>
               Agrupadas por empresa e endereço, sem passar por pedidos.
             </Text>
           </View>
-           <Pressable
-             style={styles.uploadButton}
-             onPress={() => { console.log('Import button pressed'); setIsImportModalVisible(true); }}
-             android_ripple={{color: '#fff'}}
-           >
-             <Icon name="upload-cloud" size={16} color="#fff" style={{marginRight: 6}} />
-             <Text style={styles.uploadButtonText}>Importar XML / ZIP</Text>
-           </Pressable>
+          <DefaultToolbarAction
+            action={{
+              key: 'cte-import',
+              icon: 'upload',
+              label: 'Importar',
+              accessibilityLabel: 'Importar XML ou ZIP',
+              onPress: () => setIsImportModalVisible(true),
+            }}
+          />
         </View>
       </View>
 
@@ -102,8 +98,7 @@ export default function CtePendingInvoicesPage() {
         </Text>
         <Text style={styles.summaryValue}>{formatMoney(summary.totalValue)}</Text>
       </View>
-        <ScrollView contentContainerStyle={styles.content}>
-        {/* Existing invoice list rendering */}
+      <ScrollView contentContainerStyle={styles.content}>
         {groups.map(group => (
           <View key={group.id} style={styles.groupCard} testID={`cte-group-${group.id}`}>
             <Text style={styles.groupTitle}>{group.companyName}</Text>
@@ -134,13 +129,16 @@ export default function CtePendingInvoicesPage() {
           </View>
         ))}
       </ScrollView>
-      <AddImportModal
+      <DefaultTableImportModal
         visible={isImportModalVisible}
-        onClose={() => setIsImportModalVisible(false)}
-        context={{ context: 'xml' }}
+        onClose={() => {
+          setIsImportModalVisible(false);
+          load();
+        }}
+        storeName="imports"
+        importType="invoice_tax"
         allowedExtensions={['xml', 'zip']}
-        importType="xml"
-        // UI strings fallback to defaults
+        title="Importar XML / ZIP"
       />
     </SafeAreaView>
   );
@@ -165,76 +163,6 @@ const styles = StyleSheet.create({
   },
   title: {fontSize: 18, fontWeight: '800', color: '#0F172A'},
   subtitle: {fontSize: 13, color: '#64748B', marginTop: 4},
-  uploadButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#0284C7',
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-  },
-  uploadButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 13,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  uploadSection: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-  },
-  dropzoneContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 14,
-  },
-  iconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#F1F5F9',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconCircleActive: {
-    backgroundColor: '#E0F2FE',
-  },
-  dropzoneTextWrap: {
-    alignItems: 'flex-start',
-  },
-  dropzoneTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1E293B',
-  },
-  dropzoneHint: {
-    fontSize: 12,
-    color: '#64748B',
-    marginTop: 2,
-  },
-  messageBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: 16,
-    marginTop: 12,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  messageBoxSuccess: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#A7F3D0',
-  },
-  messageBoxError: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FECACA',
-  },
-  messageText: {fontSize: 13, flex: 1},
-  messageTextSuccess: {color: '#065F46', fontWeight: '600'},
-  messageTextError: {color: '#991B1B', fontWeight: '600'},
   center: {paddingVertical: 24, alignItems: 'center'},
   errorBox: {
     margin: 16,
@@ -258,7 +186,6 @@ const styles = StyleSheet.create({
   summaryText: {fontSize: 13, color: '#155E75', marginTop: 6},
   summaryValue: {fontSize: 18, fontWeight: '800', color: '#0F172A', marginTop: 4},
   content: {padding: 16, paddingBottom: 40},
-  empty: {color: '#94A3B8', fontSize: 13},
   groupCard: {
     backgroundColor: '#fff',
     borderRadius: 14,
@@ -288,4 +215,3 @@ const styles = StyleSheet.create({
   invoiceMeta: {fontSize: 11, color: '#64748B', marginTop: 2},
   selectHint: {fontSize: 12, fontWeight: '700', color: '#0284C7'},
 });
-
