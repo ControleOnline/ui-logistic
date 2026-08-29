@@ -72,14 +72,14 @@ export default function CtePendingInvoicesPage() {
               Agrupadas por empresa e endereço, sem passar por pedidos.
             </Text>
           </View>
-          <TouchableOpacity
-            style={styles.uploadButton}
-            onPress={() => setIsImportModalVisible(true)}
-            activeOpacity={0.8}
-          >
-            <Icon name="upload-cloud" size={16} color="#fff" style={{marginRight: 6}} />
-            <Text style={styles.uploadButtonText}>Importar XML / ZIP</Text>
-          </TouchableOpacity>
+           <Pressable
+             style={styles.uploadButton}
+             onPress={() => { console.log('Import button pressed'); setIsImportModalVisible(true); }}
+             android_ripple={{color: '#fff'}}
+           >
+             <Icon name="upload-cloud" size={16} color="#fff" style={{marginRight: 6}} />
+             <Text style={styles.uploadButtonText}>Importar XML / ZIP</Text>
+           </Pressable>
         </View>
       </View>
 
