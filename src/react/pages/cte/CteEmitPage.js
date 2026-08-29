@@ -1,5 +1,5 @@
 import React, {useEffect, useMemo, useState} from 'react';
-import {Pressable, ScrollView, StyleSheet, Text, TextInput, View} from 'react-native';
+import {Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {api} from '@controleonline/ui-common/src/api';
@@ -67,6 +67,7 @@ export default function CteEmitPage() {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [preview, setPreview] = useState({visible: false, title: '', url: '', loading: false, error: ''});
 
   const setField = (key, value) => setForm(current => ({...current, [key]: value}));
 
@@ -115,7 +116,6 @@ export default function CteEmitPage() {
     const total = rows.reduce((sum, row) => sum + Number(row?.invoiceTotal || 0), 0);
     const first = rows[0] || {};
     return {
-      companyName: first.companyName || first.issuerName || 'Empresa não informada',
       issuerName: first.issuerName || first.companyName || 'Emitente não informado',
       clientName: first.clientName || 'Destinatário não informado',
       providerName: first.providerName || 'Remetente não informado',
@@ -127,6 +127,39 @@ export default function CteEmitPage() {
       totalValue: total,
     };
   }, [rows]);
+
+  const openNfPdf = async row => {
+    const id = rowId(row);
+    setPreview({
+      visible: true,
+      title: `NF #${row.invoiceNumber || id}`,
+      url: '',
+      loading: true,
+      error: '',
+    });
+    try {
+      const response = await api.fetch(`invoice_taxes/${id}/download-nf`, {
+        params: {format: 'base64'},
+      });
+      const pdf = response?.pdf || response?.response?.pdf;
+      if (!pdf) {
+        throw new Error('PDF da NF não retornou conteúdo.');
+      }
+      setPreview(current => ({
+        ...current,
+        loading: false,
+        url: `data:application/pdf;base64,${pdf}`,
+      }));
+    } catch (err) {
+      setPreview(current => ({
+        ...current,
+        loading: false,
+        error: err?.message || String(err),
+      }));
+    }
+  };
+
+  const closePreview = () => setPreview({visible: false, title: '', url: '', loading: false, error: ''});
 
   const submit = async () => {
     setSaving(true);
@@ -170,11 +203,16 @@ export default function CteEmitPage() {
 
         {rows.map(row => (
           <View key={rowId(row) || String(row.invoiceNumber)} style={styles.nfCard}>
-            <Text style={styles.nfTitle}>NF #{row.invoiceNumber || rowId(row)}</Text>
-            <Text style={styles.nfMeta}>Modelo {row.invoiceModel || '—'} · {formatMoney(row.invoiceTotal)}</Text>
-            <Text style={styles.nfMeta}>Destinatário: {row.clientName || '—'}</Text>
-            <Text style={styles.nfMeta}>Remetente: {row.providerName || '—'}</Text>
-            <Text style={styles.nfMeta}>{row.invoiceKey || 'sem chave'}</Text>
+            <View style={{flex: 1}}>
+              <Text style={styles.nfTitle}>NF #{row.invoiceNumber || rowId(row)}</Text>
+              <Text style={styles.nfMeta}>Modelo {row.invoiceModel || '—'} · {formatMoney(row.invoiceTotal)}</Text>
+              <Text style={styles.nfMeta}>Destinatário: {row.clientName || '—'}</Text>
+              <Text style={styles.nfMeta}>Remetente: {row.providerName || '—'}</Text>
+              <Text style={styles.nfMeta}>{row.invoiceKey || 'sem chave'}</Text>
+            </View>
+            <Pressable testID={`cte-nf-pdf-${rowId(row)}`} onPress={() => openNfPdf(row)} style={styles.pdfButton}>
+              <Text style={styles.pdfButtonText}>Ver PDF</Text>
+            </Pressable>
           </View>
         ))}
 
@@ -197,6 +235,24 @@ export default function CteEmitPage() {
           <Text style={styles.buttonText}>{saving ? 'Enfileirando...' : 'Enviar para fila de integração'}</Text>
         </Pressable>
       </ScrollView>
+
+      <Modal visible={preview.visible} transparent animationType="fade" onRequestClose={closePreview}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{preview.title}</Text>
+              <Pressable onPress={closePreview}><Text style={styles.modalClose}>Fechar</Text></Pressable>
+            </View>
+            {preview.loading ? <Text style={styles.hint}>Montando PDF com o XML da NF...</Text> : null}
+            {preview.error ? <Text style={styles.error}>{preview.error}</Text> : null}
+            {preview.url ? React.createElement('iframe', {
+              src: preview.url,
+              title: preview.title,
+              style: {width: '100%', height: '75vh', border: 0, background: '#fff'},
+            }) : null}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -211,11 +267,18 @@ const styles = StyleSheet.create({
   field: {marginTop: 8},
   label: {fontSize: 11, fontWeight: '800', color: '#64748B', textTransform: 'uppercase'},
   value: {fontSize: 15, fontWeight: '700', color: '#0F172A'},
-  nfCard: {backgroundColor: '#fff', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 8},
+  nfCard: {backgroundColor: '#fff', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 12},
   nfTitle: {fontWeight: '800', color: '#0F172A'},
   nfMeta: {color: '#64748B', marginTop: 2, fontSize: 12},
+  pdfButton: {backgroundColor: '#0F766E', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 12},
+  pdfButtonText: {color: '#fff', fontWeight: '800', fontSize: 12},
   input: {marginTop: 6, borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 10, padding: 12, backgroundColor: '#fff'},
   error: {color: '#B91C1C', marginTop: 10},
   button: {marginTop: 16, backgroundColor: '#0F766E', borderRadius: 12, paddingVertical: 14, alignItems: 'center'},
   buttonText: {color: '#fff', fontWeight: '800'},
+  modalBackdrop: {flex: 1, backgroundColor: 'rgba(15,23,42,0.55)', padding: 16, justifyContent: 'center'},
+  modalCard: {backgroundColor: '#F8FAFC', borderRadius: 16, padding: 16, maxHeight: '92%'},
+  modalHeader: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8},
+  modalTitle: {fontSize: 16, fontWeight: '800', color: '#0F172A'},
+  modalClose: {color: '#0F766E', fontWeight: '800'},
 });
