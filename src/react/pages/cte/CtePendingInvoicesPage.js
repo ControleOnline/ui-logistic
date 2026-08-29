@@ -9,10 +9,10 @@ export default function CtePendingInvoicesPage() {
       <View style={styles.header}>
         <Text style={styles.title}>NFs sem CT-e</Text>
         <Text style={styles.subtitle}>
-          Lista, agrupamento e resumo vêm do store invoice_taxes.
+          Lista, agrupamento, seleção e resumo vêm do store invoice_taxes.
         </Text>
       </View>
-      <DefaultTable storeName="invoice_taxes" importAction />
+      <DefaultTable storeName="invoice_taxes" />
     </SafeAreaView>
   );
 }
