@@ -11,6 +11,7 @@ import DeliveryCourierSchedulesPage from '@controleonline/ui-logistic/src/react/
 import DeliveryCourierScheduleFormPage from '@controleonline/ui-logistic/src/react/pages/presence/DeliveryCourierScheduleFormPage';
 import DeliveryCourierPresencePage from '@controleonline/ui-logistic/src/react/pages/presence/DeliveryCourierPresencePage';
 import DeliveryCourierPresenceHistoryPage from '@controleonline/ui-logistic/src/react/pages/presence/DeliveryCourierPresenceHistoryPage';
+import CtePendingInvoicesPage from '@controleonline/ui-logistic/src/react/pages/cte/CtePendingInvoicesPage';
 
 export const WrappedOrderLogistics = ({navigation, route}) => {
   React.useEffect(() => {
@@ -192,6 +193,18 @@ const logisticRoutes = [
       title: 'Historico da presenca',
     },
     path: 'delivery/courier/presence/history',
+  },
+  {
+    name: 'CtePendingInvoicesPage',
+    component: CtePendingInvoicesPage,
+    options: {
+      headerShown: true,
+      showBottomCart: false,
+      showBottomToolBar: true,
+      showCompanyFilter: false,
+      title: 'NFs sem CT-e',
+    },
+    path: 'cte',
   },
 ];
 
