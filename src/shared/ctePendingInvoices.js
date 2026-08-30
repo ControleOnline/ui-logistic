@@ -5,13 +5,22 @@ export const CTE_SMOKE_META = {
   steps: ['listar-nfs-sem-cte', 'agrupar-empresa-endereco', 'resumo-rota'],
 };
 
+export const CTE_PENDING_COLUMNS = [
+  {name: 'companyName', label: 'Empresa', grouping: true, editable: false},
+  {name: 'addressLabel', label: 'Endereço', grouping: true, editable: false},
+  {name: 'clientName', label: 'Destinatário', editable: false},
+  {name: 'invoiceNumber', label: 'NF', isIdentity: true, editable: false},
+  {name: 'invoiceModel', label: 'Modelo', editable: false},
+  {name: 'invoiceKey', label: 'Chave', editable: false},
+  {name: 'invoiceTotal', label: 'Total', type: 'money', summary: 'sum', editable: false, align: 'right'},
+];
+
 export const normalizeText = value => String(value ?? '').trim();
 
 export const normalizeEntityId = value => {
   if (value && typeof value === 'object') {
     return normalizeEntityId(value.value ?? value.id ?? value['@id'] ?? '');
   }
-
   return normalizeText(value).replace(/\D+/g, '');
 };
 
@@ -21,10 +30,7 @@ export const toMoneyNumber = value => {
 };
 
 export const formatMoney = value =>
-  toMoneyNumber(value).toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  });
+  toMoneyNumber(value).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
 
 export const unwrapInvoiceCollection = response => {
   if (Array.isArray(response?.groups) && response.groups.length > 0) {
@@ -61,7 +67,6 @@ export const buildGroupKey = invoice =>
 
 export const groupInvoicesByCompanyAddress = invoices => {
   const groups = new Map();
-
   (Array.isArray(invoices) ? invoices : []).forEach(invoice => {
     const key = buildGroupKey(invoice);
     if (!groups.has(key)) {
@@ -76,13 +81,11 @@ export const groupInvoicesByCompanyAddress = invoices => {
         totalValue: 0,
       });
     }
-
     const group = groups.get(key);
     group.invoices.push(invoice);
     group.invoiceCount += 1;
     group.totalValue = Number((group.totalValue + toMoneyNumber(invoice?.invoiceTotal)).toFixed(2));
   });
-
   return Array.from(groups.values());
 };
 
@@ -91,11 +94,9 @@ export const buildRouteSummary = (groups, selectedIds) => {
   const selectedGroups = (Array.isArray(groups) ? groups : []).filter(group =>
     (group.invoices || []).some(invoice => selected.has(String(invoice.id))),
   );
-
   const selectedInvoices = selectedGroups.flatMap(group =>
     (group.invoices || []).filter(invoice => selected.has(String(invoice.id))),
   );
-
   return {
     groupCount: selectedGroups.length,
     invoiceCount: selectedInvoices.length,
@@ -106,3 +107,8 @@ export const buildRouteSummary = (groups, selectedIds) => {
     addresses: selectedGroups.map(group => group.addressLabel),
   };
 };
+
+export const buildTableSummary = routeSummary => ({
+  count: {invoices: routeSummary.invoiceCount, groups: routeSummary.groupCount},
+  sum: {invoiceTotal: routeSummary.totalValue},
+});

@@ -12,6 +12,7 @@ import DeliveryCourierScheduleFormPage from '@controleonline/ui-logistic/src/rea
 import DeliveryCourierPresencePage from '@controleonline/ui-logistic/src/react/pages/presence/DeliveryCourierPresencePage';
 import DeliveryCourierPresenceHistoryPage from '@controleonline/ui-logistic/src/react/pages/presence/DeliveryCourierPresenceHistoryPage';
 import CtePendingInvoicesPage from '@controleonline/ui-logistic/src/react/pages/cte/CtePendingInvoicesPage';
+import CteEmitPage from '@controleonline/ui-logistic/src/react/pages/cte/CteEmitPage';
 
 export const WrappedOrderLogistics = ({navigation, route}) => {
   React.useEffect(() => {
@@ -202,9 +203,21 @@ const logisticRoutes = [
       showBottomCart: false,
       showBottomToolBar: true,
       showCompanyFilter: false,
-      title: 'NFs sem CT-e',
+      title: 'CT-e',
     },
     path: 'cte',
+  },
+  {
+    name: 'CteEmitPage',
+    component: CteEmitPage,
+    options: {
+      headerShown: true,
+      showBottomCart: false,
+      showBottomToolBar: true,
+      showCompanyFilter: false,
+      title: 'Emitir CT-e',
+    },
+    path: 'cte/emit',
   },
 ];
 
