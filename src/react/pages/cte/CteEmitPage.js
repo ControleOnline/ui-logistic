@@ -235,7 +235,7 @@ export default function CteEmitPage() {
         </View>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
-        <Pressable disabled={saving || activeIds.length < 2} onPress={submit} style={styles.button}>
+        <Pressable disabled={saving || activeIds.length < 1} onPress={submit} style={styles.button}>
           <Text style={styles.buttonText}>{saving ? 'Enfileirando...' : 'Enviar para fila de integração'}</Text>
         </Pressable>
 

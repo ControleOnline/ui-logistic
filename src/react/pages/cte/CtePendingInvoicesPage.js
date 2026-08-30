@@ -24,7 +24,7 @@ export default function CtePendingInvoicesPage() {
   const invoiceStore = useStore('invoice_taxes');
   const tableStore = useStore(current.storeName);
   const selectedIds = toInvoiceIds(invoiceStore?.getters?.selected);
-  const showEmit = tab === 'pending' && selectedIds.length > 1;
+  const showEmit = tab === 'pending' && selectedIds.length > 0;
 
   useEffect(() => {
     tableStore?.actions?.setReload?.(true);
@@ -50,7 +50,9 @@ export default function CtePendingInvoicesPage() {
           style={styles.emitButton}
           onPress={() => navigation.navigate('CteEmitPage', {ids: selectedIds.join(',')})}
         >
-          <Text style={styles.emitText}>Emitir CTE ({selectedIds.length} NFs)</Text>
+          <Text style={styles.emitText}>
+            Emitir CTE ({selectedIds.length} {selectedIds.length === 1 ? 'NF' : 'NFs'})
+          </Text>
         </Pressable>
       ) : null}
     </SafeAreaView>
