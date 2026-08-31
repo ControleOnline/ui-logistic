@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
@@ -29,37 +29,9 @@ export default function CtePendingInvoicesPage() {
 
   const cteRequestParams = useMemo(() => {
     if (current.storeName !== 'invoice_tasks_processing') return {};
-    const params = {invoiceModel: 57};
-    // DefaultExternalFilters stores status filter under key 'status' (column name)
-    // Map to backend filter status.realStatus (InvoiceTax.status.realStatus: open/pending/closed)
-    const statusValue = cteFilters?.status;
-    if (statusValue) {
-      params['status.realStatus'] = statusValue;
-    }
-    // merge other external filters (except status which was already mapped)
-    Object.entries(cteFilters || {}).forEach(([k, v]) => {
-      if (k === 'status' || v === '' || v == null) return;
-      if (k in params) return;
-      params[k] = v;
-    });
-    return params;
+    // invoiceModel 57 = CTE; externalFilters already provide status/company/etc as IRI filters
+    return {invoiceModel: 57, ...cteFilters};
   }, [cteFilters, current.storeName]);
-
-  const getExternalFilterOptions = useCallback(
-    column => {
-      const key = column?.name || column?.key;
-      if (key === 'status') {
-        return [
-          {value: 'open', label: 'Aberto'},
-          {value: 'pending', label: 'Pendente'},
-          {value: 'closed', label: 'Fechado'},
-          {value: 'emitted', label: 'Emitido'},
-        ];
-      }
-      return [];
-    },
-    [],
-  );
 
   useEffect(() => {
     tableStore?.actions?.setReload?.(true);
@@ -85,12 +57,7 @@ export default function CtePendingInvoicesPage() {
         </View>
       </View>
       {tab === 'cte' ? (
-        <DefaultExternalFilters
-          storeName="invoice_tasks_processing"
-          filters={cteFilters}
-          onChangeFilters={setCteFilters}
-          getOptionsForColumn={getExternalFilterOptions}
-        />
+        <DefaultExternalFilters storeName="invoice_tasks_processing" filters={cteFilters} onChangeFilters={setCteFilters} />
       ) : null}
       <DefaultTable key={current.storeName} storeName={current.storeName} requestParams={cteRequestParams} />
       {showEmit ? (
