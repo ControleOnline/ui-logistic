@@ -40,7 +40,7 @@ export default function CtePendingInvoicesPage() {
       return {...pendingFilters};
     }
     if (current.storeName === 'integration') {
-      return {queueName: 'CteEmission', ...integrationFilters};
+      return {...integrationFilters, queueName: 'CteEmission'};
     }
     return {};
   }, [cteFilters, pendingFilters, integrationFilters, current.storeName]);
