@@ -26,3 +26,9 @@
 | Smoke Test Flows | https://github.com/ControleOnline/app-community/wiki/Smoke-Test-Flows |
 | ui-orders | https://github.com/ControleOnline/ui-orders/wiki |
 | ui-ppc | https://github.com/ControleOnline/ui-ppc/wiki |
+
+## Documentação versionada
+
+| Página | Destino |
+| --- | --- |
+| Recebíveis do motoboy / Pagamentos a motoboys | `docs/technical/Recebiveis-Motoboy-e-Pagamentos.md` |

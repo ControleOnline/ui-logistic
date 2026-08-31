@@ -38,7 +38,8 @@ import {
   normalizePostalCodeInput,
   resolveAddressDisplayParts,
   normalizeText as normalizeDisplayText,
-} from '@controleonline/ui-common/src/react/utils/entityDisplay';
+} from '@controleonline/ui-common/src/react/utils/entityDisplay'
+import DefaultAddress from '@controleonline/ui-default/src/react/components/address/DefaultAddress';
 import {normalizeEntityId, toEntityIri} from '@controleonline/ui-common/src/react/utils/commercialDocumentOrders';
 import {getOrderChannelLabel, getOrderChannelLogo} from '@assets/ppc/channels';
 import OrderStackedTopBar from '@controleonline/ui-orders/src/react/pages/orders/sales/components/OrderStackedTopBar';
@@ -919,6 +920,7 @@ const AddressAssignmentModal = ({
   addressForm,
   onOpenCreateMode,
   onAddressFormFieldChange,
+  onAddressFormReplace,
   onSelectAddress,
   onCreateAddress,
   ppcColors,
@@ -1041,86 +1043,22 @@ const AddressAssignmentModal = ({
               </TouchableOpacity>
 
               {addressModalMode === 'create' ? (
-                <>
-                  <TextInput
-                    value={addressForm.nickname}
-                    onChangeText={value => onAddressFormFieldChange('nickname', value)}
-                    editable={!addressSaveLoading}
-                    placeholder="Referencia ou apelido"
-                    placeholderTextColor={ppcColors?.textSecondary}
-                    style={styles.assignmentFormInput}
-                  />
-                  <View style={styles.assignmentFormRow}>
-                    <TextInput
-                      value={addressForm.cep}
-                      onChangeText={value => onAddressFormFieldChange('cep', value)}
-                      editable={!addressSaveLoading}
-                      placeholder="CEP"
-                      placeholderTextColor={ppcColors?.textSecondary}
-                      keyboardType="number-pad"
-                      style={[styles.assignmentFormInput, styles.assignmentFormHalf]}
-                    />
-                    <TextInput
-                      value={addressForm.number}
-                      onChangeText={value => onAddressFormFieldChange('number', value)}
-                      editable={!addressSaveLoading}
-                      placeholder="Numero"
-                      placeholderTextColor={ppcColors?.textSecondary}
-                      keyboardType="number-pad"
-                      style={[styles.assignmentFormInput, styles.assignmentFormHalf]}
-                    />
-                  </View>
-                  <TextInput
-                    value={addressForm.street}
-                    onChangeText={value => onAddressFormFieldChange('street', value)}
-                    editable={!addressSaveLoading}
-                    placeholder="Rua"
-                    placeholderTextColor={ppcColors?.textSecondary}
-                    style={styles.assignmentFormInput}
-                  />
-                  <TextInput
-                    value={addressForm.complement}
-                    onChangeText={value => onAddressFormFieldChange('complement', value)}
-                    editable={!addressSaveLoading}
-                    placeholder="Complemento"
-                    placeholderTextColor={ppcColors?.textSecondary}
-                    style={styles.assignmentFormInput}
-                  />
-                  <TextInput
-                    value={addressForm.district}
-                    onChangeText={value => onAddressFormFieldChange('district', value)}
-                    editable={!addressSaveLoading}
-                    placeholder="Bairro"
-                    placeholderTextColor={ppcColors?.textSecondary}
-                    style={styles.assignmentFormInput}
-                  />
-                  <TextInput
-                    value={addressForm.city}
-                    onChangeText={value => onAddressFormFieldChange('city', value)}
-                    editable={!addressSaveLoading}
-                    placeholder="Cidade"
-                    placeholderTextColor={ppcColors?.textSecondary}
-                    style={styles.assignmentFormInput}
-                  />
-                  <View style={styles.assignmentFormRow}>
-                    <TextInput
-                      value={addressForm.state}
-                      onChangeText={value => onAddressFormFieldChange('state', value)}
-                      editable={!addressSaveLoading}
-                      placeholder="Estado"
-                      placeholderTextColor={ppcColors?.textSecondary}
-                      style={[styles.assignmentFormInput, styles.assignmentFormHalf]}
-                    />
-                    <TextInput
-                      value={addressForm.country}
-                      onChangeText={value => onAddressFormFieldChange('country', value)}
-                      editable={!addressSaveLoading}
-                      placeholder="Pais"
-                      placeholderTextColor={ppcColors?.textSecondary}
-                      style={[styles.assignmentFormInput, styles.assignmentFormHalf]}
-                    />
-                  </View>
-                </>
+                <DefaultAddress
+                  mode="create"
+                  hideActions
+                  row={addressForm}
+                  onFormChange={next => {
+                    if (typeof onAddressFormReplace === 'function') {
+                      onAddressFormReplace(next);
+                      return;
+                    }
+                    if (typeof onAddressFormFieldChange === 'function') {
+                      Object.entries(next || {}).forEach(([field, value]) => {
+                        onAddressFormFieldChange(field, value);
+                      });
+                    }
+                  }}
+                />
               ) : null}
             </ScrollView>
 
@@ -1571,7 +1509,16 @@ const OrderLogisticsPage = ({navigation, route}) => {
     await loadAddressOptions(localOrderClient);
   }, [loadAddressOptions, localOrderClient, selectedOrderClientIri]);
 
-  const handleAddressFormFieldChange = useCallback((field, value) => {
+  const handleAddressFormReplace = useCallback(next => {
+    setAddressForm(previousForm => ({
+      ...previousForm,
+      ...(next || {}),
+      state: next?.uf || next?.state || previousForm.state,
+      country: next?.countryCode || next?.country || previousForm.country,
+    }));
+  }, []);
+
+    const handleAddressFormFieldChange = useCallback((field, value) => {
     setAddressForm(previousForm => ({
       ...previousForm,
       [field]:
@@ -1687,8 +1634,8 @@ const OrderLogisticsPage = ({navigation, route}) => {
     const street = normalizeText(addressForm.street);
     const district = normalizeText(addressForm.district);
     const city = normalizeText(addressForm.city);
-    const state = normalizeText(addressForm.state);
-    const country = normalizeText(addressForm.country);
+    const state = normalizeText(addressForm.uf || addressForm.state);
+    const country = normalizeText(addressForm.countryCode || addressForm.country);
     const number = String(addressForm.number ?? '').replace(/\D+/g, '').trim();
     const cep = normalizePostalCodeInput(addressForm.cep);
     const complement = normalizeText(addressForm.complement);
@@ -2583,6 +2530,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
             addressForm={addressForm}
             onOpenCreateMode={openAddressCreateMode}
             onAddressFormFieldChange={handleAddressFormFieldChange}
+            onAddressFormReplace={handleAddressFormReplace}
             onSelectAddress={handleSelectAddress}
             onCreateAddress={handleCreateAddress}
           />
