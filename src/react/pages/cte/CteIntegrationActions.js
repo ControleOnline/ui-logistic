@@ -5,7 +5,7 @@ import {useStore} from '@store';
 import {useMessage} from '@controleonline/ui-common/src/react/components/MessageService';
 
 export default function CteIntegrationActions({row}) {
-  const store = useStore('integration_cte');
+  const store = useStore('integration');
   const {showSuccess, showError} = useMessage() || {};
   const [loading, setLoading] = useState('');
 

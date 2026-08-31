@@ -10,7 +10,7 @@ import CteIntegrationActions from './CteIntegrationActions';
 const TABS = [
   {key: 'pending', label: 'CTEs à emitir', storeName: 'invoice_taxes'},
   {key: 'cte', label: 'CTE', storeName: 'invoice_tasks_processing'},
-  {key: 'integrations', label: 'Integrações', storeName: 'integration_cte'},
+  {key: 'integrations', label: 'Integrações', storeName: 'integration'},
 ];
 
 const toInvoiceIds = value =>
@@ -39,8 +39,8 @@ export default function CtePendingInvoicesPage() {
     if (current.storeName === 'invoice_taxes') {
       return {...pendingFilters};
     }
-    if (current.storeName === 'integration_cte') {
-      return {...integrationFilters};
+    if (current.storeName === 'integration') {
+      return {queueName: 'CteEmission', ...integrationFilters};
     }
     return {};
   }, [cteFilters, pendingFilters, integrationFilters, current.storeName]);
@@ -69,13 +69,13 @@ export default function CtePendingInvoicesPage() {
         <DefaultExternalFilters storeName="invoice_tasks_processing" filters={cteFilters} onChangeFilters={setCteFilters} />
       ) : null}
       {tab === 'integrations' ? (
-        <DefaultExternalFilters storeName="integration_cte" filters={integrationFilters} onChangeFilters={setIntegrationFilters} />
+        <DefaultExternalFilters storeName="integration" filters={integrationFilters} onChangeFilters={setIntegrationFilters} />
       ) : null}
       <DefaultTable
         key={current.storeName}
         storeName={current.storeName}
         requestParams={requestParams}
-        rowActionsComponent={current.storeName === 'integration_cte' ? CteIntegrationActions : undefined}
+        rowActionsComponent={current.storeName === 'integration' ? CteIntegrationActions : undefined}
       />
       {showEmit ? (
         <Pressable
