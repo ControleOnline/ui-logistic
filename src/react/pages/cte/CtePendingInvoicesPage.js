@@ -5,10 +5,12 @@ import {useNavigation} from '@react-navigation/native';
 import {useStore} from '@store';
 import DefaultExternalFilters from '@controleonline/ui-default/src/react/components/filters/DefaultExternalFilters';
 import DefaultTable from '@controleonline/ui-default/src/react/components/table/DefaultTable';
+import CteIntegrationActions from './CteIntegrationActions';
 
 const TABS = [
   {key: 'pending', label: 'CTEs à emitir', storeName: 'invoice_taxes'},
   {key: 'cte', label: 'CTE', storeName: 'invoice_tasks_processing'},
+  {key: 'integrations', label: 'Integrações', storeName: 'integration_cte'},
 ];
 
 const toInvoiceIds = value =>
@@ -22,6 +24,7 @@ export default function CtePendingInvoicesPage() {
   const [tab, setTab] = useState('pending');
   const [pendingFilters, setPendingFilters] = useState({});
   const [cteFilters, setCteFilters] = useState({});
+  const [integrationFilters, setIntegrationFilters] = useState({});
   const current = TABS.find(item => item.key === tab) || TABS[0];
   const invoiceStore = useStore('invoice_taxes');
   const tableStore = useStore(current.storeName);
@@ -30,14 +33,17 @@ export default function CtePendingInvoicesPage() {
 
   const requestParams = useMemo(() => {
     if (current.storeName === 'invoice_tasks_processing') {
-      // invoiceModel 57 = CTE - sempre fixo, spread depois não sobrescreve
+      // invoiceModel 57 = CTE - sempre fixo
       return {...cteFilters, invoiceModel: 57};
     }
     if (current.storeName === 'invoice_taxes') {
       return {...pendingFilters};
     }
+    if (current.storeName === 'integration_cte') {
+      return {...integrationFilters};
+    }
     return {};
-  }, [cteFilters, pendingFilters, current.storeName]);
+  }, [cteFilters, pendingFilters, integrationFilters, current.storeName]);
 
   useEffect(() => {
     tableStore?.actions?.setReload?.(true);
@@ -62,7 +68,15 @@ export default function CtePendingInvoicesPage() {
       {tab === 'cte' ? (
         <DefaultExternalFilters storeName="invoice_tasks_processing" filters={cteFilters} onChangeFilters={setCteFilters} />
       ) : null}
-      <DefaultTable key={current.storeName} storeName={current.storeName} requestParams={requestParams} />
+      {tab === 'integrations' ? (
+        <DefaultExternalFilters storeName="integration_cte" filters={integrationFilters} onChangeFilters={setIntegrationFilters} />
+      ) : null}
+      <DefaultTable
+        key={current.storeName}
+        storeName={current.storeName}
+        requestParams={requestParams}
+        rowActionsComponent={current.storeName === 'integration_cte' ? CteIntegrationActions : undefined}
+      />
       {showEmit ? (
         <Pressable
           testID="cte-emit-button"
