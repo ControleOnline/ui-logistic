@@ -15,6 +15,13 @@ export default {
     filters: {},
     reload: false,
     add: false,
+    configs: {
+      import: {
+        enabled: true,
+        importType: 'invoice_tax',
+        allowedExtensions: ['xml', 'zip'],
+      },
+    },
     columns: [
       {name: 'id', label: 'ID', isIdentity: true, editable: false, externalFilter: true},
       {name: 'invoiceNumber', label: 'NF', isIdentity: false, editable: false, externalFilter: true},
