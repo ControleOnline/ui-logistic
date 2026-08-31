@@ -60,6 +60,9 @@ export default function CtePendingInvoicesPage() {
         storeName={current.storeName}
         requestParams={requestParams}
         rowActionsComponent={rowActionsComponent}
+        showRowActions={Boolean(rowActionsComponent)}
+        rowActionsWidth={rowActionsComponent === CteCteActions ? 168 : rowActionsComponent ? 140 : undefined}
+        pinRowActions
       />
       {showEmit ? (
         <Pressable
