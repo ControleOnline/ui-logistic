@@ -6,13 +6,14 @@ export const CTE_SMOKE_META = {
 };
 
 export const CTE_PENDING_COLUMNS = [
-  {name: 'companyName', label: 'Empresa', grouping: true, editable: false},
-  {name: 'addressLabel', label: 'Endereço', grouping: true, editable: false},
-  {name: 'clientName', label: 'Destinatário', editable: false},
-  {name: 'invoiceNumber', label: 'NF', isIdentity: true, editable: false},
-  {name: 'invoiceModel', label: 'Modelo', editable: false},
-  {name: 'invoiceKey', label: 'Chave', editable: false},
-  {name: 'invoiceTotal', label: 'Total', type: 'money', summary: 'sum', editable: false, align: 'right'},
+  {name: 'companyName', label: 'Empresa', grouping: true, editable: false, externalFilter: true, list: 'people', searchParam: 'company'},
+  {name: 'addressLabel', label: 'Endereço', grouping: true, editable: false, externalFilter: true},
+  {name: 'clientName', label: 'Destinatário', editable: false, externalFilter: true, list: 'people', searchParam: 'client'},
+  {name: 'invoiceNumber', label: 'NF', isIdentity: true, editable: false, externalFilter: true},
+  {name: 'invoiceModel', label: 'Modelo', editable: false, externalFilter: true},
+  {name: 'invoiceKey', label: 'Chave', editable: false, externalFilter: true},
+  {name: 'invoiceTotal', label: 'Total', type: 'money', summary: 'sum', editable: false, align: 'right', externalFilter: true},
+  {name: 'status', label: 'Status', editable: false, externalFilter: true, list: 'status/getItems', listRequestParams: {context: 'invoice_tax'}, searchParam: 'status'},
 ];
 
 export const normalizeText = value => String(value ?? '').trim();

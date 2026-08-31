@@ -70,6 +70,7 @@ export default {
         editable: false,
         externalFilter: true,
         list: 'status/getItems',
+        listRequestParams: {context: 'invoice_tax'},
         searchParam: 'status',
         format: value => (value?.status || value?.realStatus || '-'),
         formatList: value => (value && value['@id'] ? {value: value['@id'].split('/').pop(), label: value.status || value.realStatus || value['@id']} : value),

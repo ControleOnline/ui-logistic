@@ -20,6 +20,7 @@ const toInvoiceIds = value =>
 export default function CtePendingInvoicesPage() {
   const navigation = useNavigation();
   const [tab, setTab] = useState('pending');
+  const [pendingFilters, setPendingFilters] = useState({});
   const [cteFilters, setCteFilters] = useState({});
   const current = TABS.find(item => item.key === tab) || TABS[0];
   const invoiceStore = useStore('invoice_taxes');
@@ -27,21 +28,20 @@ export default function CtePendingInvoicesPage() {
   const selectedIds = toInvoiceIds(invoiceStore?.getters?.selected);
   const showEmit = tab === 'pending' && selectedIds.length > 0;
 
-  const cteRequestParams = useMemo(() => {
-    if (current.storeName !== 'invoice_tasks_processing') return {};
-    // invoiceModel 57 = CTE; externalFilters already provide status/company/etc as IRI filters
-    return {invoiceModel: 57, ...cteFilters};
-  }, [cteFilters, current.storeName]);
+  const requestParams = useMemo(() => {
+    if (current.storeName === 'invoice_tasks_processing') {
+      // invoiceModel 57 = CTE
+      return {invoiceModel: 57, ...cteFilters};
+    }
+    if (current.storeName === 'invoice_taxes') {
+      return {...pendingFilters};
+    }
+    return {};
+  }, [cteFilters, pendingFilters, current.storeName]);
 
   useEffect(() => {
     tableStore?.actions?.setReload?.(true);
     tableStore?.actions?.getItems?.({page: 1, itemsPerPage: 50});
-  }, [current.storeName]);
-
-  useEffect(() => {
-    if (current.storeName !== 'invoice_tasks_processing') {
-      setCteFilters({});
-    }
   }, [current.storeName]);
 
   return (
@@ -56,10 +56,13 @@ export default function CtePendingInvoicesPage() {
           ))}
         </View>
       </View>
+      {tab === 'pending' ? (
+        <DefaultExternalFilters storeName="invoice_taxes" filters={pendingFilters} onChangeFilters={setPendingFilters} />
+      ) : null}
       {tab === 'cte' ? (
         <DefaultExternalFilters storeName="invoice_tasks_processing" filters={cteFilters} onChangeFilters={setCteFilters} />
       ) : null}
-      <DefaultTable key={current.storeName} storeName={current.storeName} requestParams={cteRequestParams} />
+      <DefaultTable key={current.storeName} storeName={current.storeName} requestParams={requestParams} />
       {showEmit ? (
         <Pressable
           testID="cte-emit-button"
