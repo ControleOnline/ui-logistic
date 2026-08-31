@@ -22,7 +22,7 @@ export default {
       {name: 'companyName', label: 'Empresa', editable: false},
       {name: 'clientName', label: 'Destinatário', editable: false},
       {name: 'invoiceTotal', label: 'Total', type: 'money', summary: 'sum', editable: false, align: 'right'},
-      {name: 'status', label: 'Status', editable: false},
+      {name: 'status', label: 'Status', editable: false, externalFilter: true},
     ],
   },
   actions,

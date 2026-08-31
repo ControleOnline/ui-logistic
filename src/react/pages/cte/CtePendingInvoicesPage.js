@@ -1,21 +1,14 @@
-import React, {useEffect, useState} from 'react';
-import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import {useStore} from '@store';
+import DefaultExternalFilters from '@controleonline/ui-default/src/react/components/filters/DefaultExternalFilters';
 import DefaultTable from '@controleonline/ui-default/src/react/components/table/DefaultTable';
 
 const TABS = [
   {key: 'pending', label: 'CTEs à emitir', storeName: 'invoice_taxes'},
   {key: 'cte', label: 'CTE', storeName: 'invoice_tasks_processing'},
-];
-
-const STATUS_FILTERS = [
-  {key: '', label: 'Todos'},
-  {key: 'pending', label: 'Pendente'},
-  {key: 'emitted', label: 'Emitido'},
-  {key: 'closed', label: 'Fechado'},
-  {key: 'open', label: 'Aberto'},
 ];
 
 const toInvoiceIds = value =>
@@ -27,12 +20,40 @@ const toInvoiceIds = value =>
 export default function CtePendingInvoicesPage() {
   const navigation = useNavigation();
   const [tab, setTab] = useState('pending');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [cteFilters, setCteFilters] = useState({});
   const current = TABS.find(item => item.key === tab) || TABS[0];
   const invoiceStore = useStore('invoice_taxes');
   const tableStore = useStore(current.storeName);
   const selectedIds = toInvoiceIds(invoiceStore?.getters?.selected);
   const showEmit = tab === 'pending' && selectedIds.length > 0;
+
+  const cteRequestParams = useMemo(() => {
+    if (current.storeName !== 'invoice_tasks_processing') return {};
+    const params = {};
+    // DefaultExternalFilters stores status filter under key 'status' (column name)
+    // Map to backend filter status.realStatus (InvoiceTax.status.realStatus: open/pending/closed)
+    const statusValue = cteFilters?.status;
+    if (statusValue) {
+      params['status.realStatus'] = statusValue;
+    }
+    return params;
+  }, [cteFilters, current.storeName]);
+
+  const getExternalFilterOptions = useCallback(
+    column => {
+      const key = column?.name || column?.key;
+      if (key === 'status') {
+        return [
+          {value: 'open', label: 'Aberto'},
+          {value: 'pending', label: 'Pendente'},
+          {value: 'closed', label: 'Fechado'},
+          {value: 'emitted', label: 'Emitido'},
+        ];
+      }
+      return [];
+    },
+    [],
+  );
 
   useEffect(() => {
     tableStore?.actions?.setReload?.(true);
@@ -41,20 +62,9 @@ export default function CtePendingInvoicesPage() {
 
   useEffect(() => {
     if (current.storeName !== 'invoice_tasks_processing') {
-      setStatusFilter('');
-      return;
+      setCteFilters({});
     }
-    const filters = statusFilter
-      ? {'status.realStatus': statusFilter}
-      : {};
-    tableStore?.actions?.setFilters?.(filters);
-    tableStore?.actions?.setReload?.(true);
-    tableStore?.actions?.getItems?.({page: 1, itemsPerPage: 50});
-  }, [statusFilter, current.storeName]);
-
-  const handleStatusFilterChange = filterKey => {
-    setStatusFilter(filterKey);
-  };
+  }, [current.storeName]);
 
   return (
     <SafeAreaView style={styles.screen} edges={['bottom']}>
@@ -62,33 +72,21 @@ export default function CtePendingInvoicesPage() {
         <Text style={styles.title}>CT-e</Text>
         <View style={styles.tabs}>
           {TABS.map(item => (
-            <Pressable key={item.key} onPress={() => { setTab(item.key); setStatusFilter(''); }} style={[styles.tab, tab === item.key && styles.tabActive]}>
+            <Pressable key={item.key} onPress={() => setTab(item.key)} style={[styles.tab, tab === item.key && styles.tabActive]}>
               <Text style={[styles.tabText, tab === item.key && styles.tabTextActive]}>{item.label}</Text>
             </Pressable>
           ))}
         </View>
       </View>
       {tab === 'cte' ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.statusFilterContainer}>
-          {STATUS_FILTERS.map(item => (
-            <Pressable
-              key={item.key}
-              onPress={() => handleStatusFilterChange(item.key)}
-              style={[
-                styles.statusFilterChip,
-                statusFilter === item.key && styles.statusFilterChipActive,
-              ]}>
-              <Text style={[
-                styles.statusFilterText,
-                statusFilter === item.key && styles.statusFilterTextActive,
-              ]}>
-                {item.label}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
+        <DefaultExternalFilters
+          storeName="invoice_tasks_processing"
+          filters={cteFilters}
+          onChangeFilters={setCteFilters}
+          getOptionsForColumn={getExternalFilterOptions}
+        />
       ) : null}
-      <DefaultTable key={current.storeName} storeName={current.storeName} />
+      <DefaultTable key={current.storeName} storeName={current.storeName} requestParams={cteRequestParams} />
       {showEmit ? (
         <Pressable
           testID="cte-emit-button"
@@ -112,35 +110,6 @@ const styles = StyleSheet.create({
   tabActive: {backgroundColor: '#0EA5E9'},
   tabText: {fontSize: 12, fontWeight: '700', color: '#334155'},
   tabTextActive: {color: '#fff'},
-  statusFilterContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    maxHeight: 44,
-  },
-  statusFilterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: '#F1F5F9',
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  statusFilterChipActive: {
-    backgroundColor: '#0EA5E9',
-    borderColor: '#0EA5E9',
-  },
-  statusFilterText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#334155',
-  },
-  statusFilterTextActive: {
-    color: '#fff',
-  },
   emitButton: {margin: 16, backgroundColor: '#0F766E', borderRadius: 12, paddingVertical: 14, alignItems: 'center'},
   emitText: {color: '#fff', fontWeight: '800'},
 });
