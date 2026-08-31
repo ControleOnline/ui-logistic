@@ -212,11 +212,6 @@ export default function CteDetailPage() {
               </View>
             </View>
 
-            <Pressable onPress={openCtePdf} style={styles.pdfButton} testID="cte-detail-pdf-primary">
-              <MaterialCommunityIcons name="file-pdf-box" size={20} color="#fff" />
-              <Text style={styles.pdfButtonText}>Visualizar PDF do CT-e (DACTE)</Text>
-            </Pressable>
-
             <View style={styles.partyGrid}>
               <PartyCard icon="office-building" role="Emitente" name={summary.issuerName} address={summary.addressLabel} tone="#0F766E" />
               <PartyCard icon="package-variant-closed" role="Remetente" name={summary.providerName} address={summary.providerAddressLabel} tone="#0369A1" />
@@ -362,18 +357,6 @@ const styles = StyleSheet.create({
   input: {marginTop: 6, borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 10, padding: 12, backgroundColor: '#fff'},
   inputReadonly: {backgroundColor: '#F1F5F9', color: '#334155'},
   error: {color: '#B91C1C', marginTop: 10},
-  pdfButton: {
-    marginBottom: 14,
-    backgroundColor: '#0F766E',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  pdfButtonText: {color: '#fff', fontWeight: '800', fontSize: 14},
   nfGrid: {marginBottom: 16},
   modalBackdrop: {
     flex: 1,
