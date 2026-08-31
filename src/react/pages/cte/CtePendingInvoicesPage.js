@@ -29,13 +29,19 @@ export default function CtePendingInvoicesPage() {
 
   const cteRequestParams = useMemo(() => {
     if (current.storeName !== 'invoice_tasks_processing') return {};
-    const params = {};
+    const params = {invoiceModel: 57};
     // DefaultExternalFilters stores status filter under key 'status' (column name)
     // Map to backend filter status.realStatus (InvoiceTax.status.realStatus: open/pending/closed)
     const statusValue = cteFilters?.status;
     if (statusValue) {
       params['status.realStatus'] = statusValue;
     }
+    // merge other external filters (except status which was already mapped)
+    Object.entries(cteFilters || {}).forEach(([k, v]) => {
+      if (k === 'status' || v === '' || v == null) return;
+      if (k in params) return;
+      params[k] = v;
+    });
     return params;
   }, [cteFilters, current.storeName]);
 
