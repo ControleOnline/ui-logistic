@@ -1,4 +1,4 @@
-import React, {useEffect, useMemo, useState} from 'react';
+import React, {useMemo, useState} from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
@@ -27,7 +27,6 @@ export default function CtePendingInvoicesPage() {
   const [integrationFilters, setIntegrationFilters] = useState({});
   const current = TABS.find(item => item.key === tab) || TABS[0];
   const invoiceStore = useStore('invoice_taxes');
-  const tableStore = useStore(current.storeName);
   const selectedIds = toInvoiceIds(invoiceStore?.getters?.selected);
   const showEmit = tab === 'pending' && selectedIds.length > 0;
 
@@ -45,10 +44,8 @@ export default function CtePendingInvoicesPage() {
     return {};
   }, [cteFilters, pendingFilters, integrationFilters, current.storeName]);
 
-  useEffect(() => {
-    tableStore?.actions?.setReload?.(true);
-    tableStore?.actions?.getItems?.({page: 1, itemsPerPage: 50});
-  }, [current.storeName]);
+  // filters are passed via requestParams to DefaultTable; no manual fetch needed
+  // DefaultTable handles auto-fetch after filters are ready
 
   return (
     <SafeAreaView style={styles.screen} edges={['bottom']}>
