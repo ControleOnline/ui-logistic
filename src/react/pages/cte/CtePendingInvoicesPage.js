@@ -1,4 +1,4 @@
-import React, {useMemo, useState} from 'react';
+import React, {useState} from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
@@ -24,24 +24,14 @@ export default function CtePendingInvoicesPage() {
   const [tab, setTab] = useState('pending');
   const current = TABS.find(item => item.key === tab) || TABS[0];
   const invoiceStore = useStore('invoice_taxes');
-  const pendingStore = useStore('invoice_taxes');
-  const cteStore = useStore('invoice_tasks_processing');
-  const integrationStore = useStore('integration');
   const selectedIds = toInvoiceIds(invoiceStore?.getters?.selected);
   const showEmit = tab === 'pending' && selectedIds.length > 0;
 
-  const requestParams = useMemo(() => {
-    if (current.storeName === 'invoice_tasks_processing') {
-      const storeFilters = cteStore?.getters?.filters || {};
-      return {...storeFilters, invoiceModel: 57};
-    }
-    if (current.storeName === 'integration') {
-      const storeFilters = integrationStore?.getters?.filters || {};
-      return {...storeFilters, queueName: 'CteEmission'};
-    }
-    // invoice_taxes/without-cte uses store filters directly via DefaultExternalFilters
+  const requestParams = (() => {
+    if (current.storeName === 'invoice_tasks_processing') return {invoiceModel: 57};
+    if (current.storeName === 'integration') return {queueName: 'CteEmission'};
     return {};
-  }, [current.storeName, cteStore?.getters?.filters, integrationStore?.getters?.filters, pendingStore?.getters?.filters]);
+  })();
 
   return (
     <SafeAreaView style={styles.screen} edges={['bottom']}>
