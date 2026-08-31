@@ -22,30 +22,26 @@ const toInvoiceIds = value =>
 export default function CtePendingInvoicesPage() {
   const navigation = useNavigation();
   const [tab, setTab] = useState('pending');
-  const [pendingFilters, setPendingFilters] = useState({});
-  const [cteFilters, setCteFilters] = useState({});
-  const [integrationFilters, setIntegrationFilters] = useState({});
   const current = TABS.find(item => item.key === tab) || TABS[0];
   const invoiceStore = useStore('invoice_taxes');
+  const pendingStore = useStore('invoice_taxes');
+  const cteStore = useStore('invoice_tasks_processing');
+  const integrationStore = useStore('integration');
   const selectedIds = toInvoiceIds(invoiceStore?.getters?.selected);
   const showEmit = tab === 'pending' && selectedIds.length > 0;
 
   const requestParams = useMemo(() => {
     if (current.storeName === 'invoice_tasks_processing') {
-      // invoiceModel 57 = CTE - sempre fixo
-      return {...cteFilters, invoiceModel: 57};
-    }
-    if (current.storeName === 'invoice_taxes') {
-      return {...pendingFilters};
+      const storeFilters = cteStore?.getters?.filters || {};
+      return {...storeFilters, invoiceModel: 57};
     }
     if (current.storeName === 'integration') {
-      return {...integrationFilters, queueName: 'CteEmission'};
+      const storeFilters = integrationStore?.getters?.filters || {};
+      return {...storeFilters, queueName: 'CteEmission'};
     }
+    // invoice_taxes/without-cte uses store filters directly via DefaultExternalFilters
     return {};
-  }, [cteFilters, pendingFilters, integrationFilters, current.storeName]);
-
-  // filters are passed via requestParams to DefaultTable; no manual fetch needed
-  // DefaultTable handles auto-fetch after filters are ready
+  }, [current.storeName, cteStore?.getters?.filters, integrationStore?.getters?.filters, pendingStore?.getters?.filters]);
 
   return (
     <SafeAreaView style={styles.screen} edges={['bottom']}>
@@ -59,15 +55,9 @@ export default function CtePendingInvoicesPage() {
           ))}
         </View>
       </View>
-      {tab === 'pending' ? (
-        <DefaultExternalFilters storeName="invoice_taxes" filters={pendingFilters} onChangeFilters={setPendingFilters} />
-      ) : null}
-      {tab === 'cte' ? (
-        <DefaultExternalFilters storeName="invoice_tasks_processing" filters={cteFilters} onChangeFilters={setCteFilters} />
-      ) : null}
-      {tab === 'integrations' ? (
-        <DefaultExternalFilters storeName="integration" filters={integrationFilters} onChangeFilters={setIntegrationFilters} />
-      ) : null}
+      {tab === 'pending' ? <DefaultExternalFilters storeName="invoice_taxes" /> : null}
+      {tab === 'cte' ? <DefaultExternalFilters storeName="invoice_tasks_processing" /> : null}
+      {tab === 'integrations' ? <DefaultExternalFilters storeName="integration" /> : null}
       <DefaultTable
         key={current.storeName}
         storeName={current.storeName}
