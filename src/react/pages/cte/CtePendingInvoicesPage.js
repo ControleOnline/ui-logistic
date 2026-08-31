@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useMemo, useState} from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
@@ -27,11 +27,11 @@ export default function CtePendingInvoicesPage() {
   const selectedIds = toInvoiceIds(invoiceStore?.getters?.selected);
   const showEmit = tab === 'pending' && selectedIds.length > 0;
 
-  const requestParams = (() => {
+  const requestParams = useMemo(() => {
     if (current.storeName === 'invoice_tasks_processing') return {invoiceModel: 57};
     if (current.storeName === 'integration') return {queueName: 'CteEmission'};
     return {};
-  })();
+  }, [current.storeName]);
 
   return (
     <SafeAreaView style={styles.screen} edges={['bottom']}>
