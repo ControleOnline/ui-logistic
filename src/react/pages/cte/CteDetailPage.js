@@ -104,7 +104,7 @@ export default function CteDetailPage() {
   const summary = useMemo(() => {
     const first = nfs[0] || cte || {};
     const issuer = peopleName(cte?.issuer) || peopleName(cte?.company) || cleanName(first.issuerName || first.companyName, 'Emitente não informado');
-    const client = peopleName(cte?.client) || cleanName(first.providerName, 'Destinatário não informado');
+    const client = peopleName(cte?.client) || cleanName(first.clientName, 'Destinatário não informado');
     const provider = peopleName(cte?.provider) || cleanName(first.providerName, 'Remetente não informado');
     const carrier = peopleName(cte?.carrier) || cleanName(first.carrierName, 'Transportadora não informada');
     return {
