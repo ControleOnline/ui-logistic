@@ -45,8 +45,8 @@ export default function CtePendingInvoicesPage() {
       return;
     }
     const filters = statusFilter
-      ? {taskType: 'cte_emission', 'status.realStatus': statusFilter}
-      : {taskType: 'cte_emission'};
+      ? {'status.realStatus': statusFilter}
+      : {};
     tableStore?.actions?.setFilters?.(filters);
     tableStore?.actions?.setReload?.(true);
     tableStore?.actions?.getItems?.({page: 1, itemsPerPage: 50});
