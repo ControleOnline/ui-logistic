@@ -19,6 +19,7 @@ export default function CteEmitNfCard({row, onPreview, onRemove}) {
   const client = cleanName(row?.clientName, 'Destinatário não informado');
   const provider = cleanName(row?.providerName, 'Remetente não informado');
   const key = String(row?.invoiceKey || '').trim();
+  const canRemove = typeof onRemove === 'function';
 
   return (
     <View style={styles.card}>
@@ -31,9 +32,11 @@ export default function CteEmitNfCard({row, onPreview, onRemove}) {
           <Pressable onPress={() => onPreview?.(row)} style={styles.pdf} hitSlop={8}>
             <MaterialCommunityIcons name="file-pdf-box" size={16} color="#fff" />
           </Pressable>
-          <Pressable onPress={() => onRemove?.(row)} style={styles.remove} hitSlop={8}>
-            <MaterialCommunityIcons name="close" size={16} color="#fff" />
-          </Pressable>
+          {canRemove ? (
+            <Pressable onPress={() => onRemove?.(row)} style={styles.remove} hitSlop={8}>
+              <MaterialCommunityIcons name="close" size={16} color="#fff" />
+            </Pressable>
+          ) : null}
         </View>
       </View>
 

@@ -6,6 +6,7 @@ import {useStore} from '@store';
 import DefaultExternalFilters from '@controleonline/ui-default/src/react/components/filters/DefaultExternalFilters';
 import DefaultTable from '@controleonline/ui-default/src/react/components/table/DefaultTable';
 import CteIntegrationActions from './CteIntegrationActions';
+import CteCteActions from './CteCteActions';
 
 const TABS = [
   {key: 'pending', label: 'CTEs à emitir', storeName: 'invoice_taxes'},
@@ -33,6 +34,12 @@ export default function CtePendingInvoicesPage() {
     return {};
   }, [current.storeName]);
 
+  const rowActionsComponent = useMemo(() => {
+    if (current.storeName === 'integration') return CteIntegrationActions;
+    if (current.storeName === 'invoice_tasks_processing') return CteCteActions;
+    return undefined;
+  }, [current.storeName]);
+
   return (
     <SafeAreaView style={styles.screen} edges={['bottom']}>
       <View style={styles.header}>
@@ -52,7 +59,7 @@ export default function CtePendingInvoicesPage() {
         key={current.storeName}
         storeName={current.storeName}
         requestParams={requestParams}
-        rowActionsComponent={current.storeName === 'integration' ? CteIntegrationActions : undefined}
+        rowActionsComponent={rowActionsComponent}
       />
       {showEmit ? (
         <Pressable
