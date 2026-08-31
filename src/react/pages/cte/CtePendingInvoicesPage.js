@@ -30,8 +30,8 @@ export default function CtePendingInvoicesPage() {
 
   const requestParams = useMemo(() => {
     if (current.storeName === 'invoice_tasks_processing') {
-      // invoiceModel 57 = CTE
-      return {invoiceModel: 57, ...cteFilters};
+      // invoiceModel 57 = CTE - sempre fixo, spread depois não sobrescreve
+      return {...cteFilters, invoiceModel: 57};
     }
     if (current.storeName === 'invoice_taxes') {
       return {...pendingFilters};
