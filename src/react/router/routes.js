@@ -14,6 +14,7 @@ import DeliveryCourierPresencePage from '@controleonline/ui-logistic/src/react/p
 import DeliveryCourierPresenceHistoryPage from '@controleonline/ui-logistic/src/react/pages/presence/DeliveryCourierPresenceHistoryPage';
 import CtePendingInvoicesPage from '@controleonline/ui-logistic/src/react/pages/cte/CtePendingInvoicesPage';
 import CteEmitPage from '@controleonline/ui-logistic/src/react/pages/cte/CteEmitPage';
+import CteDetailPage from '@controleonline/ui-logistic/src/react/pages/cte/CteDetailPage';
 
 export const WrappedOrderLogistics = ({navigation, route}) => {
   React.useEffect(() => {
@@ -232,6 +233,18 @@ const logisticRoutes = [
       title: 'Emitir CT-e',
     },
     path: 'cte/emit',
+  },
+  {
+    name: 'CteDetailPage',
+    component: CteDetailPage,
+    options: {
+      headerShown: true,
+      showBottomCart: false,
+      showBottomToolBar: true,
+      showCompanyFilter: false,
+      title: 'Detalhe do CT-e',
+    },
+    path: 'cte/detail',
   },
 ];
 
