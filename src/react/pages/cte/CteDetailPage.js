@@ -78,9 +78,16 @@ export default function CteDetailPage() {
           params: {cte: cteId, itemsPerPage: 200},
         });
         const collection = nfResponse?.member || nfResponse?.['hydra:member'] || [];
+        const onlyNfs = (Array.isArray(collection) ? collection : []).filter(row => {
+          const id = rowId(row);
+          const model = Number(row?.invoiceModel || 0);
+          if (id && id === cteId) return false;
+          if (model === 57) return false;
+          return true;
+        });
         if (!cancelled) {
           setCte(cteResponse);
-          setNfs(Array.isArray(collection) ? collection : []);
+          setNfs(onlyNfs);
         }
       } catch (err) {
         if (!cancelled) setError(err?.message || String(err));
@@ -119,7 +126,7 @@ export default function CteDetailPage() {
   }, [cte, nfs]);
 
   const openPdf = async (row, kind = 'NF') => {
-    const id = rowId(row);
+    const id = rowId(row) || (kind === 'CT-e' ? cteId : '');
     if (!id) return;
     setPreview({
       visible: true,
@@ -146,16 +153,28 @@ export default function CteDetailPage() {
     }
   };
 
+  const openCtePdf = () => openPdf(cte || {id: cteId, invoiceNumber: summary.invoiceNumber}, 'CT-e');
+
   const closePreview = () =>
     setPreview({visible: false, title: '', url: '', loading: false, error: ''});
 
   return (
     <SafeAreaView style={styles.screen} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Detalhe do CT-e</Text>
-        <Text style={styles.hint}>
-          Visualização somente leitura. Emissão e organização de rotas estão desativadas.
-        </Text>
+        <View style={styles.titleRow}>
+          <View style={styles.titleBlock}>
+            <Text style={styles.title}>Detalhe do CT-e</Text>
+            <Text style={styles.hint}>
+              Visualização somente leitura. Emissão e organização de rotas estão desativadas.
+            </Text>
+          </View>
+          {!loading && !error && cteId ? (
+            <Pressable onPress={openCtePdf} style={styles.headerPdf} testID="cte-detail-pdf">
+              <MaterialCommunityIcons name="file-pdf-box" size={18} color="#fff" />
+              <Text style={styles.headerPdfText}>PDF</Text>
+            </Pressable>
+          ) : null}
+        </View>
 
         {loading ? <Text style={styles.hint}>Carregando CT-e...</Text> : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -216,10 +235,6 @@ export default function CteDetailPage() {
                 <ReadField label="Total" value={formatMoney(cte?.invoiceTotal)} />
                 <ReadField label="NFs vinculadas" value={summary.invoiceCount} />
               </View>
-              <Pressable onPress={() => openPdf(cte, 'CT-e')} style={styles.pdfButton}>
-                <MaterialCommunityIcons name="file-pdf-box" size={18} color="#fff" />
-                <Text style={styles.pdfButtonText}>Visualizar PDF do CT-e (DACTE)</Text>
-              </Pressable>
             </View>
 
             <Text style={styles.section}>NFs deste CT-e</Text>
@@ -266,8 +281,21 @@ export default function CteDetailPage() {
 const styles = StyleSheet.create({
   screen: {flex: 1, backgroundColor: '#F8FAFC'},
   content: {padding: 16, paddingBottom: 40},
+  titleRow: {flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 4},
+  titleBlock: {flex: 1, minWidth: 0},
   title: {fontSize: 20, fontWeight: '800', color: '#0F172A'},
   hint: {marginTop: 6, marginBottom: 14, color: '#64748B'},
+  headerPdf: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#0F766E',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginTop: 2,
+  },
+  headerPdfText: {color: '#fff', fontWeight: '800', fontSize: 13},
   summaryBar: {flexDirection: 'row', gap: 12, marginBottom: 12, flexWrap: 'wrap'},
   summaryItem: {
     flexDirection: 'row',
@@ -329,18 +357,6 @@ const styles = StyleSheet.create({
   input: {marginTop: 6, borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 10, padding: 12, backgroundColor: '#fff'},
   inputReadonly: {backgroundColor: '#F1F5F9', color: '#334155'},
   error: {color: '#B91C1C', marginTop: 10},
-  pdfButton: {
-    marginTop: 14,
-    backgroundColor: '#0F766E',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  pdfButtonText: {color: '#fff', fontWeight: '800'},
   nfGrid: {marginBottom: 16},
   modalBackdrop: {
     flex: 1,
