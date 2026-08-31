@@ -2,6 +2,31 @@ import * as actions from '@controleonline/ui-default/src/store/default/actions';
 import * as getters from '@controleonline/ui-default/src/store/default/getters';
 import mutations from '@controleonline/ui-default/src/store/default/mutations';
 
+const peopleFormat = value => value?.name || value?.alias || value?.['@id'] || '-';
+const peopleFormatList = value =>
+  value && value['@id']
+    ? {
+        value: value['@id'].split('/').pop(),
+        label: `${value.name || ''} - ${value.alias || ''}`.trim() || value['@id'],
+      }
+    : value;
+
+const formatStatusOption = value => {
+  if (!value) return value;
+  if (typeof value !== 'object' || Array.isArray(value)) {
+    return {value, label: String(value || '-')};
+  }
+  const statusId = value?.['@id']?.split('/').pop() || value?.id || value?.value;
+  const label = value.status || value.realStatus || '-';
+  const color = String(value.color || '').trim();
+  return {
+    ...value,
+    value: statusId,
+    label,
+    ...(color ? {color} : {}),
+  };
+};
+
 export default {
   namespaced: true,
   state: {
@@ -26,8 +51,8 @@ export default {
         externalFilter: true,
         list: 'people',
         searchParam: 'company',
-        format: value => (value?.name || value?.alias || value?.['@id'] || '-'),
-        formatList: value => (value && value['@id'] ? {value: value['@id'].split('/').pop(), label: `${value.name || ''} - ${value.alias || ''}`.trim() || value['@id']} : value),
+        format: peopleFormat,
+        formatList: peopleFormatList,
         saveFormat: value => (value ? `/people/${value.value || value}` : null),
       },
       {
@@ -37,8 +62,8 @@ export default {
         externalFilter: true,
         list: 'people',
         searchParam: 'client',
-        format: value => (value?.name || value?.alias || value?.['@id'] || '-'),
-        formatList: value => (value && value['@id'] ? {value: value['@id'].split('/').pop(), label: `${value.name || ''} - ${value.alias || ''}`.trim() || value['@id']} : value),
+        format: peopleFormat,
+        formatList: peopleFormatList,
         saveFormat: value => (value ? `/people/${value.value || value}` : null),
       },
       {
@@ -48,8 +73,8 @@ export default {
         externalFilter: true,
         list: 'people',
         searchParam: 'provider',
-        format: value => (value?.name || value?.alias || value?.['@id'] || '-'),
-        formatList: value => (value && value['@id'] ? {value: value['@id'].split('/').pop(), label: `${value.name || ''} - ${value.alias || ''}`.trim() || value['@id']} : value),
+        format: peopleFormat,
+        formatList: peopleFormatList,
         saveFormat: value => (value ? `/people/${value.value || value}` : null),
       },
       {
@@ -59,8 +84,8 @@ export default {
         externalFilter: true,
         list: 'people',
         searchParam: 'carrier',
-        format: value => (value?.name || value?.alias || value?.['@id'] || '-'),
-        formatList: value => (value && value['@id'] ? {value: value['@id'].split('/').pop(), label: `${value.name || ''} - ${value.alias || ''}`.trim() || value['@id']} : value),
+        format: peopleFormat,
+        formatList: peopleFormatList,
         saveFormat: value => (value ? `/people/${value.value || value}` : null),
       },
       {name: 'invoiceTotal', label: 'Total', type: 'money', summary: 'sum', editable: false, align: 'right', externalFilter: true},
@@ -72,8 +97,9 @@ export default {
         list: 'status/getItems',
         listRequestParams: {context: 'invoice_tax'},
         searchParam: 'status',
-        format: value => (value?.status || value?.realStatus || '-'),
-        formatList: value => (value && value['@id'] ? {value: value['@id'].split('/').pop(), label: value.status || value.realStatus || value['@id']} : value),
+        style: row => ({color: row?.status?.color}),
+        format: value => formatStatusOption(value),
+        formatList: value => formatStatusOption(value),
         saveFormat: value => (value ? `/statuses/${value.value || value}` : null),
       },
     ],

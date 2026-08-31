@@ -11,16 +11,20 @@ const peopleFormatList = value =>
       }
     : value;
 
-const statusFormat = value => {
-  if (!value) return '-';
-  if (typeof value === 'string') return value;
-  return value.status || value.realStatus || '-';
-};
-
-const statusPresentation = value => {
-  if (!value || typeof value !== 'object') return {};
-  const color = value.color || '';
-  return color ? {color, label: statusFormat(value)} : {label: statusFormat(value)};
+const formatStatusOption = value => {
+  if (!value) return value;
+  if (typeof value !== 'object' || Array.isArray(value)) {
+    return {value, label: String(value || '-')};
+  }
+  const statusId = value?.['@id']?.split('/').pop() || value?.id || value?.value;
+  const label = value.status || value.realStatus || '-';
+  const color = String(value.color || '').trim();
+  return {
+    ...value,
+    value: statusId,
+    label,
+    ...(color ? {color} : {}),
+  };
 };
 
 export default {
@@ -100,20 +104,9 @@ export default {
         list: 'status/getItems',
         listRequestParams: {context: 'invoice_tax'},
         searchParam: 'status',
-        format: (value, column, row) => {
-          const presentation = statusPresentation(value);
-          return presentation.color
-            ? presentation
-            : statusFormat(value);
-        },
-        formatList: value => {
-          if (!value || !value['@id']) return value;
-          return {
-            value: value['@id'].split('/').pop(),
-            label: value.status || value.realStatus || value['@id'],
-            color: value.color || undefined,
-          };
-        },
+        style: row => ({color: row?.status?.color}),
+        format: value => formatStatusOption(value),
+        formatList: value => formatStatusOption(value),
         saveFormat: value => (value ? `/statuses/${value.value || value}` : null),
       },
     ],
