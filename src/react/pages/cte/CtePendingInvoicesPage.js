@@ -40,10 +40,10 @@ export default function CtePendingInvoicesPage() {
 
   useEffect(() => {
     if (tab !== 'integrations') return;
-    integrationStore?.actions?.setFilters({
-      ...(integrationStore?.getters?.filters || {}),
-      queueName: 'CteEmission',
-    });
+    if (typeof integrationStore?.actions?.setFilters !== 'function') return;
+    const currentFilters = integrationStore?.getters?.filters || {};
+    if (currentFilters.queueName === 'CteEmission') return;
+    integrationStore.actions.setFilters({...currentFilters, queueName: 'CteEmission'});
   }, [integrationStore, tab]);
 
   const requestParams = useMemo(() => {
