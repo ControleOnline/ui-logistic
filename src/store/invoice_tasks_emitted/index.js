@@ -1,6 +1,7 @@
 import * as actions from '@controleonline/ui-default/src/store/default/actions';
 import * as getters from '@controleonline/ui-default/src/store/default/getters';
 import mutations from '@controleonline/ui-default/src/store/default/mutations';
+import {CTE_FISCAL_COLUMNS} from '@controleonline/ui-logistic/src/shared/ctePendingInvoices';
 
 const peopleFormat = value => value?.name || value?.alias || value?.['@id'] || '-';
 const peopleFormatList = value =>
@@ -42,8 +43,7 @@ export default {
     add: false,
     columns: [
       {name: 'id', label: 'ID', isIdentity: true, editable: false, externalFilter: true},
-      {name: 'invoiceNumber', label: 'NF', isIdentity: false, editable: false, externalFilter: true},
-      {name: 'invoiceKey', label: 'Chave', editable: false, externalFilter: true},
+      ...CTE_FISCAL_COLUMNS,
       {
         name: 'company',
         label: 'Empresa',

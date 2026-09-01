@@ -5,6 +5,8 @@ import {useNavigation} from '@react-navigation/native';
 import {api} from '@controleonline/ui-common/src/api';
 
 const rowId = row => String(row?.id ?? row?.['@id'] ?? '').replace(/\D+/g, '');
+const fiscalDocument = row => row?.fiscalDocument || {};
+const fiscalNumber = row => fiscalDocument(row).number || row?.fiscalNumber || row?.invoiceNumber || rowId(row);
 
 export default function CteCteActions({row}) {
   const navigation = useNavigation();
@@ -15,7 +17,7 @@ export default function CteCteActions({row}) {
     if (!id) return;
     setPreview({
       visible: true,
-      title: `CT-e #${row?.invoiceNumber || id}`,
+      title: `CT-e #${fiscalNumber(row) || id}`,
       url: '',
       loading: true,
       error: '',

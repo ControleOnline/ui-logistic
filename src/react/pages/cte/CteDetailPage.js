@@ -23,6 +23,11 @@ const formatWeight = value =>
 const peopleName = people =>
   cleanName(people?.alias || people?.name, null) || null;
 
+const fiscalDocument = row => row?.fiscalDocument || {};
+const fiscalSeries = row => fiscalDocument(row).series || row?.fiscalSeries || '--';
+const fiscalNumber = row => fiscalDocument(row).number || row?.fiscalNumber || '--';
+const fiscalKey = row => fiscalDocument(row).key || row?.invoiceKey || '--';
+
 const PartyCard = ({icon, role, name, address, tone}) => (
   <View style={[styles.partyCard, tone && {borderColor: tone}]}>
     <View style={styles.partyHeader}>
@@ -103,6 +108,7 @@ export default function CteDetailPage() {
 
   const summary = useMemo(() => {
     const first = nfs[0] || cte || {};
+    const cteFiscal = fiscalDocument(cte);
     const issuer = peopleName(cte?.issuer) || peopleName(cte?.company) || cleanName(first.issuerName || first.companyName, 'Emitente não informado');
     const client = peopleName(cte?.client) || cleanName(first.clientName, 'Destinatário não informado');
     const provider = peopleName(cte?.provider) || cleanName(first.providerName, 'Remetente não informado');
@@ -119,8 +125,15 @@ export default function CteDetailPage() {
       invoiceCount: nfs.length,
       totalValue: nfs.reduce((sum, row) => sum + Number(row?.invoiceTotal || 0), 0) || Number(cte?.invoiceTotal || 0),
       totalWeight: nfs.reduce((sum, row) => sum + Number(row?.weight || 0), 0),
-      invoiceNumber: cte?.invoiceNumber,
-      invoiceKey: cte?.invoiceKey,
+      cteNumber: fiscalNumber(cte),
+      cteSeries: fiscalSeries(cte),
+      cteKey: fiscalKey(cte),
+      cteProtocol: cteFiscal.protocol || cte?.fiscalProtocol || '--',
+      cteAuthorizationStatus: cteFiscal.authorizationStatus || '--',
+      cteAuthorizationMessage: cteFiscal.authorizationMessage || '-',
+      cteIssuedAt: cteFiscal.issuedAt || '--',
+      cteAuthorizedAt: cteFiscal.authorizedAt || '--',
+      cteCfop: cteFiscal.cfop || '--',
       status: cte?.status?.status || cte?.status?.realStatus || '-',
     };
   }, [cte, nfs]);
@@ -130,7 +143,7 @@ export default function CteDetailPage() {
     if (!id) return;
     setPreview({
       visible: true,
-      title: `${kind} #${row?.invoiceNumber || id}`,
+      title: `${kind} #${fiscalNumber(row) !== '--' ? fiscalNumber(row) : row?.invoiceNumber || id}`,
       url: '',
       loading: true,
       error: '',
@@ -153,7 +166,7 @@ export default function CteDetailPage() {
     }
   };
 
-  const openCtePdf = () => openPdf(cte || {id: cteId, invoiceNumber: summary.invoiceNumber}, 'CT-e');
+  const openCtePdf = () => openPdf(cte || {id: cteId, fiscalNumber: summary.cteNumber}, 'CT-e');
 
   const closePreview = () =>
     setPreview({visible: false, title: '', url: '', loading: false, error: ''});
@@ -186,7 +199,7 @@ export default function CteDetailPage() {
                 <MaterialCommunityIcons name="file-document-outline" size={18} color="#0F766E" />
                 <View>
                   <Text style={styles.summaryLabel}>CT-e</Text>
-                  <Text style={styles.summaryValue}>#{summary.invoiceNumber || cteId}</Text>
+                  <Text style={styles.summaryValue}>Série {summary.cteSeries} / Nº {summary.cteNumber}</Text>
                 </View>
               </View>
               <View style={styles.summaryItem}>
@@ -228,9 +241,15 @@ export default function CteDetailPage() {
             <View style={styles.card}>
               <Text style={styles.section}>Dados do CT-e</Text>
               <View style={styles.formGrid}>
-                <ReadField label="Número" value={summary.invoiceNumber} />
-                <ReadField label="Chave" value={summary.invoiceKey} />
-                <ReadField label="Status" value={summary.status} />
+                <ReadField label="Série" value={summary.cteSeries} />
+                <ReadField label="Número" value={summary.cteNumber} />
+                <ReadField label="Chave" value={summary.cteKey} wide />
+                <ReadField label="Protocolo" value={summary.cteProtocol} />
+                <ReadField label="Status SEFAZ" value={`${summary.cteAuthorizationStatus} - ${summary.cteAuthorizationMessage}`} />
+                <ReadField label="Emissão" value={summary.cteIssuedAt} />
+                <ReadField label="Autorização" value={summary.cteAuthorizedAt} />
+                <ReadField label="CFOP" value={summary.cteCfop} />
+                <ReadField label="Status interno" value={summary.status} />
                 <ReadField label="Modelo" value={cte?.invoiceModel || 57} />
                 <ReadField label="Total" value={formatMoney(cte?.invoiceTotal)} />
                 <ReadField label="NFs vinculadas" value={summary.invoiceCount} />

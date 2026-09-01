@@ -16,6 +16,13 @@ export const CTE_PENDING_COLUMNS = [
   {name: 'status', label: 'Status', editable: false, externalFilter: true, list: 'status/getItems', listRequestParams: {context: 'invoice_tax'}, searchParam: 'status'},
 ];
 
+export const CTE_FISCAL_COLUMNS = [
+  {name: 'fiscalSeries', label: 'Série', editable: false, externalFilter: true},
+  {name: 'fiscalNumber', label: 'CT-e', isIdentity: false, editable: false, externalFilter: true},
+  {name: 'invoiceKey', label: 'Chave CT-e', editable: false, externalFilter: true},
+  {name: 'fiscalProtocol', label: 'Protocolo', editable: false, externalFilter: true},
+];
+
 export const normalizeText = value => String(value ?? '').trim();
 
 export const normalizeEntityId = value => {

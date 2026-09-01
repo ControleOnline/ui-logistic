@@ -1,11 +1,14 @@
 const {
   buildRouteSummary,
   CTE_SMOKE_META,
+  CTE_FISCAL_COLUMNS,
   groupInvoicesByCompanyAddress,
   mergeCteDefaults,
   missingCteFields,
   unwrapInvoiceCollection,
 } = require('../../../shared/ctePendingInvoices');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const {describe, expect, it} = global;
 
@@ -107,5 +110,52 @@ describe('ctePendingInvoices', () => {
     expect(missingCteFields({...result.defaults, valorFrete: '', valorReceber: ''})).toEqual(
       expect.arrayContaining(['cfop', 'tomador', 'valorFrete', 'valorReceber']),
     );
+  });
+
+  it('declares filterable fiscal CTe columns for emitted and processing lists', () => {
+    const columns = CTE_FISCAL_COLUMNS.map(column => column.name);
+    expect(columns).toEqual(['fiscalSeries', 'fiscalNumber', 'invoiceKey', 'fiscalProtocol']);
+    expect(CTE_FISCAL_COLUMNS.find(column => column.name === 'fiscalNumber')?.label).toBe('CT-e');
+    expect(CTE_FISCAL_COLUMNS.every(column => column.externalFilter === true)).toBe(true);
+  });
+
+  it('opens CTe fiscal settings through ui-accounting ownership', () => {
+    const page = fs.readFileSync(
+      path.resolve(__dirname, '../../../react/pages/cte/CtePendingInvoicesPage.js'),
+      'utf8',
+    );
+    const manifest = JSON.parse(
+      fs.readFileSync(path.resolve(__dirname, '../../../../package.json'), 'utf8'),
+    );
+
+    expect(page).toMatch(/cte-fiscal-config-button/);
+    expect(page).toMatch(/@controleonline\/ui-accounting\/src\/react\/components\/fiscal\/CteFiscalConfig/);
+    expect(page).not.toMatch(/IntegrationConfigPage/);
+    expect(manifest.dependencies['@controleonline/ui-accounting']).toBe('*');
+    expect(page).toMatch(/queueName: 'CteEmission'/);
+  });
+
+  it('registers dedicated NF-e, NFC-e and NFSe routes', () => {
+    const routes = fs.readFileSync(
+      path.resolve(__dirname, '../../../react/router/routes.js'),
+      'utf8',
+    );
+
+    expect(routes).toMatch(/path: 'nfce'/);
+    expect(routes).toMatch(/path: 'nfe'/);
+    expect(routes).toMatch(/path: 'nfse'/);
+    expect(routes).toMatch(/FiscalDocumentsPage/);
+  });
+
+  it('exposes a configuration action for each fiscal document screen', () => {
+    const page = fs.readFileSync(
+      path.resolve(__dirname, '../../../react/pages/fiscal/FiscalDocumentsPage.js'),
+      'utf8',
+    );
+
+    expect(page).toMatch(/\$\{config\.key\}-fiscal-config-button/);
+    expect(page).toMatch(/NfceFiscalConfig/);
+    expect(page).toMatch(/NfeFiscalConfig/);
+    expect(page).toMatch(/NfseFiscalConfig/);
   });
 });
