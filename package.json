@@ -16,6 +16,7 @@
     "last 1 version, not dead, ie >= 11"
   ],
   "dependencies": {
+    "@controleonline/ui-accounting": "*",
     "@controleonline/ui-common": "*",
     "@controleonline/ui-default": "*",
     "@controleonline/ui-layout": "*",
