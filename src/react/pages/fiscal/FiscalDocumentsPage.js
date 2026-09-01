@@ -51,11 +51,15 @@ export default function FiscalDocumentsPage({documentType}) {
 
   useEffect(() => {
     if (!config || !currentCompanyIri || typeof activeStore?.actions?.setFilters !== 'function') return;
-    activeStore?.actions?.setFilters({
-      ...(activeStore?.getters?.filters || {}),
+    const currentFilters = activeStore?.getters?.filters || {};
+    const nextQueueName = current.key === 'integrations' ? config.integrationQueue : undefined;
+    if (currentFilters.provider === currentCompanyIri && currentFilters.queueName === nextQueueName) return;
+    const nextFilters = {
+      ...currentFilters,
       provider: currentCompanyIri,
-      ...(current.key === 'integrations' ? {queueName: config.integrationQueue} : {}),
-    });
+    };
+    if (nextQueueName) nextFilters.queueName = nextQueueName;
+    activeStore.actions.setFilters(nextFilters);
   }, [activeStore, config, current.key, currentCompanyIri]);
 
   if (!config) return null;
