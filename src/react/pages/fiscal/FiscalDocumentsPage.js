@@ -15,7 +15,7 @@ import {
   buildFiscalDocumentRequestParams,
   resolveFiscalDocumentConfig,
 } from '@controleonline/ui-logistic/src/shared/fiscalDocuments';
-import NfceEmitPage from './NfceEmitPage';
+import NfceEmittedActions from './NfceEmittedActions';
 
 const TABS = [
   {key: 'pending', labelKey: 'pendingLabel', storeName: 'fiscal_orders_pending'},
@@ -48,6 +48,7 @@ export default function FiscalDocumentsPage({documentType}) {
     ? pendingStore.getters.selected.map(item => String(item).replace(/\D+/g, '')).filter(Boolean)
     : [];
   const canEmitNfce = config.key === 'nfce' && current.key === 'pending' && selectedIds.length > 0;
+  const rowActionsComponent = config.key === 'nfce' && current.key === 'emitted' ? NfceEmittedActions : undefined;
 
   useEffect(() => {
     if (!config || !currentCompanyIri) return;
@@ -96,6 +97,9 @@ export default function FiscalDocumentsPage({documentType}) {
           key={`${config.key}-${current.key}`}
           storeName={current.storeName}
           requestParams={requestParams}
+          rowActionsComponent={rowActionsComponent}
+          showRowActions={Boolean(rowActionsComponent)}
+          rowActionsWidth={rowActionsComponent ? 176 : undefined}
           pinRowActions
         />
       ) : (

@@ -49,3 +49,48 @@ export const buildFiscalDocumentRequestParams = (config, tab) => {
 
   return {queueName: config.integrationQueue};
 };
+
+export const resolveInvoiceTaxId = value => {
+  if (value && typeof value === 'object') {
+    return resolveInvoiceTaxId(value.id ?? value.value ?? value['@id'] ?? '');
+  }
+  return String(value || '').replace(/\D+/g, '');
+};
+
+const fiscalDocumentOf = row => (row && typeof row.fiscalDocument === 'object' ? row.fiscalDocument : {}) || {};
+
+export const resolveNfceSeries = row =>
+  String(fiscalDocumentOf(row).series ?? row?.fiscalSeries ?? row?.serie ?? '').trim();
+
+export const resolveNfceNumber = row =>
+  String(fiscalDocumentOf(row).number ?? row?.fiscalNumber ?? row?.invoiceNumber ?? '').trim();
+
+export const resolveNfceProtocol = row =>
+  String(fiscalDocumentOf(row).protocol ?? row?.fiscalProtocol ?? row?.protocol ?? '').trim();
+
+export const resolveNfceStatus = row => {
+  const status = row?.status;
+  if (status && typeof status === 'object') {
+    return String(status.status || status.realStatus || status.label || '').trim();
+  }
+  return String(status || row?.realStatus || '').trim();
+};
+
+export const isValidNfceDocument = row =>
+  Boolean(resolveInvoiceTaxId(row) && resolveNfceSeries(row) && resolveNfceNumber(row));
+
+export const buildNfcePdfFilename = row => {
+  const series = resolveNfceSeries(row) || 'SEM-SERIE';
+  const number = resolveNfceNumber(row) || 'SEM-NUMERO';
+  return `NFC-E-${series}-${number}.pdf`;
+};
+
+export const NFCE_EMITTED_COLUMNS = [
+  {name: 'id', label: 'ID', isIdentity: true, editable: false, externalFilter: true},
+  {name: 'fiscalSeries', label: 'Série', editable: false, externalFilter: true, format: (_, row) => resolveNfceSeries(row) || '--'},
+  {name: 'fiscalNumber', label: 'Número', editable: false, externalFilter: true, format: (_, row) => resolveNfceNumber(row) || '--'},
+  {name: 'fiscalProtocol', label: 'Protocolo', editable: false, externalFilter: true, format: (_, row) => resolveNfceProtocol(row) || '--'},
+  {name: 'status', label: 'Status', editable: false, externalFilter: true, format: (_, row) => resolveNfceStatus(row) || '--'},
+  {name: 'invoiceTotal', label: 'Total', type: 'money', summary: 'sum', editable: false, align: 'right', externalFilter: true},
+];
+
