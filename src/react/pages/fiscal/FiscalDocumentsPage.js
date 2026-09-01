@@ -30,13 +30,13 @@ export default function FiscalDocumentsPage({documentType}) {
   const config = resolveFiscalDocumentConfig(documentType);
   const [tab, setTab] = useState('pending');
   const [configVisible, setConfigVisible] = useState(false);
-  const integrationStore = useStore('integration');
+  const current = TABS.find(item => item.key === tab) || TABS[0];
   const pendingStore = useStore('fiscal_orders_pending');
+  const activeStore = useStore(current.storeName);
   const peopleStore = useStore('people');
   const fiscalCompany = peopleStore?.getters?.currentCompany || null;
   const fiscalCompanyId = resolveFiscalCompanyId(fiscalCompany);
   const currentCompanyIri = fiscalCompanyId ? `/people/${fiscalCompanyId}` : null;
-  const current = TABS.find(item => item.key === tab) || TABS[0];
   const requestParams = useMemo(
     () => config && currentCompanyIri
       ? {...buildFiscalDocumentRequestParams(config, current.key), provider: currentCompanyIri}
@@ -50,13 +50,13 @@ export default function FiscalDocumentsPage({documentType}) {
   const canEmitNfce = config.key === 'nfce' && current.key === 'pending' && selectedIds.length > 0;
 
   useEffect(() => {
-    if (config && current.key === 'integrations') {
-      integrationStore?.actions?.setFilters({
-        ...(integrationStore?.getters?.filters || {}),
-        queueName: config.integrationQueue,
-      });
-    }
-  }, [config, current.key, integrationStore]);
+    if (!config || !currentCompanyIri) return;
+    activeStore?.actions?.setFilters({
+      ...(activeStore?.getters?.filters || {}),
+      provider: currentCompanyIri,
+      ...(current.key === 'integrations' ? {queueName: config.integrationQueue} : {}),
+    });
+  }, [activeStore, config, current.key, currentCompanyIri]);
 
   if (!config) return null;
 
