@@ -133,4 +133,12 @@ describe('ctePendingInvoices', () => {
     expect(page).not.toMatch(/IntegrationConfigPage/);
     expect(manifest.dependencies['@controleonline/ui-accounting']).toBe('*');
   });
+
+  it('keeps the accounting package alias resolvable by Metro', () => {
+    const babel = fs.readFileSync(path.resolve(__dirname, '../../../../../../../babel.config.js'), 'utf8');
+    const metro = fs.readFileSync(path.resolve(__dirname, '../../../../../../../metro.config.js'), 'utf8');
+
+    expect(babel).toMatch(/'@controleonline\/ui-accounting': '\.\/modules\/controleonline\/ui-accounting'/);
+    expect(metro).toMatch(/'@controleonline\/ui-accounting': path\.resolve\(projectRoot, 'modules', 'controleonline', 'ui-accounting'\)/);
+  });
 });
