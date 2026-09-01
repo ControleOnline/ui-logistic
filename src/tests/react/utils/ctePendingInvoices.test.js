@@ -132,5 +132,30 @@ describe('ctePendingInvoices', () => {
     expect(page).toMatch(/@controleonline\/ui-accounting\/src\/react\/components\/fiscal\/CteFiscalConfig/);
     expect(page).not.toMatch(/IntegrationConfigPage/);
     expect(manifest.dependencies['@controleonline/ui-accounting']).toBe('*');
+    expect(page).toMatch(/queueName: 'CteEmission'/);
+  });
+
+  it('registers dedicated NF-e, NFC-e and NFSe routes', () => {
+    const routes = fs.readFileSync(
+      path.resolve(__dirname, '../../../react/router/routes.js'),
+      'utf8',
+    );
+
+    expect(routes).toMatch(/path: 'nfce'/);
+    expect(routes).toMatch(/path: 'nfe'/);
+    expect(routes).toMatch(/path: 'nfse'/);
+    expect(routes).toMatch(/FiscalDocumentsPage/);
+  });
+
+  it('exposes a configuration action for each fiscal document screen', () => {
+    const page = fs.readFileSync(
+      path.resolve(__dirname, '../../../react/pages/fiscal/FiscalDocumentsPage.js'),
+      'utf8',
+    );
+
+    expect(page).toMatch(/\$\{config\.key\}-fiscal-config-button/);
+    expect(page).toMatch(/NfceFiscalConfig/);
+    expect(page).toMatch(/NfeFiscalConfig/);
+    expect(page).toMatch(/NfseFiscalConfig/);
   });
 });
