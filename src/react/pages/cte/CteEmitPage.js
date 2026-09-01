@@ -91,7 +91,7 @@ export default function CteEmitPage() {
   const [readonlyFields, setReadonlyFields] = useState([]);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
-  const [preview, setPreview] = useState({visible: false, title: '', url: '', loading: false, error: ''});
+  const [preview, setPreview] = useState({visible: false, title: '', url: '', filename: '', loading: false, error: ''});
   const setField = (key, value) => setForm(current => ({...current, [key]: value}));
   const cardColumns = width >= 1280 ? 4 : width >= 980 ? 3 : width >= 680 ? 2 : 1;
 
@@ -151,12 +151,13 @@ export default function CteEmitPage() {
 
   const openNfPdf = async row => {
     const id = rowId(row);
-    setPreview({visible: true, title: `NF #${row.invoiceNumber || id}`, url: '', loading: true, error: ''});
+    setPreview({visible: true, title: `NF #${row.invoiceNumber || id}`, url: '', filename: '', loading: true, error: ''});
     try {
       const response = await api.fetch(`invoice_taxes/${id}/download-nf`, {params: {format: 'base64'}});
       const pdf = response?.pdf || response?.response?.pdf;
+      const filename = response?.filename || response?.response?.filename || 'nota_fiscal.pdf';
       if (!pdf) throw new Error('PDF da NF não retornou conteúdo.');
-      setPreview(current => ({...current, loading: false, url: `data:application/pdf;base64,${pdf}`}));
+      setPreview(current => ({...current, loading: false, url: `data:application/pdf;base64,${pdf}`, filename}));
     } catch (err) {
       setPreview(current => ({...current, loading: false, error: err?.message || String(err)}));
     }
@@ -284,14 +285,21 @@ export default function CteEmitPage() {
         ) : null}
       </ScrollView>
 
-      <Modal visible={preview.visible} transparent animationType="fade" onRequestClose={() => setPreview({visible: false, title: '', url: '', loading: false, error: ''})}>
+      <Modal visible={preview.visible} transparent animationType="fade" onRequestClose={() => setPreview({visible: false, title: '', url: '', filename: '', loading: false, error: ''})}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{preview.title}</Text>
-              <Pressable onPress={() => setPreview({visible: false, title: '', url: '', loading: false, error: ''})}>
+              <Pressable onPress={() => setPreview({visible: false, title: '', url: '', filename: '', loading: false, error: ''})}>
                 <Text style={styles.modalClose}>Fechar</Text>
               </Pressable>
+              {preview.url
+                ? React.createElement(
+                    'a',
+                    {href: preview.url, download: preview.filename || 'nota_fiscal.pdf', style: styles.modalDownload},
+                    'Baixar'
+                  )
+                : null}
             </View>
             {preview.loading ? <Text style={styles.hint}>Montando PDF com o XML da NF...</Text> : null}
             {preview.error ? <Text style={styles.error}>{preview.error}</Text> : null}
@@ -344,4 +352,5 @@ const styles = StyleSheet.create({
   modalHeader: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8},
   modalTitle: {fontSize: 16, fontWeight: '800', color: '#0F172A'},
   modalClose: {color: '#0F766E', fontWeight: '800'},
+  modalDownload: {color: '#0369A1', fontWeight: '800', textDecorationLine: 'none'},
 });
