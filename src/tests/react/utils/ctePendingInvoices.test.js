@@ -7,6 +7,8 @@ const {
   missingCteFields,
   unwrapInvoiceCollection,
 } = require('../../../shared/ctePendingInvoices');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const {describe, expect, it} = global;
 
@@ -115,5 +117,20 @@ describe('ctePendingInvoices', () => {
     expect(columns).toEqual(['fiscalSeries', 'fiscalNumber', 'invoiceKey', 'fiscalProtocol']);
     expect(CTE_FISCAL_COLUMNS.find(column => column.name === 'fiscalNumber')?.label).toBe('CT-e');
     expect(CTE_FISCAL_COLUMNS.every(column => column.externalFilter === true)).toBe(true);
+  });
+
+  it('opens CTe fiscal settings through ui-accounting ownership', () => {
+    const page = fs.readFileSync(
+      path.resolve(__dirname, '../../../react/pages/cte/CtePendingInvoicesPage.js'),
+      'utf8',
+    );
+    const manifest = JSON.parse(
+      fs.readFileSync(path.resolve(__dirname, '../../../../package.json'), 'utf8'),
+    );
+
+    expect(page).toMatch(/cte-fiscal-config-button/);
+    expect(page).toMatch(/@controleonline\/ui-accounting\/src\/react\/components\/fiscal\/CteFiscalConfig/);
+    expect(page).not.toMatch(/IntegrationConfigPage/);
+    expect(manifest.dependencies['@controleonline/ui-accounting']).toBe('*');
   });
 });
