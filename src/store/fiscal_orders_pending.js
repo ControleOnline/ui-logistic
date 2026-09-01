@@ -16,6 +16,11 @@ export default {
     summary: {},
     filters: {},
     reload: false,
+    selected: [],
+    configs: {
+      selectable: true,
+      showRowActions: false,
+    },
     columns: [
       {name: 'id', label: 'Pedido', isIdentity: true, editable: false, externalFilter: true},
       {name: 'orderDate', label: 'Data', type: 'date', editable: false, externalFilter: true},

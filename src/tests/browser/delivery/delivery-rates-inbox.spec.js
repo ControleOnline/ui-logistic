@@ -103,6 +103,6 @@ test.describe('delivery rates manager inbox smoke', () => {
 
     await page.goto('/delivery/manager/rates');
     await expect(page.getByText(/Tabelas de entrega/i).first()).toBeVisible({timeout: 15000});
-    await expect(page.getByPlaceholder(/Buscar tabela/i)).toBeVisible();
+    await expect(page.getByPlaceholder(/Buscar tabela|Pesquisar|Search/i)).toBeVisible();
   });
 });

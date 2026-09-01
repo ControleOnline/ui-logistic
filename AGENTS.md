@@ -5,6 +5,12 @@
 - Quando houver detalhe específico de implementação, prefira comentar no código em inglês perto da regra.
 - Este arquivo deve ficar curto e servir apenas como ponte para as fontes oficiais.
 
+## Documentação versionada
+
+| Página | Destino |
+| --- | --- |
+| Recebíveis do motoboy / Pagamentos a motoboys | `docs/technical/Recebiveis-Motoboy-e-Pagamentos.md` |
+
 ## Documentação (navegação humana)
 
 | Categoria | Destino |
@@ -27,9 +33,3 @@
 | Smoke Test Flows | https://github.com/ControleOnline/app-community/wiki/Smoke-Test-Flows |
 | ui-orders | https://github.com/ControleOnline/ui-orders/wiki |
 | ui-ppc | https://github.com/ControleOnline/ui-ppc/wiki |
-
-## Documentação versionada
-
-| Página | Destino |
-| --- | --- |
-| Recebíveis do motoboy / Pagamentos a motoboys | `docs/technical/Recebiveis-Motoboy-e-Pagamentos.md` |

@@ -15,6 +15,7 @@ import {
   buildFiscalDocumentRequestParams,
   resolveFiscalDocumentConfig,
 } from '@controleonline/ui-logistic/src/shared/fiscalDocuments';
+import NfceEmitPage from './NfceEmitPage';
 
 const TABS = [
   {key: 'pending', labelKey: 'pendingLabel', storeName: 'fiscal_orders_pending'},
@@ -29,12 +30,13 @@ export default function FiscalDocumentsPage({documentType}) {
   const config = resolveFiscalDocumentConfig(documentType);
   const [tab, setTab] = useState('pending');
   const [configVisible, setConfigVisible] = useState(false);
-  const integrationStore = useStore('integration');
+  const current = TABS.find(item => item.key === tab) || TABS[0];
+  const pendingStore = useStore('fiscal_orders_pending');
+  const activeStore = useStore(current.storeName);
   const peopleStore = useStore('people');
   const fiscalCompany = peopleStore?.getters?.currentCompany || null;
   const fiscalCompanyId = resolveFiscalCompanyId(fiscalCompany);
   const currentCompanyIri = fiscalCompanyId ? `/people/${fiscalCompanyId}` : null;
-  const current = TABS.find(item => item.key === tab) || TABS[0];
   const requestParams = useMemo(
     () => config && currentCompanyIri
       ? {...buildFiscalDocumentRequestParams(config, current.key), provider: currentCompanyIri}
@@ -42,15 +44,19 @@ export default function FiscalDocumentsPage({documentType}) {
     [config, current.key, currentCompanyIri],
   );
   const FiscalConfig = config ? CONFIG_COMPONENTS[config.key] : null;
+  const selectedIds = Array.isArray(pendingStore?.getters?.selected)
+    ? pendingStore.getters.selected.map(item => String(item).replace(/\D+/g, '')).filter(Boolean)
+    : [];
+  const canEmitNfce = config.key === 'nfce' && current.key === 'pending' && selectedIds.length > 0;
 
   useEffect(() => {
-    if (config && current.key === 'integrations') {
-      integrationStore?.actions?.setFilters({
-        ...(integrationStore?.getters?.filters || {}),
-        queueName: config.integrationQueue,
-      });
-    }
-  }, [config, current.key, integrationStore]);
+    if (!config || !currentCompanyIri) return;
+    activeStore?.actions?.setFilters({
+      ...(activeStore?.getters?.filters || {}),
+      provider: currentCompanyIri,
+      ...(current.key === 'integrations' ? {queueName: config.integrationQueue} : {}),
+    });
+  }, [activeStore, config, current.key, currentCompanyIri]);
 
   if (!config) return null;
 
@@ -97,6 +103,17 @@ export default function FiscalDocumentsPage({documentType}) {
           <Text style={styles.emptyStateText}>Selecione a empresa corrente para consultar os documentos fiscais.</Text>
         </View>
       )}
+      {canEmitNfce ? (
+        <Pressable
+          testID="nfce-emit-button"
+          accessibilityRole="button"
+          accessibilityLabel={`Emitir NFC-e para ${selectedIds.length} pedido(s)`}
+          onPress={() => navigation.navigate('NfceEmitPage', {ids: selectedIds.join(','), provider: currentCompanyIri})}
+          style={styles.emitButton}>
+          <MaterialCommunityIcons name="file-send-outline" size={18} color="#fff" />
+          <Text style={styles.emitText}>Emitir NFC-e ({selectedIds.length})</Text>
+        </Pressable>
+      ) : null}
       <Modal visible={configVisible} transparent animationType="fade" onRequestClose={() => setConfigVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalPanel}>
@@ -144,4 +161,6 @@ const styles = StyleSheet.create({
   emptyState: {padding: 24},
   emptyStateText: {fontSize: 13, fontWeight: '700', color: '#64748B'},
   modalContent: {padding: 12},
+  emitButton: {margin: 16, marginTop: 0, backgroundColor: '#0F766E', borderRadius: 8, minHeight: 48, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8},
+  emitText: {color: '#fff', fontWeight: '800'},
 });

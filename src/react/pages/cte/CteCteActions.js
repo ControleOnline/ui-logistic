@@ -11,7 +11,7 @@ const fiscalNumber = row => fiscalDocument(row).number || row?.fiscalNumber || r
 export default function CteCteActions({row}) {
   const navigation = useNavigation();
   const id = rowId(row);
-  const [preview, setPreview] = useState({visible: false, title: '', url: '', filename: '', loading: false, error: ''});
+  const [preview, setPreview] = useState({visible: false, title: '', url: '', loading: false, error: ''});
 
   const openPdf = async () => {
     if (!id) return;
@@ -19,20 +19,17 @@ export default function CteCteActions({row}) {
       visible: true,
       title: `CT-e #${fiscalNumber(row) || id}`,
       url: '',
-      filename: '',
       loading: true,
       error: '',
     });
     try {
       const response = await api.fetch(`invoice_taxes/${id}/download-nf`, {params: {format: 'base64'}});
       const pdf = response?.pdf || response?.response?.pdf;
-      const filename = response?.filename || response?.response?.filename || 'nota_fiscal.pdf';
       if (!pdf) throw new Error('PDF do CT-e não retornou conteúdo.');
       setPreview(current => ({
         ...current,
         loading: false,
         url: `data:application/pdf;base64,${pdf}`,
-        filename,
       }));
     } catch (err) {
       setPreview(current => ({
@@ -49,15 +46,15 @@ export default function CteCteActions({row}) {
   };
 
   const closePreview = () =>
-    setPreview({visible: false, title: '', url: '', filename: '', loading: false, error: ''});
+    setPreview({visible: false, title: '', url: '', loading: false, error: ''});
 
   return (
     <View style={styles.wrap}>
-      <Pressable onPress={openPdf} style={styles.pdf} hitSlop={6}>
+      <Pressable testID="cte-row-pdf" onPress={openPdf} style={styles.pdf} hitSlop={6}>
         <MaterialCommunityIcons name="file-pdf-box" size={14} color="#fff" />
         <Text style={styles.text}>PDF</Text>
       </Pressable>
-      <Pressable onPress={openDetail} style={styles.detail} hitSlop={6}>
+      <Pressable testID="cte-row-detail" onPress={openDetail} style={styles.detail} hitSlop={6}>
         <MaterialCommunityIcons name="eye-outline" size={14} color="#fff" />
         <Text style={styles.text}>Detalhe</Text>
       </Pressable>
@@ -70,13 +67,6 @@ export default function CteCteActions({row}) {
               <Pressable onPress={closePreview}>
                 <Text style={styles.modalClose}>Fechar</Text>
               </Pressable>
-              {preview.url
-                ? React.createElement(
-                    'a',
-                    {href: preview.url, download: preview.filename || 'nota_fiscal.pdf', style: styles.modalDownload},
-                    'Baixar'
-                  )
-                : null}
             </View>
             {preview.loading ? <Text style={styles.hint}>Montando DACTE a partir do XML do CT-e...</Text> : null}
             {preview.error ? <Text style={styles.error}>{preview.error}</Text> : null}
@@ -125,7 +115,6 @@ const styles = StyleSheet.create({
   modalHeader: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8},
   modalTitle: {fontSize: 16, fontWeight: '800', color: '#0F172A'},
   modalClose: {color: '#0F766E', fontWeight: '800'},
-  modalDownload: {color: '#0369A1', fontWeight: '800', textDecorationLine: 'none'},
   hint: {marginTop: 6, color: '#64748B'},
   error: {color: '#B91C1C', marginTop: 10},
 });
