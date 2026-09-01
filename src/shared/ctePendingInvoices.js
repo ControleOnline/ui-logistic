@@ -63,8 +63,18 @@ export const unwrapInvoiceCollection = response => {
   };
 };
 
-export const buildGroupKey = invoice =>
-  `${normalizeEntityId(invoice?.companyId) || 'none'}:${normalizeEntityId(invoice?.addressId) || 'none'}`;
+export const buildGroupKey = invoice => [
+  normalizeEntityId(invoice?.companyId) || 'none',
+  normalizeEntityId(invoice?.addressId) || 'none',
+  normalizeEntityId(invoice?.providerId) || 'none',
+  normalizeEntityId(invoice?.clientId) || 'none',
+  normalizeEntityId(invoice?.carrierId) || 'none',
+  normalizeText(invoice?.providerAddressLabel) || 'none',
+  normalizeText(invoice?.clientAddressLabel) || 'none',
+  normalizeText(invoice?.carrierAddressLabel) || 'none',
+  normalizeText(invoice?.cteDefaults?.cfop) || 'none',
+  normalizeText(invoice?.cteDefaults?.tomador) || 'none',
+].join(':');
 
 export const groupInvoicesByCompanyAddress = invoices => {
   const groups = new Map();
@@ -113,3 +123,35 @@ export const buildTableSummary = routeSummary => ({
   count: {invoices: routeSummary.invoiceCount, groups: routeSummary.groupCount},
   sum: {invoiceTotal: routeSummary.totalValue},
 });
+
+export const CTE_REQUIRED_FIELDS = ['cfop', 'modal', 'tipoServico', 'tipoCte', 'tomador', 'valorFrete', 'valorReceber'];
+
+export const CTE_SYSTEM_DEFAULTS = {
+  modal: '01',
+  tipoServico: '0',
+  tipoCte: '0',
+  natureza: 'PRESTACAO DE SERVICO DE TRANSPORTE',
+  observacao: '',
+};
+
+export const mergeCteDefaults = invoices => {
+  const defaults = {...CTE_SYSTEM_DEFAULTS};
+  const readonly = new Set();
+  const rows = Array.isArray(invoices) ? invoices : [];
+  const fields = ['cfop', 'tomador', 'valorFrete', 'valorReceber'];
+
+  fields.forEach(field => {
+    const values = Array.from(new Set(rows
+      .map(invoice => normalizeText(invoice?.cteDefaults?.[field]))
+      .filter(Boolean)));
+    if (values.length === 1) {
+      defaults[field] = values[0];
+      readonly.add(field);
+    }
+  });
+
+  return {defaults, readonlyFields: Array.from(readonly)};
+};
+
+export const missingCteFields = form =>
+  CTE_REQUIRED_FIELDS.filter(field => normalizeText(form?.[field]) === '');
