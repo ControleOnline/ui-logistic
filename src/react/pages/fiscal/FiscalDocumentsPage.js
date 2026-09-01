@@ -1,4 +1,4 @@
-import React, {useEffect, useMemo, useState} from 'react';
+import React, {useMemo, useState} from 'react';
 import {Modal, Pressable} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {StyleSheet, Text, View} from 'react-native';
@@ -32,7 +32,6 @@ export default function FiscalDocumentsPage({documentType}) {
   const [configVisible, setConfigVisible] = useState(false);
   const current = TABS.find(item => item.key === tab) || TABS[0];
   const pendingStore = useStore('fiscal_orders_pending');
-  const activeStore = useStore(current.storeName);
   const peopleStore = useStore('people');
   const fiscalCompany = peopleStore?.getters?.currentCompany || null;
   const fiscalCompanyId = resolveFiscalCompanyId(fiscalCompany);
@@ -49,19 +48,6 @@ export default function FiscalDocumentsPage({documentType}) {
     : [];
   const canEmitNfce = config.key === 'nfce' && current.key === 'pending' && selectedIds.length > 0;
   const rowActionsComponent = config.key === 'nfce' && current.key === 'emitted' ? NfceEmittedActions : undefined;
-
-  useEffect(() => {
-    if (!config || !currentCompanyIri || typeof activeStore?.actions?.setFilters !== 'function') return;
-    const currentFilters = activeStore?.getters?.filters || {};
-    const nextQueueName = current.key === 'integrations' ? config.integrationQueue : undefined;
-    if (currentFilters.provider === currentCompanyIri && currentFilters.queueName === nextQueueName) return;
-    const nextFilters = {
-      ...currentFilters,
-      provider: currentCompanyIri,
-    };
-    if (nextQueueName) nextFilters.queueName = nextQueueName;
-    activeStore.actions.setFilters(nextFilters);
-  }, [activeStore, config, current.key, currentCompanyIri]);
 
   if (!config) return null;
 
