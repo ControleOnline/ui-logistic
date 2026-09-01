@@ -15,6 +15,7 @@ import DeliveryCourierPresenceHistoryPage from '@controleonline/ui-logistic/src/
 import CtePendingInvoicesPage from '@controleonline/ui-logistic/src/react/pages/cte/CtePendingInvoicesPage';
 import CteEmitPage from '@controleonline/ui-logistic/src/react/pages/cte/CteEmitPage';
 import CteDetailPage from '@controleonline/ui-logistic/src/react/pages/cte/CteDetailPage';
+import {NfcePage, NfePage, NfsePage} from '@controleonline/ui-logistic/src/react/pages/fiscal/FiscalDocumentsPage';
 
 export const WrappedOrderLogistics = ({navigation, route}) => {
   React.useEffect(() => {
@@ -245,6 +246,24 @@ const logisticRoutes = [
       title: 'Detalhe do CT-e',
     },
     path: 'cte/detail',
+  },
+  {
+    name: 'NfcePage',
+    component: NfcePage,
+    options: {headerShown: true, showBottomCart: false, showBottomToolBar: true, showCompanyFilter: false, title: 'NFC-e'},
+    path: 'nfce',
+  },
+  {
+    name: 'NfePage',
+    component: NfePage,
+    options: {headerShown: true, showBottomCart: false, showBottomToolBar: true, showCompanyFilter: false, title: 'NF-e'},
+    path: 'nfe',
+  },
+  {
+    name: 'NfsePage',
+    component: NfsePage,
+    options: {headerShown: true, showBottomCart: false, showBottomToolBar: true, showCompanyFilter: false, title: 'NFSe'},
+    path: 'nfse',
   },
 ];
 

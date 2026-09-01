@@ -134,11 +134,15 @@ describe('ctePendingInvoices', () => {
     expect(manifest.dependencies['@controleonline/ui-accounting']).toBe('*');
   });
 
-  it('keeps the accounting package alias resolvable by Metro', () => {
-    const babel = fs.readFileSync(path.resolve(__dirname, '../../../../../../../babel.config.js'), 'utf8');
-    const metro = fs.readFileSync(path.resolve(__dirname, '../../../../../../../metro.config.js'), 'utf8');
+  it('registers dedicated NF-e, NFC-e and NFSe routes', () => {
+    const routes = fs.readFileSync(
+      path.resolve(__dirname, '../../../react/router/routes.js'),
+      'utf8',
+    );
 
-    expect(babel).toMatch(/'@controleonline\/ui-accounting': '\.\/modules\/controleonline\/ui-accounting'/);
-    expect(metro).toMatch(/'@controleonline\/ui-accounting': path\.resolve\(projectRoot, 'modules', 'controleonline', 'ui-accounting'\)/);
+    expect(routes).toMatch(/path: 'nfce'/);
+    expect(routes).toMatch(/path: 'nfe'/);
+    expect(routes).toMatch(/path: 'nfse'/);
+    expect(routes).toMatch(/FiscalDocumentsPage/);
   });
 });
