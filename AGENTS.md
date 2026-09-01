@@ -23,6 +23,7 @@
 | Página | O que documenta |
 | --- | --- |
 | [Own Delivery Handoff](https://github.com/ControleOnline/ui-logistic/wiki/Own-Delivery-Handoff) | Gate Ready → entrega nossa → ON DELIVERY → cobrança na entrega (`fluxo: logistica-entrega`, flowchart id=1, app-community#610) |
+| [CT-e — Detalhe e PDF](https://github.com/ControleOnline/ui-logistic/wiki/CT-e-Detalhe-e-PDF) | Aba CTE: PDF (DACTE) + detalhe read-only `/cte/detail` (ui-logistic#34) |
 
 ### Módulos relacionados
 
