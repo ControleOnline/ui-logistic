@@ -1,6 +1,7 @@
 const {
   buildRouteSummary,
   CTE_SMOKE_META,
+  CTE_FISCAL_COLUMNS,
   groupInvoicesByCompanyAddress,
   mergeCteDefaults,
   missingCteFields,
@@ -107,5 +108,12 @@ describe('ctePendingInvoices', () => {
     expect(missingCteFields({...result.defaults, valorFrete: '', valorReceber: ''})).toEqual(
       expect.arrayContaining(['cfop', 'tomador', 'valorFrete', 'valorReceber']),
     );
+  });
+
+  it('declares filterable fiscal CTe columns for emitted and processing lists', () => {
+    const columns = CTE_FISCAL_COLUMNS.map(column => column.name);
+    expect(columns).toEqual(['fiscalSeries', 'fiscalNumber', 'invoiceKey', 'fiscalProtocol']);
+    expect(CTE_FISCAL_COLUMNS.find(column => column.name === 'fiscalNumber')?.label).toBe('CT-e');
+    expect(CTE_FISCAL_COLUMNS.every(column => column.externalFilter === true)).toBe(true);
   });
 });
