@@ -2,6 +2,8 @@ const {
   buildRouteSummary,
   CTE_SMOKE_META,
   groupInvoicesByCompanyAddress,
+  mergeCteDefaults,
+  missingCteFields,
   unwrapInvoiceCollection,
 } = require('../../../shared/ctePendingInvoices');
 
@@ -55,6 +57,16 @@ describe('ctePendingInvoices', () => {
     expect(groups[1].companyName).toBe('Beta');
   });
 
+  it('separates invoices that cannot share the same CTe', () => {
+    const groups = groupInvoicesByCompanyAddress([
+      {...invoices[0], clientId: 10, cteDefaults: {cfop: '5932', tomador: '0'}},
+      {...invoices[1], clientId: 11, cteDefaults: {cfop: '5932', tomador: '0'}},
+      {...invoices[2], companyId: 3, addressId: 9, clientId: 10, cteDefaults: {cfop: '6932', tomador: '0'}},
+    ]);
+
+    expect(groups).toHaveLength(3);
+  });
+
   it('builds a route summary from the current selection', () => {
     const groups = groupInvoicesByCompanyAddress(invoices);
     const summary = buildRouteSummary(groups, [1, 3]);
@@ -71,5 +83,29 @@ describe('ctePendingInvoices', () => {
     });
     expect(collection.groups).toHaveLength(2);
     expect(collection.totalItems).toBe(3);
+  });
+
+  it('marks inferred CTe values as readonly when all NFs agree', () => {
+    const result = mergeCteDefaults([
+      {cteDefaults: {cfop: '6932', tomador: '0'}},
+      {cteDefaults: {cfop: '6932', tomador: '0'}},
+    ]);
+
+    expect(result.defaults.cfop).toBe('6932');
+    expect(result.defaults.tomador).toBe('0');
+    expect(result.readonlyFields).toEqual(expect.arrayContaining(['cfop', 'tomador']));
+  });
+
+  it('keeps missing or divergent CTe values editable and required', () => {
+    const result = mergeCteDefaults([
+      {cteDefaults: {cfop: '5932'}},
+      {cteDefaults: {cfop: '6932'}},
+    ]);
+
+    expect(result.defaults.cfop).toBeUndefined();
+    expect(result.readonlyFields).not.toContain('cfop');
+    expect(missingCteFields({...result.defaults, valorFrete: '', valorReceber: ''})).toEqual(
+      expect.arrayContaining(['cfop', 'tomador', 'valorFrete', 'valorReceber']),
+    );
   });
 });
