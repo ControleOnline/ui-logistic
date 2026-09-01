@@ -6,7 +6,12 @@ import {useNavigation, useRoute} from '@react-navigation/native';
 import {api} from '@controleonline/ui-common/src/api';
 import DefaultTable from '@controleonline/ui-default/src/react/components/table/DefaultTable';
 import {useStore} from '@store';
-import {formatMoney} from '@controleonline/ui-logistic/src/shared/ctePendingInvoices';
+import {
+  CTE_SYSTEM_DEFAULTS,
+  formatMoney,
+  mergeCteDefaults,
+  missingCteFields,
+} from '@controleonline/ui-logistic/src/shared/ctePendingInvoices';
 import CteEmitNfCard from './CteEmitNfCard';
 
 const HOMOLOG_LABEL = /homologa|sem valor fiscal/i;
@@ -46,10 +51,17 @@ const PartyCard = ({icon, role, name, address, tone}) => (
   </View>
 );
 
-const InputField = ({label, value, onChangeText, placeholder, keyboardType, wide}) => (
+const InputField = ({label, value, onChangeText, placeholder, keyboardType, wide, readOnly}) => (
   <View style={[styles.field, wide && styles.fieldWide]}>
     <Text style={styles.label}>{label}</Text>
-    <TextInput value={value} onChangeText={onChangeText} placeholder={placeholder} keyboardType={keyboardType} style={styles.input} />
+    <TextInput
+      value={value}
+      onChangeText={onChangeText}
+      placeholder={placeholder}
+      keyboardType={keyboardType}
+      editable={!readOnly}
+      style={[styles.input, readOnly && styles.inputReadonly]}
+    />
   </View>
 );
 
@@ -70,20 +82,16 @@ export default function CteEmitPage() {
   const [parkedIds, setParkedIds] = useState(initialParked);
   const [parkedRows, setParkedRows] = useState([]);
   const [form, setForm] = useState({
-    cfop: '5353',
-    modal: '01',
-    tipoServico: '0',
-    tipoCte: '0',
-    tomador: '3',
-    natureza: 'PRESTACAO DE SERVICO DE TRANSPORTE',
-    rntrc: '',
+    cfop: '',
+    ...CTE_SYSTEM_DEFAULTS,
+    tomador: '',
     valorFrete: '',
     valorReceber: '',
-    observacao: '',
   });
+  const [readonlyFields, setReadonlyFields] = useState([]);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
-  const [preview, setPreview] = useState({visible: false, title: '', url: '', loading: false, error: ''});
+  const [preview, setPreview] = useState({visible: false, title: '', url: '', filename: '', loading: false, error: ''});
   const setField = (key, value) => setForm(current => ({...current, [key]: value}));
   const cardColumns = width >= 1280 ? 4 : width >= 980 ? 3 : width >= 680 ? 2 : 1;
 
@@ -134,17 +142,22 @@ export default function CteEmitPage() {
   }, [items]);
 
   useEffect(() => {
-    if (summary.rntrc && summary.rntrc !== form.rntrc) setField('rntrc', summary.rntrc);
-  }, [summary.rntrc]);
+    const {defaults, readonlyFields: nextReadonlyFields} = mergeCteDefaults(items);
+    setReadonlyFields(nextReadonlyFields);
+    setForm(current => ({...current, ...Object.fromEntries(
+      Object.entries(defaults).filter(([, value]) => String(value ?? '').trim() !== '')
+    )}));
+  }, [items]);
 
   const openNfPdf = async row => {
     const id = rowId(row);
-    setPreview({visible: true, title: `NF #${row.invoiceNumber || id}`, url: '', loading: true, error: ''});
+    setPreview({visible: true, title: `NF #${row.invoiceNumber || id}`, url: '', filename: '', loading: true, error: ''});
     try {
       const response = await api.fetch(`invoice_taxes/${id}/download-nf`, {params: {format: 'base64'}});
       const pdf = response?.pdf || response?.response?.pdf;
+      const filename = response?.filename || response?.response?.filename || 'nota_fiscal.pdf';
       if (!pdf) throw new Error('PDF da NF não retornou conteúdo.');
-      setPreview(current => ({...current, loading: false, url: `data:application/pdf;base64,${pdf}`}));
+      setPreview(current => ({...current, loading: false, url: `data:application/pdf;base64,${pdf}`, filename}));
     } catch (err) {
       setPreview(current => ({...current, loading: false, error: err?.message || String(err)}));
     }
@@ -164,9 +177,14 @@ export default function CteEmitPage() {
     setSaving(true);
     setError('');
     try {
+      const missing = missingCteFields(form);
+      if (missing.length) {
+        setError(`Preencha: ${missing.join(', ')}`);
+        return;
+      }
       await api.fetch('invoice_tasks/emit-cte', {
         method: 'POST',
-        body: {invoiceTaxIds: activeIds, cfop: form.cfop, extra: {...form, rntrc: summary.rntrc || form.rntrc}},
+        body: {invoiceTaxIds: activeIds, cfop: form.cfop, extra: form},
       });
       navigation.navigate('CtePendingInvoicesPage');
     } catch (err) {
@@ -180,7 +198,7 @@ export default function CteEmitPage() {
     <SafeAreaView style={styles.screen} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Emitir CT-e</Text>
-        <Text style={styles.hint}>Complete os dados do transporte. RNTRC vem do documento da transportadora ou da config fiscal.</Text>
+        <Text style={styles.hint}>Complete os dados do transporte.</Text>
 
         <View style={styles.summaryBar}>
           <View style={styles.summaryItem}>
@@ -214,7 +232,7 @@ export default function CteEmitPage() {
             icon="truck-delivery-outline"
             role="Transportadora"
             name={summary.carrierName}
-            address={summary.rntrc ? `RNTRC ${summary.rntrc}` : 'Cadastre o RNTRC no documento da transportadora ou na aba Fiscal / CT-e'}
+            address={summary.rntrc ? `RNTRC ${summary.rntrc}` : 'RNTRC não configurado'}
             tone="#C2410C"
           />
         </View>
@@ -222,13 +240,13 @@ export default function CteEmitPage() {
         <View style={styles.card}>
           <Text style={styles.section}>Dados do CT-e</Text>
           <View style={styles.formGrid}>
-            <InputField label="CFOP" value={form.cfop} onChangeText={value => setField('cfop', value)} placeholder="5353" />
+            <InputField label="CFOP" value={form.cfop} onChangeText={value => setField('cfop', value)} placeholder="5932 ou 6932" readOnly={readonlyFields.includes('cfop')} />
             <InputField label="Modal" value={form.modal} onChangeText={value => setField('modal', value)} placeholder="01 rodoviário" />
             <InputField label="Tipo de serviço" value={form.tipoServico} onChangeText={value => setField('tipoServico', value)} placeholder="0 normal" />
             <InputField label="Tipo do CT-e" value={form.tipoCte} onChangeText={value => setField('tipoCte', value)} placeholder="0 normal" />
-            <InputField label="Tomador" value={form.tomador} onChangeText={value => setField('tomador', value)} placeholder="3 destinatário" />
-            <InputField label="Valor do frete" value={form.valorFrete} onChangeText={value => setField('valorFrete', value)} keyboardType="decimal-pad" placeholder="0,00" />
-            <InputField label="Valor a receber" value={form.valorReceber} onChangeText={value => setField('valorReceber', value)} keyboardType="decimal-pad" placeholder="0,00" />
+            <InputField label="Tomador" value={form.tomador} onChangeText={value => setField('tomador', value)} placeholder="0, 1, 2 ou 3" readOnly={readonlyFields.includes('tomador')} />
+            <InputField label="Valor do frete" value={form.valorFrete} onChangeText={value => setField('valorFrete', value)} keyboardType="decimal-pad" placeholder="0,00" readOnly={readonlyFields.includes('valorFrete')} />
+            <InputField label="Valor a receber" value={form.valorReceber} onChangeText={value => setField('valorReceber', value)} keyboardType="decimal-pad" placeholder="0,00" readOnly={readonlyFields.includes('valorReceber')} />
             <InputField label="Natureza da prestação" value={form.natureza} onChangeText={value => setField('natureza', value)} wide />
             <InputField label="Observação" value={form.observacao} onChangeText={value => setField('observacao', value)} placeholder="Informações complementares" wide />
           </View>
@@ -267,14 +285,21 @@ export default function CteEmitPage() {
         ) : null}
       </ScrollView>
 
-      <Modal visible={preview.visible} transparent animationType="fade" onRequestClose={() => setPreview({visible: false, title: '', url: '', loading: false, error: ''})}>
+      <Modal visible={preview.visible} transparent animationType="fade" onRequestClose={() => setPreview({visible: false, title: '', url: '', filename: '', loading: false, error: ''})}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{preview.title}</Text>
-              <Pressable onPress={() => setPreview({visible: false, title: '', url: '', loading: false, error: ''})}>
+              <Pressable onPress={() => setPreview({visible: false, title: '', url: '', filename: '', loading: false, error: ''})}>
                 <Text style={styles.modalClose}>Fechar</Text>
               </Pressable>
+              {preview.url
+                ? React.createElement(
+                    'a',
+                    {href: preview.url, download: preview.filename || 'nota_fiscal.pdf', style: styles.modalDownload},
+                    'Baixar'
+                  )
+                : null}
             </View>
             {preview.loading ? <Text style={styles.hint}>Montando PDF com o XML da NF...</Text> : null}
             {preview.error ? <Text style={styles.error}>{preview.error}</Text> : null}
@@ -313,6 +338,7 @@ const styles = StyleSheet.create({
   fieldWide: {flexBasis: '100%', minWidth: '100%'},
   label: {fontSize: 11, fontWeight: '800', color: '#64748B', textTransform: 'uppercase'},
   input: {marginTop: 6, borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 10, padding: 12, backgroundColor: '#fff'},
+  inputReadonly: {backgroundColor: '#F1F5F9', color: '#334155'},
   error: {color: '#B91C1C', marginTop: 10},
   button: {marginTop: 8, marginBottom: 16, backgroundColor: '#0F766E', borderRadius: 12, paddingVertical: 14, alignItems: 'center'},
   buttonText: {color: '#fff', fontWeight: '800'},
@@ -326,4 +352,5 @@ const styles = StyleSheet.create({
   modalHeader: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8},
   modalTitle: {fontSize: 16, fontWeight: '800', color: '#0F172A'},
   modalClose: {color: '#0F766E', fontWeight: '800'},
+  modalDownload: {color: '#0369A1', fontWeight: '800', textDecorationLine: 'none'},
 });
