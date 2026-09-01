@@ -250,19 +250,19 @@ const logisticRoutes = [
   {
     name: 'NfcePage',
     component: NfcePage,
-    options: {headerShown: true, showBottomCart: false, showBottomToolBar: true, showCompanyFilter: false, title: 'NFC-e'},
+    options: {headerShown: true, showBottomCart: false, showBottomToolBar: true, showCompanyFilter: true, title: 'NFC-e'},
     path: 'nfce',
   },
   {
     name: 'NfePage',
     component: NfePage,
-    options: {headerShown: true, showBottomCart: false, showBottomToolBar: true, showCompanyFilter: false, title: 'NF-e'},
+    options: {headerShown: true, showBottomCart: false, showBottomToolBar: true, showCompanyFilter: true, title: 'NF-e'},
     path: 'nfe',
   },
   {
     name: 'NfsePage',
     component: NfsePage,
-    options: {headerShown: true, showBottomCart: false, showBottomToolBar: true, showCompanyFilter: false, title: 'NFSe'},
+    options: {headerShown: true, showBottomCart: false, showBottomToolBar: true, showCompanyFilter: true, title: 'NFSe'},
     path: 'nfse',
   },
 ];

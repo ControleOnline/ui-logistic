@@ -31,10 +31,13 @@ export default function FiscalDocumentsPage({documentType}) {
   const integrationStore = useStore('integration');
   const peopleStore = useStore('people');
   const fiscalCompany = peopleStore?.getters?.currentCompany || null;
+  const currentCompanyIri = fiscalCompany?.id ? `/people/${String(fiscalCompany.id).replace(/\D+/g, '')}` : null;
   const current = TABS.find(item => item.key === tab) || TABS[0];
   const requestParams = useMemo(
-    () => config ? buildFiscalDocumentRequestParams(config, current.key) : {},
-    [config, current.key],
+    () => config && currentCompanyIri
+      ? {...buildFiscalDocumentRequestParams(config, current.key), provider: currentCompanyIri}
+      : {},
+    [config, current.key, currentCompanyIri],
   );
   const FiscalConfig = config ? CONFIG_COMPONENTS[config.key] : null;
 
@@ -80,12 +83,18 @@ export default function FiscalDocumentsPage({documentType}) {
         </View>
       </View>
       <DefaultExternalFilters storeName={current.storeName} />
-      <DefaultTable
-        key={`${config.key}-${current.key}`}
-        storeName={current.storeName}
-        requestParams={requestParams}
-        pinRowActions
-      />
+      {currentCompanyIri ? (
+        <DefaultTable
+          key={`${config.key}-${current.key}`}
+          storeName={current.storeName}
+          requestParams={requestParams}
+          pinRowActions
+        />
+      ) : (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyStateText}>Selecione a empresa corrente para consultar os documentos fiscais.</Text>
+        </View>
+      )}
       <Modal visible={configVisible} transparent animationType="fade" onRequestClose={() => setConfigVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalPanel}>
@@ -130,5 +139,7 @@ const styles = StyleSheet.create({
   modalHeader: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: '#E2E8F0'},
   modalTitle: {fontSize: 16, fontWeight: '800', color: '#0F172A'},
   closeButton: {width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0'},
+  emptyState: {padding: 24},
+  emptyStateText: {fontSize: 13, fontWeight: '700', color: '#64748B'},
   modalContent: {padding: 12},
 });
