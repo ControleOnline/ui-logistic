@@ -8,6 +8,7 @@ import {useStore} from '@store';
 import NfceFiscalConfig from '@controleonline/ui-accounting/src/react/components/fiscal/NfceFiscalConfig';
 import NfeFiscalConfig from '@controleonline/ui-accounting/src/react/components/fiscal/NfeFiscalConfig';
 import NfseFiscalConfig from '@controleonline/ui-accounting/src/react/components/fiscal/NfseFiscalConfig';
+import {resolveFiscalCompanyId} from '@controleonline/ui-accounting/src/react/components/fiscal/CteFiscalConfig';
 import DefaultExternalFilters from '@controleonline/ui-default/src/react/components/filters/DefaultExternalFilters';
 import DefaultTable from '@controleonline/ui-default/src/react/components/table/DefaultTable';
 import {
@@ -31,7 +32,8 @@ export default function FiscalDocumentsPage({documentType}) {
   const integrationStore = useStore('integration');
   const peopleStore = useStore('people');
   const fiscalCompany = peopleStore?.getters?.currentCompany || null;
-  const currentCompanyIri = fiscalCompany?.id ? `/people/${String(fiscalCompany.id).replace(/\D+/g, '')}` : null;
+  const fiscalCompanyId = resolveFiscalCompanyId(fiscalCompany);
+  const currentCompanyIri = fiscalCompanyId ? `/people/${fiscalCompanyId}` : null;
   const current = TABS.find(item => item.key === tab) || TABS[0];
   const requestParams = useMemo(
     () => config && currentCompanyIri
