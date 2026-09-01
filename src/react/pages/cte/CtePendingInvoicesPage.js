@@ -34,6 +34,7 @@ export default function CtePendingInvoicesPage() {
   const peopleStore = useStore('people');
   const fiscalCompany = peopleStore?.getters?.currentCompany || null;
   const fiscalCompanyId = resolveFiscalCompanyId(fiscalCompany);
+  const currentCompanyIri = fiscalCompanyId ? `/people/${fiscalCompanyId}` : null;
   const selectedIds = toInvoiceIds(invoiceStore?.getters?.selected);
   const showEmit = tab === 'pending' && selectedIds.length > 0;
 
@@ -46,10 +47,11 @@ export default function CtePendingInvoicesPage() {
   }, [integrationStore, tab]);
 
   const requestParams = useMemo(() => {
-    if (current.storeName === 'invoice_tasks_processing') return {invoiceModel: 57};
-    if (current.storeName === 'integration') return {queueName: 'CteEmission'};
-    return {};
-  }, [current.storeName]);
+    if (!currentCompanyIri) return {};
+    if (current.storeName === 'invoice_tasks_processing') return {invoiceModel: 57, provider: currentCompanyIri};
+    if (current.storeName === 'integration') return {queueName: 'CteEmission', provider: currentCompanyIri};
+    return {provider: currentCompanyIri};
+  }, [current.storeName, currentCompanyIri]);
 
   const rowActionsComponent = useMemo(() => {
     if (current.storeName === 'integration') return CteIntegrationActions;
@@ -87,15 +89,21 @@ export default function CtePendingInvoicesPage() {
       {tab === 'pending' ? <DefaultExternalFilters storeName="invoice_taxes" /> : null}
       {tab === 'cte' ? <DefaultExternalFilters storeName="invoice_tasks_processing" /> : null}
       {tab === 'integrations' ? <DefaultExternalFilters storeName="integration" /> : null}
-      <DefaultTable
-        key={current.storeName}
-        storeName={current.storeName}
-        requestParams={requestParams}
-        rowActionsComponent={rowActionsComponent}
-        showRowActions={Boolean(rowActionsComponent)}
-        rowActionsWidth={rowActionsComponent === CteCteActions ? 168 : rowActionsComponent ? 140 : undefined}
-        pinRowActions
-      />
+      {currentCompanyIri ? (
+        <DefaultTable
+          key={current.storeName}
+          storeName={current.storeName}
+          requestParams={requestParams}
+          rowActionsComponent={rowActionsComponent}
+          showRowActions={Boolean(rowActionsComponent)}
+          rowActionsWidth={rowActionsComponent === CteCteActions ? 168 : rowActionsComponent ? 140 : undefined}
+          pinRowActions
+        />
+      ) : (
+        <View style={styles.emptyConfigState}>
+          <Text style={styles.emptyConfigText}>Selecione a empresa corrente para consultar os documentos fiscais.</Text>
+        </View>
+      )}
       {showEmit ? (
         <Pressable
           testID="cte-emit-button"
