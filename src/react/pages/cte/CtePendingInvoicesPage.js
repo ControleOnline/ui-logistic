@@ -1,4 +1,4 @@
-import React, {useEffect, useMemo, useState} from 'react';
+import React, {useMemo, useState} from 'react';
 import {Modal, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
@@ -30,21 +30,12 @@ export default function CtePendingInvoicesPage() {
   const [fiscalConfigVisible, setFiscalConfigVisible] = useState(false);
   const current = TABS.find(item => item.key === tab) || TABS[0];
   const invoiceStore = useStore('invoice_taxes');
-  const integrationStore = useStore('integration');
   const peopleStore = useStore('people');
   const fiscalCompany = peopleStore?.getters?.currentCompany || null;
   const fiscalCompanyId = resolveFiscalCompanyId(fiscalCompany);
   const currentCompanyIri = fiscalCompanyId ? `/people/${fiscalCompanyId}` : null;
   const selectedIds = toInvoiceIds(invoiceStore?.getters?.selected);
   const showEmit = tab === 'pending' && selectedIds.length > 0;
-
-  useEffect(() => {
-    if (tab !== 'integrations') return;
-    if (typeof integrationStore?.actions?.setFilters !== 'function') return;
-    const currentFilters = integrationStore?.getters?.filters || {};
-    if (currentFilters.queueName === 'CteEmission') return;
-    integrationStore.actions.setFilters({...currentFilters, queueName: 'CteEmission'});
-  }, [integrationStore, tab]);
 
   const requestParams = useMemo(() => {
     if (!currentCompanyIri) return {};
