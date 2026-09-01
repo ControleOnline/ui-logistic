@@ -50,7 +50,7 @@ export default function FiscalDocumentsPage({documentType}) {
   const canEmitNfce = config.key === 'nfce' && current.key === 'pending' && selectedIds.length > 0;
 
   useEffect(() => {
-    if (!config || !currentCompanyIri) return;
+    if (!config || !currentCompanyIri || typeof activeStore?.actions?.setFilters !== 'function') return;
     activeStore?.actions?.setFilters({
       ...(activeStore?.getters?.filters || {}),
       provider: currentCompanyIri,
