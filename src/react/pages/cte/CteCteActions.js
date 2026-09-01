@@ -48,11 +48,11 @@ export default function CteCteActions({row}) {
 
   return (
     <View style={styles.wrap}>
-      <Pressable onPress={openPdf} style={styles.pdf} hitSlop={6}>
+      <Pressable testID="cte-row-pdf" onPress={openPdf} style={styles.pdf} hitSlop={6}>
         <MaterialCommunityIcons name="file-pdf-box" size={14} color="#fff" />
         <Text style={styles.text}>PDF</Text>
       </Pressable>
-      <Pressable onPress={openDetail} style={styles.detail} hitSlop={6}>
+      <Pressable testID="cte-row-detail" onPress={openDetail} style={styles.detail} hitSlop={6}>
         <MaterialCommunityIcons name="eye-outline" size={14} color="#fff" />
         <Text style={styles.text}>Detalhe</Text>
       </Pressable>
