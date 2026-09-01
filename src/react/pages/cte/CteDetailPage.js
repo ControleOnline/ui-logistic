@@ -59,7 +59,7 @@ export default function CteDetailPage() {
   const [nfs, setNfs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [preview, setPreview] = useState({visible: false, title: '', url: '', loading: false, error: ''});
+  const [preview, setPreview] = useState({visible: false, title: '', url: '', filename: '', loading: false, error: ''});
   const cardColumns = width >= 1280 ? 4 : width >= 980 ? 3 : width >= 680 ? 2 : 1;
 
   useEffect(() => {
@@ -132,17 +132,20 @@ export default function CteDetailPage() {
       visible: true,
       title: `${kind} #${row?.invoiceNumber || id}`,
       url: '',
+      filename: '',
       loading: true,
       error: '',
     });
     try {
       const response = await api.fetch(`invoice_taxes/${id}/download-nf`, {params: {format: 'base64'}});
       const pdf = response?.pdf || response?.response?.pdf;
+      const filename = response?.filename || response?.response?.filename || 'nota_fiscal.pdf';
       if (!pdf) throw new Error(`PDF do ${kind} não retornou conteúdo.`);
       setPreview(current => ({
         ...current,
         loading: false,
         url: `data:application/pdf;base64,${pdf}`,
+        filename,
       }));
     } catch (err) {
       setPreview(current => ({
@@ -156,7 +159,7 @@ export default function CteDetailPage() {
   const openCtePdf = () => openPdf(cte || {id: cteId, invoiceNumber: summary.invoiceNumber}, 'CT-e');
 
   const closePreview = () =>
-    setPreview({visible: false, title: '', url: '', loading: false, error: ''});
+    setPreview({visible: false, title: '', url: '', filename: '', loading: false, error: ''});
 
   return (
     <SafeAreaView style={styles.screen} edges={['bottom']}>
@@ -261,6 +264,13 @@ export default function CteDetailPage() {
               <Pressable onPress={closePreview}>
                 <Text style={styles.modalClose}>Fechar</Text>
               </Pressable>
+              {preview.url
+                ? React.createElement(
+                    'a',
+                    {href: preview.url, download: preview.filename || 'nota_fiscal.pdf', style: styles.modalDownload},
+                    'Baixar'
+                  )
+                : null}
             </View>
             {preview.loading ? <Text style={styles.hint}>Montando PDF...</Text> : null}
             {preview.error ? <Text style={styles.error}>{preview.error}</Text> : null}
@@ -368,4 +378,5 @@ const styles = StyleSheet.create({
   modalHeader: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8},
   modalTitle: {fontSize: 16, fontWeight: '800', color: '#0F172A'},
   modalClose: {color: '#0F766E', fontWeight: '800'},
+  modalDownload: {color: '#0369A1', fontWeight: '800', textDecorationLine: 'none'},
 });
