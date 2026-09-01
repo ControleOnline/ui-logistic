@@ -218,7 +218,8 @@ const logisticRoutes = [
       headerShown: true,
       showBottomCart: false,
       showBottomToolBar: true,
-      showCompanyFilter: false,
+      showCompanyFilter: true,
+      companyFilterMode: 'icon',
       title: 'CT-e',
     },
     path: 'cte',
@@ -250,19 +251,19 @@ const logisticRoutes = [
   {
     name: 'NfcePage',
     component: NfcePage,
-    options: {headerShown: true, showBottomCart: false, showBottomToolBar: true, showCompanyFilter: true, title: 'NFC-e'},
+    options: {headerShown: true, showBottomCart: false, showBottomToolBar: true, showCompanyFilter: true, companyFilterMode: 'icon', title: 'NFC-e'},
     path: 'nfce',
   },
   {
     name: 'NfePage',
     component: NfePage,
-    options: {headerShown: true, showBottomCart: false, showBottomToolBar: true, showCompanyFilter: true, title: 'NF-e'},
+    options: {headerShown: true, showBottomCart: false, showBottomToolBar: true, showCompanyFilter: true, companyFilterMode: 'icon', title: 'NF-e'},
     path: 'nfe',
   },
   {
     name: 'NfsePage',
     component: NfsePage,
-    options: {headerShown: true, showBottomCart: false, showBottomToolBar: true, showCompanyFilter: true, title: 'NFSe'},
+    options: {headerShown: true, showBottomCart: false, showBottomToolBar: true, showCompanyFilter: true, companyFilterMode: 'icon', title: 'NFSe'},
     path: 'nfse',
   },
 ];
