@@ -51,7 +51,7 @@ export default function FiscalDocumentsPage({documentType}) {
   const rowActionsComponent = config.key === 'nfce' && current.key === 'emitted' ? NfceEmittedActions : undefined;
 
   useEffect(() => {
-    if (!config || !currentCompanyIri) return;
+    if (!config || !currentCompanyIri || typeof activeStore?.actions?.setFilters !== 'function') return;
     activeStore?.actions?.setFilters({
       ...(activeStore?.getters?.filters || {}),
       provider: currentCompanyIri,
