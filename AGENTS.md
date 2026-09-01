@@ -5,6 +5,12 @@
 - Quando houver detalhe específico de implementação, prefira comentar no código em inglês perto da regra.
 - Este arquivo deve ficar curto e servir apenas como ponte para as fontes oficiais.
 
+## Documentação versionada
+
+| Página | Destino |
+| --- | --- |
+| Recebíveis do motoboy / Pagamentos a motoboys | `docs/technical/Recebiveis-Motoboy-e-Pagamentos.md` |
+
 ## Documentação (navegação humana)
 
 | Categoria | Destino |
@@ -17,6 +23,7 @@
 | Página | O que documenta |
 | --- | --- |
 | [Own Delivery Handoff](https://github.com/ControleOnline/ui-logistic/wiki/Own-Delivery-Handoff) | Gate Ready → entrega nossa → ON DELIVERY → cobrança na entrega (`fluxo: logistica-entrega`, flowchart id=1, app-community#610) |
+| [CT-e — Detalhe e PDF](https://github.com/ControleOnline/ui-logistic/wiki/CT-e-Detalhe-e-PDF) | Aba CTE: PDF (DACTE) + detalhe read-only `/cte/detail` (ui-logistic#34) |
 
 ### Módulos relacionados
 
@@ -26,9 +33,3 @@
 | Smoke Test Flows | https://github.com/ControleOnline/app-community/wiki/Smoke-Test-Flows |
 | ui-orders | https://github.com/ControleOnline/ui-orders/wiki |
 | ui-ppc | https://github.com/ControleOnline/ui-ppc/wiki |
-
-## Documentação versionada
-
-| Página | Destino |
-| --- | --- |
-| Recebíveis do motoboy / Pagamentos a motoboys | `docs/technical/Recebiveis-Motoboy-e-Pagamentos.md` |

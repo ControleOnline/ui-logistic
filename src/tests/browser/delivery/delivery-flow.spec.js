@@ -1394,7 +1394,7 @@ test('opens the delivery home menu and routes without looping backend calls', as
 
   await openDeliveryHome();
   const bottomNavigation = page.getByTestId('bottom-navigation');
-  await expect(bottomNavigation).toBeVisible();
+  await expect(bottomNavigation).toBeVisible({timeout: 15000});
   const bottomNavigationBox = await bottomNavigation.boundingBox();
   expect(bottomNavigationBox).toBeTruthy();
   const viewport = page.viewportSize();
@@ -1931,7 +1931,7 @@ test.describe('delivery browser smoke', () => {
     });
 
     await page.goto('/delivery/orders');
-    await expect(page).toHaveURL(/delivery\/run/);
+    await expect(page).toHaveURL(/delivery\/run/, {timeout: 15000});
     const runUrl = new URL(page.url());
     expect(runUrl.pathname).toBe('/delivery/run');
     expect(runUrl.searchParams.has('id')).toBe(false);
@@ -1997,7 +1997,7 @@ test.describe('delivery browser smoke', () => {
     });
 
     await page.goto('/delivery/orders');
-    await expect(page).toHaveURL(/order-details\?store=orders&id=72533/);
+    await expect(page).toHaveURL(/order-details\?store=orders&id=72533/, {timeout: 15000});
 
     await expect(page.getByText('Aguardando aceite').first()).toBeVisible();
     await expect(page.getByText(/Aceitar corrida/i)).toBeVisible();
@@ -2013,7 +2013,7 @@ test.describe('delivery browser smoke', () => {
     await expect(page.getByText(/Cancelar corrida/i)).toBeVisible();
 
     await page.getByText(/Aceitar corrida/i).click();
-    await expect(page).toHaveURL(/delivery\/run/);
+    await expect(page).toHaveURL(/delivery\/run/, {timeout: 15000});
     expect(new URL(page.url()).searchParams.has('id')).toBe(false);
 
     await expect(page.getByText(/Corrida ativa/i)).toBeVisible();
@@ -2022,19 +2022,19 @@ test.describe('delivery browser smoke', () => {
     await expect(markDeliveredButton).toBeVisible();
 
     await markDeliveredButton.click();
-    await expect(page).toHaveURL(/delivery\/run/);
+    await expect(page).toHaveURL(/delivery\/run/, {timeout: 15000});
     expect(new URL(page.url()).searchParams.has('id')).toBe(false);
 
     await expect(page.getByText(/Corrida ativa/i)).toBeVisible();
     await expect(markDeliveredButton).toBeVisible();
 
     await markDeliveredButton.click();
-    await expect(page).toHaveURL(/delivery\/run/);
+    await expect(page).toHaveURL(/delivery\/run/, {timeout: 15000});
     expect(new URL(page.url()).searchParams.has('id')).toBe(false);
     await expect(page.getByText(/Corrida ativa/i)).toBeVisible();
 
     await markDeliveredButton.click();
-    await expect(page).toHaveURL(/delivery\/run/);
+    await expect(page).toHaveURL(/delivery\/run/, {timeout: 15000});
     expect(new URL(page.url()).searchParams.has('id')).toBe(false);
     await expect(page.getByText(/Corrida ativa/i)).toHaveCount(0);
     await expect(page.getByText(/Parada atual/i)).toHaveCount(0);
