@@ -17,6 +17,7 @@ import CteEmitPage from '@controleonline/ui-logistic/src/react/pages/cte/CteEmit
 import CteDetailPage from '@controleonline/ui-logistic/src/react/pages/cte/CteDetailPage';
 import {NfcePage, NfePage, NfsePage} from '@controleonline/ui-logistic/src/react/pages/fiscal/FiscalDocumentsPage';
 import NfceEmitPage from '@controleonline/ui-logistic/src/react/pages/fiscal/NfceEmitPage';
+import NfceDetailPage from '@controleonline/ui-logistic/src/react/pages/fiscal/NfceDetailPage';
 
 export const WrappedOrderLogistics = ({navigation, route}) => {
   React.useEffect(() => {
@@ -260,6 +261,12 @@ const logisticRoutes = [
     component: NfceEmitPage,
     options: {headerShown: true, showBottomCart: false, showBottomToolBar: true, showCompanyFilter: false, title: 'Emitir NFC-e'},
     path: 'nfce/emit',
+  },
+  {
+    name: 'NfceDetailPage',
+    component: NfceDetailPage,
+    options: {headerShown: true, showBottomCart: false, showBottomToolBar: true, showCompanyFilter: false, title: 'Detalhe da NFC-e'},
+    path: 'nfce/detail',
   },
   {
     name: 'NfePage',

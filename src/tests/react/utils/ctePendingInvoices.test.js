@@ -142,9 +142,11 @@ describe('ctePendingInvoices', () => {
     );
 
     expect(routes).toMatch(/path: 'nfce'/);
+    expect(routes).toMatch(/path: 'nfce\/detail'/);
     expect(routes).toMatch(/path: 'nfe'/);
     expect(routes).toMatch(/path: 'nfse'/);
     expect(routes).toMatch(/FiscalDocumentsPage/);
+    expect(routes).toMatch(/NfceDetailPage/);
   });
 
   it('exposes a configuration action for each fiscal document screen', () => {
@@ -157,5 +159,6 @@ describe('ctePendingInvoices', () => {
     expect(page).toMatch(/NfceFiscalConfig/);
     expect(page).toMatch(/NfeFiscalConfig/);
     expect(page).toMatch(/NfseFiscalConfig/);
+    expect(page).toMatch(/NfceEmittedActions/);
   });
 });
