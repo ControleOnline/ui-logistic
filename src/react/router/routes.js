@@ -17,6 +17,8 @@ import CteEmitPage from '@controleonline/ui-logistic/src/react/pages/cte/CteEmit
 import CteDetailPage from '@controleonline/ui-logistic/src/react/pages/cte/CteDetailPage';
 import {NfcePage, NfePage, NfsePage} from '@controleonline/ui-logistic/src/react/pages/fiscal/FiscalDocumentsPage';
 import NfceEmitPage from '@controleonline/ui-logistic/src/react/pages/fiscal/NfceEmitPage';
+import NfeEmitPage from '@controleonline/ui-logistic/src/react/pages/fiscal/NfeEmitPage';
+import NfseEmitPage from '@controleonline/ui-logistic/src/react/pages/fiscal/NfseEmitPage';
 
 export const WrappedOrderLogistics = ({navigation, route}) => {
   React.useEffect(() => {
@@ -268,10 +270,22 @@ const logisticRoutes = [
     path: 'nfe',
   },
   {
+    name: 'NfeEmitPage',
+    component: NfeEmitPage,
+    options: {headerShown: true, showBottomCart: false, showBottomToolBar: true, showCompanyFilter: false, title: 'Emitir NF-e'},
+    path: 'nfe/emit',
+  },
+  {
     name: 'NfsePage',
     component: NfsePage,
     options: {headerShown: true, showBottomCart: false, showBottomToolBar: true, showCompanyFilter: true, companyFilterMode: 'icon', title: 'NFSe'},
     path: 'nfse',
+  },
+  {
+    name: 'NfseEmitPage',
+    component: NfseEmitPage,
+    options: {headerShown: true, showBottomCart: false, showBottomToolBar: true, showCompanyFilter: false, title: 'Emitir NFSe'},
+    path: 'nfse/emit',
   },
 ];
 
