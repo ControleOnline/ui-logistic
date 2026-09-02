@@ -1,4 +1,4 @@
-import React, {useMemo, useState} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {Modal, Pressable} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {StyleSheet, Text, View} from 'react-native';
@@ -14,9 +14,9 @@ import DefaultTable from '@controleonline/ui-default/src/react/components/table/
 import {
   buildFiscalDocumentRequestParams,
   resolveFiscalDocumentConfig,
-  EMIT_PAGE_BY_TYPE,
 } from '@controleonline/ui-logistic/src/shared/fiscalDocuments';
-import FiscalEmittedActions from './FiscalEmittedActions';
+import {NfceDocumentActions, NfeDocumentActions, NfseDocumentActions} from './FiscalDocumentActions';
+import CteIntegrationActions from '../cte/CteIntegrationActions';
 
 const TABS = [
   {key: 'pending', labelKey: 'pendingLabel', storeName: 'fiscal_orders_pending'},
@@ -31,12 +31,13 @@ export default function FiscalDocumentsPage({documentType}) {
   const config = resolveFiscalDocumentConfig(documentType);
   const [tab, setTab] = useState('pending');
   const [configVisible, setConfigVisible] = useState(false);
-  const current = TABS.find(item => item.key === tab) || TABS[0];
+  const integrationStore = useStore('integration');
   const pendingStore = useStore('fiscal_orders_pending');
   const peopleStore = useStore('people');
   const fiscalCompany = peopleStore?.getters?.currentCompany || null;
   const fiscalCompanyId = resolveFiscalCompanyId(fiscalCompany);
   const currentCompanyIri = fiscalCompanyId ? `/people/${fiscalCompanyId}` : null;
+  const current = TABS.find(item => item.key === tab) || TABS[0];
   const requestParams = useMemo(
     () => config && currentCompanyIri
       ? {...buildFiscalDocumentRequestParams(config, current.key), provider: currentCompanyIri}
@@ -44,14 +45,23 @@ export default function FiscalDocumentsPage({documentType}) {
     [config, current.key, currentCompanyIri],
   );
   const FiscalConfig = config ? CONFIG_COMPONENTS[config.key] : null;
+  useEffect(() => {
+    if (config && current.key === 'integrations') {
+      integrationStore?.actions?.setFilters({
+        ...(integrationStore?.getters?.filters || {}),
+        queueName: config.integrationQueue,
+      });
+    }
+  }, [config, current.key, integrationStore]);
   const selectedIds = Array.isArray(pendingStore?.getters?.selected)
     ? pendingStore.getters.selected.map(item => String(item).replace(/\D+/g, '')).filter(Boolean)
     : [];
-  const canEmit = Boolean(config) && current.key === 'pending' && selectedIds.length > 0;
-  const emitPage = config ? EMIT_PAGE_BY_TYPE[config.key] : undefined;
+  const canEmit = current.key === 'pending' && selectedIds.length > 0;
   const rowActionsComponent = current.key === 'emitted'
-    ? props => <FiscalEmittedActions {...props} documentType={config.key} />
-    : undefined;
+    ? config.key === 'nfce' ? NfceDocumentActions : config.key === 'nfse' ? NfseDocumentActions : NfeDocumentActions
+    : current.key === 'integrations'
+      ? CteIntegrationActions
+      : undefined;
 
   if (!config) return null;
 
@@ -87,13 +97,13 @@ export default function FiscalDocumentsPage({documentType}) {
       </View>
       <DefaultExternalFilters storeName={current.storeName} />
       {currentCompanyIri ? (
-        <DefaultTable
+      <DefaultTable
           key={`${config.key}-${current.key}`}
           storeName={current.storeName}
           requestParams={requestParams}
           rowActionsComponent={rowActionsComponent}
           showRowActions={Boolean(rowActionsComponent)}
-          rowActionsWidth={rowActionsComponent ? 176 : undefined}
+          rowActionsWidth={current.key === 'integrations' ? 140 : 140}
           pinRowActions
         />
       ) : (
@@ -101,12 +111,15 @@ export default function FiscalDocumentsPage({documentType}) {
           <Text style={styles.emptyStateText}>Selecione a empresa corrente para consultar os documentos fiscais.</Text>
         </View>
       )}
-      {canEmit && emitPage ? (
+      {canEmit ? (
         <Pressable
-          testID={`${config.key}-emit-button`}
+          testID="nfce-emit-button"
           accessibilityRole="button"
           accessibilityLabel={`Emitir ${config.title} para ${selectedIds.length} pedido(s)`}
-          onPress={() => navigation.navigate(emitPage, {ids: selectedIds.join(','), provider: currentCompanyIri})}
+          onPress={() => navigation.navigate(
+            config.key === 'nfce' ? 'NfceEmitPage' : config.key === 'nfe' ? 'NfeEmitPage' : 'NfseEmitPage',
+            {ids: selectedIds.join(','), provider: currentCompanyIri},
+          )}
           style={styles.emitButton}>
           <MaterialCommunityIcons name="file-send-outline" size={18} color="#fff" />
           <Text style={styles.emitText}>Emitir {config.title} ({selectedIds.length})</Text>
@@ -159,6 +172,4 @@ const styles = StyleSheet.create({
   emptyState: {padding: 24},
   emptyStateText: {fontSize: 13, fontWeight: '700', color: '#64748B'},
   modalContent: {padding: 12},
-  emitButton: {margin: 16, marginTop: 0, backgroundColor: '#0F766E', borderRadius: 8, minHeight: 48, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8},
-  emitText: {color: '#fff', fontWeight: '800'},
 });

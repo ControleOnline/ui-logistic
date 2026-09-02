@@ -17,11 +17,9 @@ import CteEmitPage from '@controleonline/ui-logistic/src/react/pages/cte/CteEmit
 import CteDetailPage from '@controleonline/ui-logistic/src/react/pages/cte/CteDetailPage';
 import {NfcePage, NfePage, NfsePage} from '@controleonline/ui-logistic/src/react/pages/fiscal/FiscalDocumentsPage';
 import NfceEmitPage from '@controleonline/ui-logistic/src/react/pages/fiscal/NfceEmitPage';
-import NfceDetailPage from '@controleonline/ui-logistic/src/react/pages/fiscal/NfceDetailPage';
 import NfeEmitPage from '@controleonline/ui-logistic/src/react/pages/fiscal/NfeEmitPage';
 import NfseEmitPage from '@controleonline/ui-logistic/src/react/pages/fiscal/NfseEmitPage';
-import NfeDetailPage from '@controleonline/ui-logistic/src/react/pages/fiscal/NfeDetailPage';
-import NfseDetailPage from '@controleonline/ui-logistic/src/react/pages/fiscal/NfseDetailPage';
+import FiscalDocumentDetailPage from '@controleonline/ui-logistic/src/react/pages/fiscal/FiscalDocumentDetailPage';
 
 export const WrappedOrderLogistics = ({navigation, route}) => {
   React.useEffect(() => {
@@ -255,6 +253,12 @@ const logisticRoutes = [
     path: 'cte/detail',
   },
   {
+    name: 'FiscalDocumentDetailPage',
+    component: FiscalDocumentDetailPage,
+    options: {headerShown: true, showBottomCart: false, showBottomToolBar: true, showCompanyFilter: false, title: 'Detalhe fiscal'},
+    path: 'fiscal-document/detail',
+  },
+  {
     name: 'NfcePage',
     component: NfcePage,
     options: {headerShown: true, showBottomCart: false, showBottomToolBar: true, showCompanyFilter: true, companyFilterMode: 'icon', title: 'NFC-e'},
@@ -265,12 +269,6 @@ const logisticRoutes = [
     component: NfceEmitPage,
     options: {headerShown: true, showBottomCart: false, showBottomToolBar: true, showCompanyFilter: false, title: 'Emitir NFC-e'},
     path: 'nfce/emit',
-  },
-  {
-    name: 'NfceDetailPage',
-    component: NfceDetailPage,
-    options: {headerShown: true, showBottomCart: false, showBottomToolBar: true, showCompanyFilter: false, title: 'Detalhe da NFC-e'},
-    path: 'nfce/detail',
   },
   {
     name: 'NfePage',
@@ -285,12 +283,6 @@ const logisticRoutes = [
     path: 'nfe/emit',
   },
   {
-    name: 'NfeDetailPage',
-    component: NfeDetailPage,
-    options: {headerShown: true, showBottomCart: false, showBottomToolBar: true, showCompanyFilter: false, title: 'Detalhe da NF-e'},
-    path: 'nfe/detail',
-  },
-  {
     name: 'NfsePage',
     component: NfsePage,
     options: {headerShown: true, showBottomCart: false, showBottomToolBar: true, showCompanyFilter: true, companyFilterMode: 'icon', title: 'NFSe'},
@@ -299,14 +291,8 @@ const logisticRoutes = [
   {
     name: 'NfseEmitPage',
     component: NfseEmitPage,
-    options: {headerShown: true, showBottomCart: false, showBottomToolBar: true, showCompanyFilter: false, title: 'Emitir NFSe'},
+    options: {headerShown: true, showBottomCart: false, showBottomToolBar: true, showCompanyFilter: false, title: 'Emitir NFS-e'},
     path: 'nfse/emit',
-  },
-  {
-    name: 'NfseDetailPage',
-    component: NfseDetailPage,
-    options: {headerShown: true, showBottomCart: false, showBottomToolBar: true, showCompanyFilter: false, title: 'Detalhe da NFSe'},
-    path: 'nfse/detail',
   },
 ];
 
