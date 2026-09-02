@@ -13,7 +13,7 @@ import {useNavigation, useRoute} from '@react-navigation/native';
 import {api} from '@controleonline/ui-common/src/api';
 import {useStore} from '@store';
 import {FiscalModelField} from '@controleonline/ui-logistic/src/react/components/fiscal/FiscalAuxiliarySelect';
-import {downloadFiscalPdf} from './FiscalDocumentActions';
+import {downloadFiscalPdf, downloadFiscalXml} from './FiscalDocumentActions';
 
 const text = (...values) =>
   values.find(
@@ -199,6 +199,13 @@ export default function FiscalDocumentDetailLayout() {
             />
             <Text style={styles.downloadText}>Baixar</Text>
           </Pressable>
+          <Pressable
+            onPress={() => downloadFiscalXml(document, type)}
+            style={styles.xmlButton}
+          >
+            <MaterialCommunityIcons name="xml" size={18} color="#7C3AED" />
+            <Text style={styles.xmlText}>XML</Text>
+          </Pressable>
         </View>
         {error ? <Text style={styles.error}>{error}</Text> : null}
         {!document ? (
@@ -350,6 +357,17 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   downloadText: {color: '#0F766E', fontWeight: '800'},
+  xmlButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: '#DDD6FE',
+    borderRadius: 8,
+    padding: 10,
+    marginLeft: 8,
+  },
+  xmlText: {color: '#7C3AED', fontWeight: '800'},
   summaryBar: {
     flexDirection: 'row',
     flexWrap: 'wrap',
