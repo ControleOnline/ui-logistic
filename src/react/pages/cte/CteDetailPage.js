@@ -6,6 +6,7 @@ import {useRoute} from '@react-navigation/native';
 import {api} from '@controleonline/ui-common/src/api';
 import {formatMoney} from '@controleonline/ui-logistic/src/shared/ctePendingInvoices';
 import CteEmitNfCard from './CteEmitNfCard';
+import {downloadFiscalXml} from '@controleonline/ui-logistic/src/react/pages/fiscal/FiscalDocumentActions';
 
 const HOMOLOG_LABEL = /homologa|sem valor fiscal/i;
 
@@ -182,10 +183,16 @@ export default function CteDetailPage() {
             </Text>
           </View>
           {!loading && !error && cteId ? (
+            <View style={styles.headerActions}>
             <Pressable onPress={openCtePdf} style={styles.headerPdf} testID="cte-detail-pdf">
               <MaterialCommunityIcons name="file-pdf-box" size={18} color="#fff" />
               <Text style={styles.headerPdfText}>PDF</Text>
             </Pressable>
+            <Pressable onPress={() => downloadFiscalXml(cte, 'cte').catch(() => {})} style={styles.headerXml} testID="cte-detail-xml">
+              <MaterialCommunityIcons name="xml" size={18} color="#fff" />
+              <Text style={styles.headerPdfText}>XML</Text>
+            </Pressable>
+            </View>
           ) : null}
         </View>
 
@@ -313,6 +320,16 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 14,
     marginTop: 2,
+  },
+  headerActions: {flexDirection: 'row', alignItems: 'center', gap: 8},
+  headerXml: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#7C3AED',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
   },
   headerPdfText: {color: '#fff', fontWeight: '800', fontSize: 13},
   summaryBar: {flexDirection: 'row', gap: 12, marginBottom: 12, flexWrap: 'wrap'},

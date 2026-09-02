@@ -3,6 +3,7 @@ import {Modal, Pressable, StyleSheet, Text, View} from 'react-native';
 import {MaterialCommunityIcons} from '@expo/vector-icons';
 import {useNavigation} from '@react-navigation/native';
 import {api} from '@controleonline/ui-common/src/api';
+import {downloadFiscalXml} from '@controleonline/ui-logistic/src/react/pages/fiscal/FiscalDocumentActions';
 
 const rowId = row => String(row?.id ?? row?.['@id'] ?? '').replace(/\D+/g, '');
 const fiscalDocument = row => row?.fiscalDocument || {};
@@ -54,6 +55,10 @@ export default function CteCteActions({row}) {
         <MaterialCommunityIcons name="file-pdf-box" size={14} color="#fff" />
         <Text style={styles.text}>PDF</Text>
       </Pressable>
+      <Pressable testID="cte-row-xml" onPress={() => downloadFiscalXml(row, 'cte').catch(() => {})} style={styles.xml} hitSlop={6}>
+        <MaterialCommunityIcons name="xml" size={14} color="#fff" />
+        <Text style={styles.text}>XML</Text>
+      </Pressable>
       <Pressable testID="cte-row-detail" onPress={openDetail} style={styles.detail} hitSlop={6}>
         <MaterialCommunityIcons name="eye-outline" size={14} color="#fff" />
         <Text style={styles.text}>Detalhe</Text>
@@ -104,6 +109,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 10,
   },
+  xml: {flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#7C3AED', borderRadius: 8, paddingVertical: 6, paddingHorizontal: 10},
   text: {color: '#fff', fontWeight: '800', fontSize: 11},
   modalBackdrop: {
     flex: 1,
