@@ -31,6 +31,27 @@ export const FISCAL_DOCUMENT_CONFIGS = {
 
 export const FISCAL_DOCUMENT_TYPE_KEYS = Object.keys(FISCAL_DOCUMENT_CONFIGS);
 
+export const extractFiscalDocumentFromXml = (xml, model = 0) => {
+  if (typeof xml !== 'string' || !xml.trim() || typeof DOMParser === 'undefined') return {};
+  const document = new DOMParser().parseFromString(xml, 'application/xml');
+  const read = name => document.getElementsByTagNameNS('*', name)[0]?.textContent?.trim() || '';
+  const resolvedModel = Number(model) || Number(read('mod')) || 0;
+  const isCte = resolvedModel === 57 || /<\s*(?:cteProc|CTe)\b/i.test(xml);
+  return {
+    model: resolvedModel || null,
+    series: read('serie'),
+    number: read(isCte ? 'nCT' : 'nNF'),
+    key: read(isCte ? 'chCTe' : 'chNFe'),
+    issuedAt: read('dhEmi'),
+    cfop: read('CFOP'),
+    protocol: read('nProt'),
+    authorizationStatus: read('cStat'),
+    authorizationMessage: read('xMotivo'),
+    authorizedAt: read('dhRecbto'),
+    total: read(isCte ? 'vTPrest' : 'vNF'),
+  };
+};
+
 export const resolveFiscalDocumentConfig = value => {
   const key = String(value || '').toLowerCase();
   return FISCAL_DOCUMENT_CONFIGS[key] || null;
