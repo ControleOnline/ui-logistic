@@ -55,6 +55,8 @@ test('fiscal details use the CT-e-compatible shared layout', () => {
   assert.match(read('src/react/pages/cte/CteDetailPage.js'), /cte-detail-xml/);
   assert.match(read('src/shared/fiscalDocuments.js'), /extractFiscalDocumentFromXml/);
   assert.match(layout, /extractFiscalDocumentFromXml\(document\?\.invoice/);
+  assert.match(layout, /setOrders\(referencedOrders\)/);
+  assert.match(layout, /return \{id: idOf\(order\), '@id': order\}/);
   for (const token of [
     'summaryBar',
     'partyGrid',

@@ -98,9 +98,20 @@ export default function FiscalDocumentDetailLayout() {
         const links = response?.member || response?.['hydra:member'] || [];
         const orderRefs = links
           .map(link => link?.order)
-          .filter(order => typeof order === 'string' && order);
+          .filter(order => order && (typeof order === 'string' || typeof order === 'object'));
+        const referencedOrders = orderRefs.map(order =>
+          typeof order === 'object' ? order : {id: idOf(order), '@id': order},
+        );
+        if (!cancelled) setOrders(referencedOrders);
         const loadedOrders = await Promise.all(
-          orderRefs.map(order => api.fetch(order.replace(/^\//, ''))),
+          orderRefs.map(async order => {
+            if (typeof order === 'object') return order;
+            try {
+              return await api.fetch(order.replace(/^\//, ''));
+            } catch {
+              return {id: idOf(order), '@id': order};
+            }
+          }),
         );
         if (!cancelled) setOrders(loadedOrders);
       })
