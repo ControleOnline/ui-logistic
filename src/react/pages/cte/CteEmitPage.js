@@ -13,6 +13,7 @@ import {
   missingCteFields,
 } from '@controleonline/ui-logistic/src/shared/ctePendingInvoices';
 import CteEmitNfCard from './CteEmitNfCard';
+import FiscalAuxiliarySelect, {FiscalModelField} from '@controleonline/ui-logistic/src/react/components/fiscal/FiscalAuxiliarySelect';
 
 const HOMOLOG_LABEL = /homologa|sem valor fiscal/i;
 
@@ -70,6 +71,8 @@ export default function CteEmitPage() {
   const route = useRoute();
   const {width} = useWindowDimensions();
   const emitStore = useStore('invoice_taxes_emit');
+  const fiscalAuxiliaryStore = useStore('fiscal_auxiliary');
+  const auxiliary = fiscalAuxiliaryStore?.getters?.auxiliary || {};
   const initialIds = useMemo(() => {
     const fromRoute = toInvoiceIds(route.params?.ids || route.params?.selectedIds);
     return fromRoute.length ? fromRoute : readQueryIds('ids');
@@ -241,10 +244,11 @@ export default function CteEmitPage() {
           <Text style={styles.section}>Dados do CT-e</Text>
           <View style={styles.formGrid}>
             <InputField label="CFOP" value={form.cfop} onChangeText={value => setField('cfop', value)} placeholder="5932 ou 6932" readOnly={readonlyFields.includes('cfop')} />
-            <InputField label="Modal" value={form.modal} onChangeText={value => setField('modal', value)} placeholder="01 rodoviário" />
-            <InputField label="Tipo de serviço" value={form.tipoServico} onChangeText={value => setField('tipoServico', value)} placeholder="0 normal" />
-            <InputField label="Tipo do CT-e" value={form.tipoCte} onChangeText={value => setField('tipoCte', value)} placeholder="0 normal" />
-            <InputField label="Tomador" value={form.tomador} onChangeText={value => setField('tomador', value)} placeholder="0, 1, 2 ou 3" readOnly={readonlyFields.includes('tomador')} />
+            <FiscalModelField model="57" options={auxiliary.fiscalModels} />
+            <FiscalAuxiliarySelect label="Modal" value={form.modal} options={auxiliary.modals} onChange={value => setField('modal', value)} />
+            <FiscalAuxiliarySelect label="Tipo de serviço" value={form.tipoServico} options={auxiliary.serviceTypes} onChange={value => setField('tipoServico', value)} />
+            <FiscalAuxiliarySelect label="Tipo do CT-e" value={form.tipoCte} options={auxiliary.cteTypes} onChange={value => setField('tipoCte', value)} />
+            <FiscalAuxiliarySelect label="Tomador" value={form.tomador} options={auxiliary.takers} onChange={value => setField('tomador', value)} readOnly={readonlyFields.includes('tomador')} />
             <InputField label="Valor do frete" value={form.valorFrete} onChangeText={value => setField('valorFrete', value)} keyboardType="decimal-pad" placeholder="0,00" readOnly={readonlyFields.includes('valorFrete')} />
             <InputField label="Valor a receber" value={form.valorReceber} onChangeText={value => setField('valorReceber', value)} keyboardType="decimal-pad" placeholder="0,00" readOnly={readonlyFields.includes('valorReceber')} />
             <InputField label="Natureza da prestação" value={form.natureza} onChangeText={value => setField('natureza', value)} wide />
