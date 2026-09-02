@@ -31,7 +31,6 @@ export default function FiscalDocumentsPage({documentType}) {
   const config = resolveFiscalDocumentConfig(documentType);
   const [tab, setTab] = useState('pending');
   const [configVisible, setConfigVisible] = useState(false);
-  const integrationStore = useStore('integration');
   const pendingStore = useStore('fiscal_orders_pending');
   const peopleStore = useStore('people');
   const fiscalCompany = peopleStore?.getters?.currentCompany || null;
@@ -45,14 +44,6 @@ export default function FiscalDocumentsPage({documentType}) {
     [config, current.key, currentCompanyIri],
   );
   const FiscalConfig = config ? CONFIG_COMPONENTS[config.key] : null;
-  useEffect(() => {
-    if (config && current.key === 'integrations' && typeof integrationStore?.actions?.setFilters === 'function') {
-      integrationStore?.actions?.setFilters({
-        ...(integrationStore?.getters?.filters || {}),
-        queueName: config.integrationQueue,
-      });
-    }
-  }, [config, current.key, integrationStore]);
   const selectedIds = Array.isArray(pendingStore?.getters?.selected)
     ? pendingStore.getters.selected.map(item => String(item).replace(/\D+/g, '')).filter(Boolean)
     : [];
