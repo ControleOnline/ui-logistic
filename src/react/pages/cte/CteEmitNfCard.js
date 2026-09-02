@@ -2,6 +2,7 @@ import React from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {MaterialCommunityIcons} from '@expo/vector-icons';
 import {formatMoney} from '@controleonline/ui-logistic/src/shared/ctePendingInvoices';
+import {downloadFiscalPdf} from '@controleonline/ui-logistic/src/react/pages/fiscal/FiscalDocumentActions';
 
 const HOMOLOG_LABEL = /homologa|sem valor fiscal/i;
 
@@ -14,7 +15,7 @@ const cleanName = (value, fallback) => {
 const formatWeight = value =>
   `${Number(value || 0).toLocaleString('pt-BR', {minimumFractionDigits: 3, maximumFractionDigits: 3})} kg`;
 
-export default function CteEmitNfCard({row, onPreview, onRemove}) {
+export default function CteEmitNfCard({row, onPreview, onRemove, onDownload}) {
   const number = row?.invoiceNumber || row?.id || '--';
   const client = cleanName(row?.clientName, 'Destinatário não informado');
   const provider = cleanName(row?.providerName, 'Remetente não informado');
@@ -29,7 +30,7 @@ export default function CteEmitNfCard({row, onPreview, onRemove}) {
           <Text style={styles.number}>NF {number}</Text>
         </View>
         <View style={styles.actions}>
-          <Pressable onPress={() => onPreview?.(row)} style={styles.pdf} hitSlop={8}>
+          <Pressable accessibilityRole="button" accessibilityLabel={`Baixar PDF da NF ${number}`} onPress={() => (onDownload ? onDownload(row) : downloadFiscalPdf(row, 'nfe'))} style={styles.pdf} hitSlop={8}>
             <MaterialCommunityIcons name="file-pdf-box" size={16} color="#fff" />
           </Pressable>
           {canRemove ? (
