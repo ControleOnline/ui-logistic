@@ -30,7 +30,7 @@ test('all fiscal emitters consume the shared fiscal model catalog', () => {
 
 test('fiscal emitter sends the selected orders in one emission request', () => {
   const source = read('src/react/pages/fiscal/FiscalEmitPage.js');
-  assert.match(source, /body:\s*\{orderIds:\s*activeIds\}/);
+  assert.match(source, /body:\s*\{[\s\S]*orderIds:\s*activeIds/);
   assert.match(source, /orders\/\$\{activeIds\[0\]\}\/nfe/);
   assert.doesNotMatch(source, /for \(const id of activeIds\)/);
 });

@@ -5,6 +5,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import {MaterialCommunityIcons} from '@expo/vector-icons';
@@ -93,6 +94,9 @@ export default function FiscalEmitPage({documentType, title, model}) {
   const [loadedOrders, setLoadedOrders] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [serviceCode, setServiceCode] = useState('');
+  const [serviceDescription, setServiceDescription] = useState('');
+  const [serviceValue, setServiceValue] = useState('');
   const requestedOrdersKey = useRef('');
   const storeOrders = useMemo(
     () =>
@@ -186,7 +190,12 @@ export default function FiscalEmitPage({documentType, title, model}) {
       const response = await api.fetch(`orders/${activeIds[0]}/nfe`, {
         method: 'POST',
         params: {model, provider},
-        body: {orderIds: activeIds},
+        body: {
+          orderIds: activeIds,
+          ...(documentType === 'nfse'
+            ? {serviceCode, serviceDescription, serviceValue}
+            : {}),
+        },
       });
       const result = response?.response || response;
       if (result?.success === false || !result?.invoice_tax)
@@ -254,6 +263,34 @@ export default function FiscalEmitPage({documentType, title, model}) {
         </View>
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <Text style={styles.section}>Pedidos desta emissão</Text>
+        {documentType === 'nfse' ? (
+          <View style={styles.serviceBox}>
+            <Text style={styles.serviceLabel}>Dados do serviço</Text>
+            <TextInput
+              accessibilityLabel="Código nacional do serviço"
+              value={serviceCode}
+              onChangeText={setServiceCode}
+              keyboardType="number-pad"
+              placeholder="Código nacional com 6 dígitos"
+              style={styles.serviceInput}
+            />
+            <TextInput
+              accessibilityLabel="Descrição do serviço"
+              value={serviceDescription}
+              onChangeText={setServiceDescription}
+              placeholder="Descrição do serviço"
+              style={styles.serviceInput}
+            />
+            <TextInput
+              accessibilityLabel="Valor do serviço"
+              value={serviceValue}
+              onChangeText={setServiceValue}
+              keyboardType="decimal-pad"
+              placeholder="Valor do serviço"
+              style={styles.serviceInput}
+            />
+          </View>
+        ) : null}
         <View style={styles.orderGrid}>
           {activeOrders.map(row => (
             <OrderCard key={rowId(row)} row={row} onRemove={removeOrder} />
@@ -469,5 +506,24 @@ const styles = StyleSheet.create({
   },
   emitText: {color: '#fff', fontWeight: '800'},
   error: {color: '#B91C1C', fontWeight: '700', marginBottom: 12},
+  serviceBox: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+  },
+  serviceLabel: {fontWeight: '800', color: '#0F172A', marginBottom: 8},
+  serviceInput: {
+    minHeight: 42,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    marginBottom: 8,
+    color: '#0F172A',
+    backgroundColor: '#F8FAFC',
+  },
   disabled: {opacity: 0.6},
 });
