@@ -16,6 +16,10 @@ import CtePendingInvoicesPage from '@controleonline/ui-logistic/src/react/pages/
 import CteEmitPage from '@controleonline/ui-logistic/src/react/pages/cte/CteEmitPage';
 import CteDetailPage from '@controleonline/ui-logistic/src/react/pages/cte/CteDetailPage';
 import {NfcePage, NfePage, NfsePage} from '@controleonline/ui-logistic/src/react/pages/fiscal/FiscalDocumentsPage';
+import NfceEmitPage from '@controleonline/ui-logistic/src/react/pages/fiscal/NfceEmitPage';
+import NfeEmitPage from '@controleonline/ui-logistic/src/react/pages/fiscal/NfeEmitPage';
+import NfseEmitPage from '@controleonline/ui-logistic/src/react/pages/fiscal/NfseEmitPage';
+import FiscalDocumentDetailPage from '@controleonline/ui-logistic/src/react/pages/fiscal/FiscalDocumentDetailPage';
 
 export const WrappedOrderLogistics = ({navigation, route}) => {
   React.useEffect(() => {
@@ -249,10 +253,22 @@ const logisticRoutes = [
     path: 'cte/detail',
   },
   {
+    name: 'FiscalDocumentDetailPage',
+    component: FiscalDocumentDetailPage,
+    options: {headerShown: true, showBottomCart: false, showBottomToolBar: true, showCompanyFilter: false, title: 'Detalhe fiscal'},
+    path: 'fiscal-document/detail',
+  },
+  {
     name: 'NfcePage',
     component: NfcePage,
     options: {headerShown: true, showBottomCart: false, showBottomToolBar: true, showCompanyFilter: true, companyFilterMode: 'icon', title: 'NFC-e'},
     path: 'nfce',
+  },
+  {
+    name: 'NfceEmitPage',
+    component: NfceEmitPage,
+    options: {headerShown: true, showBottomCart: false, showBottomToolBar: true, showCompanyFilter: false, title: 'Emitir NFC-e'},
+    path: 'nfce/emit',
   },
   {
     name: 'NfePage',
@@ -261,10 +277,22 @@ const logisticRoutes = [
     path: 'nfe',
   },
   {
+    name: 'NfeEmitPage',
+    component: NfeEmitPage,
+    options: {headerShown: true, showBottomCart: false, showBottomToolBar: true, showCompanyFilter: false, title: 'Emitir NF-e'},
+    path: 'nfe/emit',
+  },
+  {
     name: 'NfsePage',
     component: NfsePage,
     options: {headerShown: true, showBottomCart: false, showBottomToolBar: true, showCompanyFilter: true, companyFilterMode: 'icon', title: 'NFSe'},
     path: 'nfse',
+  },
+  {
+    name: 'NfseEmitPage',
+    component: NfseEmitPage,
+    options: {headerShown: true, showBottomCart: false, showBottomToolBar: true, showCompanyFilter: false, title: 'Emitir NFS-e'},
+    path: 'nfse/emit',
   },
 ];
 

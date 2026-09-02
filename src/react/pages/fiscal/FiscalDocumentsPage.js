@@ -15,6 +15,8 @@ import {
   buildFiscalDocumentRequestParams,
   resolveFiscalDocumentConfig,
 } from '@controleonline/ui-logistic/src/shared/fiscalDocuments';
+import {NfceDocumentActions, NfeDocumentActions, NfseDocumentActions} from './FiscalDocumentActions';
+import CteIntegrationActions from '../cte/CteIntegrationActions';
 
 const TABS = [
   {key: 'pending', labelKey: 'pendingLabel', storeName: 'fiscal_orders_pending'},
@@ -30,6 +32,7 @@ export default function FiscalDocumentsPage({documentType}) {
   const [tab, setTab] = useState('pending');
   const [configVisible, setConfigVisible] = useState(false);
   const integrationStore = useStore('integration');
+  const pendingStore = useStore('fiscal_orders_pending');
   const peopleStore = useStore('people');
   const fiscalCompany = peopleStore?.getters?.currentCompany || null;
   const fiscalCompanyId = resolveFiscalCompanyId(fiscalCompany);
@@ -42,7 +45,6 @@ export default function FiscalDocumentsPage({documentType}) {
     [config, current.key, currentCompanyIri],
   );
   const FiscalConfig = config ? CONFIG_COMPONENTS[config.key] : null;
-
   useEffect(() => {
     if (config && current.key === 'integrations') {
       integrationStore?.actions?.setFilters({
@@ -51,6 +53,15 @@ export default function FiscalDocumentsPage({documentType}) {
       });
     }
   }, [config, current.key, integrationStore]);
+  const selectedIds = Array.isArray(pendingStore?.getters?.selected)
+    ? pendingStore.getters.selected.map(item => String(item).replace(/\D+/g, '')).filter(Boolean)
+    : [];
+  const canEmit = current.key === 'pending' && selectedIds.length > 0;
+  const rowActionsComponent = current.key === 'emitted'
+    ? config.key === 'nfce' ? NfceDocumentActions : config.key === 'nfse' ? NfseDocumentActions : NfeDocumentActions
+    : current.key === 'integrations'
+      ? CteIntegrationActions
+      : undefined;
 
   if (!config) return null;
 
@@ -86,10 +97,13 @@ export default function FiscalDocumentsPage({documentType}) {
       </View>
       <DefaultExternalFilters storeName={current.storeName} />
       {currentCompanyIri ? (
-        <DefaultTable
+      <DefaultTable
           key={`${config.key}-${current.key}`}
           storeName={current.storeName}
           requestParams={requestParams}
+          rowActionsComponent={rowActionsComponent}
+          showRowActions={Boolean(rowActionsComponent)}
+          rowActionsWidth={current.key === 'integrations' ? 140 : 140}
           pinRowActions
         />
       ) : (
@@ -97,6 +111,20 @@ export default function FiscalDocumentsPage({documentType}) {
           <Text style={styles.emptyStateText}>Selecione a empresa corrente para consultar os documentos fiscais.</Text>
         </View>
       )}
+      {canEmit ? (
+        <Pressable
+          testID="nfce-emit-button"
+          accessibilityRole="button"
+          accessibilityLabel={`Emitir ${config.title} para ${selectedIds.length} pedido(s)`}
+          onPress={() => navigation.navigate(
+            config.key === 'nfce' ? 'NfceEmitPage' : config.key === 'nfe' ? 'NfeEmitPage' : 'NfseEmitPage',
+            {ids: selectedIds.join(','), provider: currentCompanyIri},
+          )}
+          style={styles.emitButton}>
+          <MaterialCommunityIcons name="file-send-outline" size={18} color="#fff" />
+          <Text style={styles.emitText}>Emitir {config.title} ({selectedIds.length})</Text>
+        </Pressable>
+      ) : null}
       <Modal visible={configVisible} transparent animationType="fade" onRequestClose={() => setConfigVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalPanel}>
