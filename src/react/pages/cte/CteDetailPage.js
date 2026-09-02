@@ -7,6 +7,7 @@ import {api} from '@controleonline/ui-common/src/api';
 import {formatMoney} from '@controleonline/ui-logistic/src/shared/ctePendingInvoices';
 import CteEmitNfCard from './CteEmitNfCard';
 import {downloadFiscalXml} from '@controleonline/ui-logistic/src/react/pages/fiscal/FiscalDocumentActions';
+import {extractFiscalDocumentFromXml} from '@controleonline/ui-logistic/src/shared/fiscalDocuments';
 
 const HOMOLOG_LABEL = /homologa|sem valor fiscal/i;
 
@@ -109,7 +110,10 @@ export default function CteDetailPage() {
 
   const summary = useMemo(() => {
     const first = nfs[0] || cte || {};
-    const cteFiscal = fiscalDocument(cte);
+    const cteFiscal = {
+      ...extractFiscalDocumentFromXml(cte?.invoice, cte?.invoiceModel),
+      ...fiscalDocument(cte),
+    };
     const issuer = peopleName(cte?.issuer) || peopleName(cte?.company) || cleanName(first.issuerName || first.companyName, 'Emitente não informado');
     const client = peopleName(cte?.client) || cleanName(first.clientName, 'Destinatário não informado');
     const provider = peopleName(cte?.provider) || cleanName(first.providerName, 'Remetente não informado');
