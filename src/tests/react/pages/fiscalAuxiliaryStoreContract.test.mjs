@@ -49,6 +49,10 @@ test('fiscal details use the CT-e-compatible shared layout', () => {
   assert.match(routes, /FiscalDocumentDetailLayout/);
   assert.match(layout, /order_invoice_taxes/);
   assert.doesNotMatch(layout, /\.fetch\('orders'/);
+  assert.match(layout, /downloadFiscalXml/);
+  assert.match(read('src/react/pages/fiscal/FiscalDocumentActions.js'), /format: 'xml'/);
+  assert.match(read('src/react/pages/cte/CteCteActions.js'), /cte-row-xml/);
+  assert.match(read('src/react/pages/cte/CteDetailPage.js'), /cte-detail-xml/);
   for (const token of [
     'summaryBar',
     'partyGrid',

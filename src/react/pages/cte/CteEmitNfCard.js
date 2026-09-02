@@ -2,7 +2,7 @@ import React from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {MaterialCommunityIcons} from '@expo/vector-icons';
 import {formatMoney} from '@controleonline/ui-logistic/src/shared/ctePendingInvoices';
-import {downloadFiscalPdf} from '@controleonline/ui-logistic/src/react/pages/fiscal/FiscalDocumentActions';
+import {downloadFiscalPdf, downloadFiscalXml} from '@controleonline/ui-logistic/src/react/pages/fiscal/FiscalDocumentActions';
 
 const HOMOLOG_LABEL = /homologa|sem valor fiscal/i;
 
@@ -32,6 +32,9 @@ export default function CteEmitNfCard({row, onPreview, onRemove, onDownload}) {
         <View style={styles.actions}>
           <Pressable accessibilityRole="button" accessibilityLabel={`Baixar PDF da NF ${number}`} onPress={() => (onDownload ? onDownload(row) : downloadFiscalPdf(row, 'nfe'))} style={styles.pdf} hitSlop={8}>
             <MaterialCommunityIcons name="file-pdf-box" size={16} color="#fff" />
+          </Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel={`Baixar XML da NF ${number}`} onPress={() => downloadFiscalXml(row, 'nfe').catch(() => {})} style={styles.xml} hitSlop={8}>
+            <MaterialCommunityIcons name="xml" size={16} color="#fff" />
           </Pressable>
           {canRemove ? (
             <Pressable onPress={() => onRemove?.(row)} style={styles.remove} hitSlop={8}>
@@ -79,6 +82,7 @@ const styles = StyleSheet.create({
   number: {fontSize: 12, fontWeight: '800', color: '#0F766E'},
   actions: {flexDirection: 'row', gap: 6},
   pdf: {width: 28, height: 28, borderRadius: 8, backgroundColor: '#0F766E', alignItems: 'center', justifyContent: 'center'},
+  xml: {width: 28, height: 28, borderRadius: 8, backgroundColor: '#7C3AED', alignItems: 'center', justifyContent: 'center'},
   remove: {width: 28, height: 28, borderRadius: 8, backgroundColor: '#BE123C', alignItems: 'center', justifyContent: 'center'},
   client: {marginTop: 12, fontSize: 15, fontWeight: '800', color: '#0F172A', lineHeight: 20},
   provider: {marginTop: 4, fontSize: 12, color: '#64748B'},
