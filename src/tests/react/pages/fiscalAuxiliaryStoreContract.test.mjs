@@ -53,6 +53,8 @@ test('fiscal details use the CT-e-compatible shared layout', () => {
   assert.match(read('src/react/pages/fiscal/FiscalDocumentActions.js'), /format: 'xml'/);
   assert.match(read('src/react/pages/cte/CteCteActions.js'), /cte-row-xml/);
   assert.match(read('src/react/pages/cte/CteDetailPage.js'), /cte-detail-xml/);
+  assert.match(read('src/shared/fiscalDocuments.js'), /extractFiscalDocumentFromXml/);
+  assert.match(layout, /extractFiscalDocumentFromXml\(document\?\.invoice/);
   for (const token of [
     'summaryBar',
     'partyGrid',
@@ -64,5 +66,23 @@ test('fiscal details use the CT-e-compatible shared layout', () => {
     'Pedidos desta NF',
   ]) {
     assert.match(layout, new RegExp(token));
+  }
+});
+
+test('integration store is registered from the default store and fiscal tabs guard bootstrap', () => {
+  const stores = readApp('src/store/stores.js');
+  const page = read('src/react/pages/fiscal/FiscalDocumentsPage.js');
+  assert.match(stores, /import integration from '@controleonline\/ui-common\/src\/store\/integration'/);
+  assert.match(stores, /\bintegration,\n/);
+  assert.match(page, /typeof integrationStore\?\.actions\?\.setFilters === 'function'/);
+});
+
+test('fiscal configuration exposes only runtime-backed shared fields', () => {
+  const catalog = readApp('modules/controleonline/ui-common/src/react/pages/integrationsCatalog.js');
+  assert.match(catalog, /receita-federal-state-registration/);
+  assert.match(catalog, /receita-federal-ibge-code/);
+  assert.match(catalog, /receita-federal-certificate-password/);
+  for (const unusedKey of ['receita-federal-nfce-csc-id', 'receita-federal-nfce-csc', 'receita-federal-prenota-enabled', 'receita-federal-nfce-enabled']) {
+    assert.doesNotMatch(catalog, new RegExp(unusedKey));
   }
 });

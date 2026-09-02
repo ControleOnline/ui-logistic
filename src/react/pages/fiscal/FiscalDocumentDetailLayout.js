@@ -14,6 +14,7 @@ import {api} from '@controleonline/ui-common/src/api';
 import {useStore} from '@store';
 import {FiscalModelField} from '@controleonline/ui-logistic/src/react/components/fiscal/FiscalAuxiliarySelect';
 import {downloadFiscalPdf, downloadFiscalXml} from './FiscalDocumentActions';
+import {extractFiscalDocumentFromXml} from '@controleonline/ui-logistic/src/shared/fiscalDocuments';
 
 const text = (...values) =>
   values.find(
@@ -139,7 +140,13 @@ export default function FiscalDocumentDetailLayout() {
   };
   const closePreview = () =>
     setPreview({visible: false, title: '', url: '', loading: false, error: ''});
-  const fiscal = document?.fiscalDocument || {};
+  const fiscal = useMemo(
+    () => ({
+      ...extractFiscalDocumentFromXml(document?.invoice, document?.invoiceModel),
+      ...(document?.fiscalDocument || {}),
+    }),
+    [document],
+  );
   const summary = useMemo(
     () => ({
       number: text(
