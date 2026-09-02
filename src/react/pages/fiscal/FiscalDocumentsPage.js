@@ -14,8 +14,9 @@ import DefaultTable from '@controleonline/ui-default/src/react/components/table/
 import {
   buildFiscalDocumentRequestParams,
   resolveFiscalDocumentConfig,
+  EMIT_PAGE_BY_TYPE,
 } from '@controleonline/ui-logistic/src/shared/fiscalDocuments';
-import NfceEmittedActions from './NfceEmittedActions';
+import FiscalEmittedActions from './FiscalEmittedActions';
 
 const TABS = [
   {key: 'pending', labelKey: 'pendingLabel', storeName: 'fiscal_orders_pending'},
@@ -46,8 +47,11 @@ export default function FiscalDocumentsPage({documentType}) {
   const selectedIds = Array.isArray(pendingStore?.getters?.selected)
     ? pendingStore.getters.selected.map(item => String(item).replace(/\D+/g, '')).filter(Boolean)
     : [];
-  const canEmitNfce = config.key === 'nfce' && current.key === 'pending' && selectedIds.length > 0;
-  const rowActionsComponent = config.key === 'nfce' && current.key === 'emitted' ? NfceEmittedActions : undefined;
+  const canEmit = Boolean(config) && current.key === 'pending' && selectedIds.length > 0;
+  const emitPage = config ? EMIT_PAGE_BY_TYPE[config.key] : undefined;
+  const rowActionsComponent = current.key === 'emitted'
+    ? props => <FiscalEmittedActions {...props} documentType={config.key} />
+    : undefined;
 
   if (!config) return null;
 
@@ -97,15 +101,15 @@ export default function FiscalDocumentsPage({documentType}) {
           <Text style={styles.emptyStateText}>Selecione a empresa corrente para consultar os documentos fiscais.</Text>
         </View>
       )}
-      {canEmitNfce ? (
+      {canEmit && emitPage ? (
         <Pressable
-          testID="nfce-emit-button"
+          testID={`${config.key}-emit-button`}
           accessibilityRole="button"
-          accessibilityLabel={`Emitir NFC-e para ${selectedIds.length} pedido(s)`}
-          onPress={() => navigation.navigate('NfceEmitPage', {ids: selectedIds.join(','), provider: currentCompanyIri})}
+          accessibilityLabel={`Emitir ${config.title} para ${selectedIds.length} pedido(s)`}
+          onPress={() => navigation.navigate(emitPage, {ids: selectedIds.join(','), provider: currentCompanyIri})}
           style={styles.emitButton}>
           <MaterialCommunityIcons name="file-send-outline" size={18} color="#fff" />
-          <Text style={styles.emitText}>Emitir NFC-e ({selectedIds.length})</Text>
+          <Text style={styles.emitText}>Emitir {config.title} ({selectedIds.length})</Text>
         </Pressable>
       ) : null}
       <Modal visible={configVisible} transparent animationType="fade" onRequestClose={() => setConfigVisible(false)}>

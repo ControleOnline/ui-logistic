@@ -50,6 +50,8 @@ export const buildFiscalDocumentRequestParams = (config, tab) => {
   return {queueName: config.integrationQueue};
 };
 
+const fiscalDocumentOf = row => (row && typeof row.fiscalDocument === 'object' ? row.fiscalDocument : {}) || {};
+
 export const resolveInvoiceTaxId = value => {
   if (value && typeof value === 'object') {
     return resolveInvoiceTaxId(value.id ?? value.value ?? value['@id'] ?? '');
@@ -57,18 +59,16 @@ export const resolveInvoiceTaxId = value => {
   return String(value || '').replace(/\D+/g, '');
 };
 
-const fiscalDocumentOf = row => (row && typeof row.fiscalDocument === 'object' ? row.fiscalDocument : {}) || {};
-
-export const resolveNfceSeries = row =>
+export const resolveFiscalSeries = row =>
   String(fiscalDocumentOf(row).series ?? row?.fiscalSeries ?? row?.serie ?? '').trim();
 
-export const resolveNfceNumber = row =>
+export const resolveFiscalNumber = row =>
   String(fiscalDocumentOf(row).number ?? row?.fiscalNumber ?? row?.invoiceNumber ?? '').trim();
 
-export const resolveNfceProtocol = row =>
+export const resolveFiscalProtocol = row =>
   String(fiscalDocumentOf(row).protocol ?? row?.fiscalProtocol ?? row?.protocol ?? '').trim();
 
-export const resolveNfceStatus = row => {
+export const resolveFiscalStatus = row => {
   const status = row?.status;
   if (status && typeof status === 'object') {
     return String(status.status || status.realStatus || status.label || '').trim();
@@ -76,21 +76,34 @@ export const resolveNfceStatus = row => {
   return String(status || row?.realStatus || '').trim();
 };
 
-export const isValidNfceDocument = row =>
-  Boolean(resolveInvoiceTaxId(row) && resolveNfceSeries(row) && resolveNfceNumber(row));
+export const resolveNfceSeries = resolveFiscalSeries;
+export const resolveNfceNumber = resolveFiscalNumber;
+export const resolveNfceProtocol = resolveFiscalProtocol;
+export const resolveNfceStatus = resolveFiscalStatus;
 
-export const buildNfcePdfFilename = row => {
-  const series = resolveNfceSeries(row) || 'SEM-SERIE';
-  const number = resolveNfceNumber(row) || 'SEM-NUMERO';
-  return `NFC-E-${series}-${number}.pdf`;
+export const isValidFiscalDocument = row =>
+  Boolean(resolveInvoiceTaxId(row) && resolveFiscalSeries(row) && resolveFiscalNumber(row));
+
+export const isValidNfceDocument = isValidFiscalDocument;
+
+export const buildFiscalPdfFilename = (row, documentType) => {
+  const prefix = {nfce: 'NFC-E', nfe: 'NFE', nfse: 'NFSE'}[String(documentType || '').toLowerCase()] || 'NF';
+  const series = resolveFiscalSeries(row) || 'SEM-SERIE';
+  const number = resolveFiscalNumber(row) || 'SEM-NUMERO';
+  return `${prefix}-${series}-${number}.pdf`;
 };
+
+export const buildNfcePdfFilename = row => buildFiscalPdfFilename(row, 'nfce');
 
 export const NFCE_EMITTED_COLUMNS = [
   {name: 'id', label: 'ID', isIdentity: true, editable: false, externalFilter: true},
-  {name: 'fiscalSeries', label: 'Série', editable: false, externalFilter: true, format: (_, row) => resolveNfceSeries(row) || '--'},
-  {name: 'fiscalNumber', label: 'Número', editable: false, externalFilter: true, format: (_, row) => resolveNfceNumber(row) || '--'},
-  {name: 'fiscalProtocol', label: 'Protocolo', editable: false, externalFilter: true, format: (_, row) => resolveNfceProtocol(row) || '--'},
-  {name: 'status', label: 'Status', editable: false, externalFilter: true, format: (_, row) => resolveNfceStatus(row) || '--'},
+  {name: 'fiscalSeries', label: 'Série', editable: false, externalFilter: true, format: (_, row) => resolveFiscalSeries(row) || '--'},
+  {name: 'fiscalNumber', label: 'Número', editable: false, externalFilter: true, format: (_, row) => resolveFiscalNumber(row) || '--'},
+  {name: 'fiscalProtocol', label: 'Protocolo', editable: false, externalFilter: true, format: (_, row) => resolveFiscalProtocol(row) || '--'},
+  {name: 'status', label: 'Status', editable: false, externalFilter: true, format: (_, row) => resolveFiscalStatus(row) || '--'},
   {name: 'invoiceTotal', label: 'Total', type: 'money', summary: 'sum', editable: false, align: 'right', externalFilter: true},
 ];
 
+export const EMIT_PAGE_BY_TYPE = {nfce: 'NfceEmitPage', nfe: 'NfeEmitPage', nfse: 'NfseEmitPage'};
+export const DETAIL_PAGE_BY_TYPE = {nfce: 'NfceDetailPage', nfe: 'NfeDetailPage', nfse: 'NfseDetailPage'};
+export const LIST_PAGE_BY_TYPE = {nfce: 'NfcePage', nfe: 'NfePage', nfse: 'NfsePage'};
