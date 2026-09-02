@@ -4,7 +4,7 @@ import {MaterialCommunityIcons} from '@expo/vector-icons';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {api} from '@controleonline/ui-common/src/api';
 import {useStore} from '@store';
-import {selectFiscalOrders} from '@controleonline/ui-logistic/src/shared/fiscalEmitOrders';
+import {fetchSelectedFiscalOrders, selectFiscalOrders} from '@controleonline/ui-logistic/src/shared/fiscalEmitOrders';
 
 const toIds = value => (Array.isArray(value) ? value : [value]).flatMap(item => String(item || '').split(/[,\s]+/)).map(item => String(item).replace(/\D+/g, '')).filter(Boolean);
 const rowId = row => String(row?.id ?? row?.['@id'] ?? '').replace(/\D+/g, '');
@@ -45,9 +45,9 @@ export default function FiscalEmitPage({documentType, title, model}) {
     if (requestedOrdersKey.current === requestKey) return undefined;
     requestedOrdersKey.current = requestKey;
     let cancelled = false;
-    api.fetch('orders', {params: {id: missingIds, provider, itemsPerPage: missingIds.length, page: 1}})
-      .then(response => {
-        if (!cancelled) setLoadedOrders(response?.member || response?.['hydra:member'] || []);
+    fetchSelectedFiscalOrders({ids: missingIds, provider, fetcher: api.fetch.bind(api)})
+      .then(rows => {
+        if (!cancelled) setLoadedOrders(rows);
       })
       .catch(err => {
         if (!cancelled) setError(err?.message || String(err));
