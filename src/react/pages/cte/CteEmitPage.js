@@ -14,6 +14,7 @@ import {
 } from '@controleonline/ui-logistic/src/shared/ctePendingInvoices';
 import CteEmitNfCard from './CteEmitNfCard';
 import FiscalAuxiliarySelect, {FiscalModelField} from '@controleonline/ui-logistic/src/react/components/fiscal/FiscalAuxiliarySelect';
+import {downloadFiscalPdf} from '@controleonline/ui-logistic/src/react/pages/fiscal/FiscalDocumentActions';
 
 const HOMOLOG_LABEL = /homologa|sem valor fiscal/i;
 
@@ -270,7 +271,7 @@ export default function CteEmitPage() {
           showRowActions={false}
           cardListProps={{numColumns: cardColumns, columnWrapperStyle: styles.cardRow}}
           renderCard={({row}) => (
-            <CteEmitNfCard row={row} onPreview={openNfPdf} onRemove={removeNf} />
+            <CteEmitNfCard row={row} onDownload={row => downloadFiscalPdf(row, 'nfe').catch(err => setError(err?.message || String(err)))} onRemove={removeNf} />
           )}
         />
 

@@ -40,7 +40,16 @@ test('fiscal details use the CT-e-compatible shared layout', () => {
   const routes = read('src/react/router/routes.js');
   const layout = read('src/react/pages/fiscal/FiscalDocumentDetailLayout.js');
   assert.match(routes, /FiscalDocumentDetailLayout/);
-  for (const token of ['summaryBar', 'partyGrid', 'Dados fiscais', 'FiscalModelField']) {
+  for (const token of [
+    'summaryBar',
+    'partyGrid',
+    'Dados fiscais',
+    'FiscalModelField',
+    'Modal',
+    'iframe',
+    'downloadFiscalPdf',
+    'Pedidos desta NF',
+  ]) {
     assert.match(layout, new RegExp(token));
   }
 });
