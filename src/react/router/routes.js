@@ -19,7 +19,7 @@ import {NfcePage, NfePage, NfsePage} from '@controleonline/ui-logistic/src/react
 import NfceEmitPage from '@controleonline/ui-logistic/src/react/pages/fiscal/NfceEmitPage';
 import NfeEmitPage from '@controleonline/ui-logistic/src/react/pages/fiscal/NfeEmitPage';
 import NfseEmitPage from '@controleonline/ui-logistic/src/react/pages/fiscal/NfseEmitPage';
-import FiscalDocumentDetailPage from '@controleonline/ui-logistic/src/react/pages/fiscal/FiscalDocumentDetailPage';
+import FiscalDocumentDetailPage from '@controleonline/ui-logistic/src/react/pages/fiscal/FiscalDocumentDetailLayout';
 
 export const WrappedOrderLogistics = ({navigation, route}) => {
   React.useEffect(() => {
