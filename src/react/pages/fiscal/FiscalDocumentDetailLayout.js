@@ -86,16 +86,22 @@ export default function FiscalDocumentDetailLayout() {
     let cancelled = false;
     if (!id) return undefined;
     api
-      .fetch('orders', {
+      .fetch('order_invoice_taxes', {
         params: {
           invoiceTax: `/invoice_taxes/${id}`,
           itemsPerPage: 200,
           page: 1,
         },
       })
-      .then(response => {
-        if (!cancelled)
-          setOrders(response?.member || response?.['hydra:member'] || []);
+      .then(async response => {
+        const links = response?.member || response?.['hydra:member'] || [];
+        const orderRefs = links
+          .map(link => link?.order)
+          .filter(order => typeof order === 'string' && order);
+        const loadedOrders = await Promise.all(
+          orderRefs.map(order => api.fetch(order.replace(/^\//, ''))),
+        );
+        if (!cancelled) setOrders(loadedOrders);
       })
       .catch(err => {
         if (!cancelled) setError(err?.message || String(err));
