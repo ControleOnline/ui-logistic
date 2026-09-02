@@ -47,6 +47,8 @@ test('fiscal details use the CT-e-compatible shared layout', () => {
   const routes = read('src/react/router/routes.js');
   const layout = read('src/react/pages/fiscal/FiscalDocumentDetailLayout.js');
   assert.match(routes, /FiscalDocumentDetailLayout/);
+  assert.match(layout, /order_invoice_taxes/);
+  assert.doesNotMatch(layout, /\.fetch\('orders'/);
   for (const token of [
     'summaryBar',
     'partyGrid',
