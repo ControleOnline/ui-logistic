@@ -183,15 +183,14 @@ export default function FiscalEmitPage({documentType, title, model}) {
     setSaving(true);
     setError('');
     try {
-      for (const id of activeIds) {
-        const response = await api.fetch(`orders/${id}/nfe`, {
-          method: 'POST',
-          params: {model, provider},
-        });
-        const result = response?.response || response;
-        if (result?.success === false || !result?.invoice_tax)
-          throw new Error(result?.error || `O pedido ${id} não foi emitido.`);
-      }
+      const response = await api.fetch(`orders/${activeIds[0]}/nfe`, {
+        method: 'POST',
+        params: {model, provider},
+        body: {orderIds: activeIds},
+      });
+      const result = response?.response || response;
+      if (result?.success === false || !result?.invoice_tax)
+        throw new Error(result?.error || 'Os pedidos não foram emitidos.');
       navigation.navigate(
         documentType === 'nfce'
           ? 'NfcePage'
