@@ -46,7 +46,7 @@ export default function FiscalDocumentsPage({documentType}) {
   );
   const FiscalConfig = config ? CONFIG_COMPONENTS[config.key] : null;
   useEffect(() => {
-    if (config && current.key === 'integrations') {
+    if (config && current.key === 'integrations' && typeof integrationStore?.actions?.setFilters === 'function') {
       integrationStore?.actions?.setFilters({
         ...(integrationStore?.getters?.filters || {}),
         queueName: config.integrationQueue,
