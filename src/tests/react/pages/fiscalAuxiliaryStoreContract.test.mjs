@@ -74,7 +74,8 @@ test('integration store is registered from the default store and fiscal tabs gua
   const page = read('src/react/pages/fiscal/FiscalDocumentsPage.js');
   assert.match(stores, /import integration from '@controleonline\/ui-common\/src\/store\/integration'/);
   assert.match(stores, /\bintegration,\n/);
-  assert.match(page, /typeof integrationStore\?\.actions\?\.setFilters === 'function'/);
+  assert.doesNotMatch(page, /integrationStore/);
+  assert.doesNotMatch(page, /setFilters/);
 });
 
 test('fiscal configuration exposes only runtime-backed shared fields', () => {
