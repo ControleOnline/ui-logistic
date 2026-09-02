@@ -21,9 +21,10 @@ test('all fiscal emitters consume the shared fiscal model catalog', () => {
   const source = read('src/react/pages/fiscal/FiscalEmitPage.js');
   assert.match(source, /useStore\('fiscal_auxiliary'\)/);
   assert.match(source, /FiscalModelField/);
-  for (const type of ['nfce', 'nfe', 'nfse']) {
-    assert.match(source, new RegExp(`documentType`));
-    assert.match(source, new RegExp(type));
+  for (const [wrapper, type] of [['NfceEmitPage.js', 'nfce'], ['NfeEmitPage.js', 'nfe'], ['NfseEmitPage.js', 'nfse']]) {
+    const wrapperSource = read(`src/react/pages/fiscal/${wrapper}`);
+    assert.match(wrapperSource, /FiscalEmitPage/);
+    assert.match(wrapperSource, new RegExp(`documentType="${type}"`));
   }
 });
 
