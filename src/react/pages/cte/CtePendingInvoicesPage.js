@@ -15,6 +15,8 @@ import CteCteActions from './CteCteActions';
 const TABS = [
   {key: 'pending', label: 'CTEs à emitir', storeName: 'invoice_taxes'},
   {key: 'cte', label: 'CTE', storeName: 'invoice_tasks_processing'},
+  {key: 'mdfe', label: 'MDF-e', storeName: 'mdfe'},
+  {key: 'mdfe', label: 'MDF-e', storeName: 'mdfe'},
   {key: 'integrations', label: 'Integrações', storeName: 'integration'},
 ];
 
@@ -39,6 +41,8 @@ export default function CtePendingInvoicesPage() {
 
   const requestParams = useMemo(() => {
     if (!currentCompanyIri) return {};
+    if (current.storeName === 'mdfe') return {company: currentCompanyIri};
+    if (current.storeName === 'mdfe') return {company: currentCompanyIri};
     if (current.storeName === 'invoice_tasks_processing') return {invoiceModel: 57, provider: currentCompanyIri};
     if (current.storeName === 'integration') return {queueName: 'CteEmission', provider: currentCompanyIri};
     return {provider: currentCompanyIri};
@@ -80,6 +84,8 @@ export default function CtePendingInvoicesPage() {
       {tab === 'pending' ? <DefaultExternalFilters storeName="invoice_taxes" /> : null}
       {tab === 'cte' ? <DefaultExternalFilters storeName="invoice_tasks_processing" /> : null}
       {tab === 'integrations' ? <DefaultExternalFilters storeName="integration" /> : null}
+      {tab === 'mdfe' ? <DefaultExternalFilters storeName="mdfe" /> : null}
+      {tab === 'mdfe' ? <DefaultExternalFilters storeName="mdfe" /> : null}
       {currentCompanyIri ? (
         <DefaultTable
           key={current.storeName}
@@ -96,14 +102,14 @@ export default function CtePendingInvoicesPage() {
         </View>
       )}
       {showEmit ? (
-        <Pressable
-          testID="cte-emit-button"
-          style={styles.emitButton}
-          onPress={() => navigation.navigate('CteEmitPage', {ids: selectedIds.join(',')})}>
-          <Text style={styles.emitText}>
-            Emitir CTE ({selectedIds.length} {selectedIds.length === 1 ? 'NF' : 'NFs'})
-          </Text>
-        </Pressable>
+        <View>
+          <Pressable testID="cte-emit-button" style={styles.emitButton} onPress={() => navigation.navigate('CteEmitPage', {ids: selectedIds.join(',')})}>
+            <Text style={styles.emitText}>Emitir CTE ({selectedIds.length} {selectedIds.length === 1 ? 'NF' : 'NFs'})</Text>
+          </Pressable>
+          <Pressable testID="mdfe-emit-button" style={styles.mdfeButton} onPress={() => navigation.navigate('MdfeEmitPage', {ids: selectedIds.join(',')})}>
+            <Text style={styles.emitText}>Criar MDF-e com estas NFs</Text>
+          </Pressable>
+        </View>
       ) : null}
       <Modal
         visible={fiscalConfigVisible}
@@ -117,14 +123,17 @@ export default function CtePendingInvoicesPage() {
                 <Text style={styles.modalTitle}>Fiscal CT-e</Text>
                 <Text style={styles.modalSubtitle}>{fiscalCompany?.name || fiscalCompany?.alias || `Empresa #${fiscalCompanyId}`}</Text>
               </View>
-              <Pressable
+        <View>
+        <Pressable
                 testID="cte-fiscal-config-close"
                 accessibilityRole="button"
                 accessibilityLabel="Fechar configurações fiscais CT-e"
                 onPress={() => setFiscalConfigVisible(false)}
                 style={styles.closeButton}>
                 <MaterialCommunityIcons name="close" size={20} color="#0F172A" />
-              </Pressable>
+        </Pressable>
+        <Pressable testID="mdfe-emit-button" style={styles.mdfeButton} onPress={() => navigation.navigate('MdfeEmitPage', {ids: selectedIds.join(',')})}><Text style={styles.emitText}>Criar MDF-e com estas NFs</Text></Pressable>
+        </View>
             </View>
             {fiscalCompanyId ? (
               <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator>
@@ -158,6 +167,8 @@ const styles = StyleSheet.create({
   tabText: {fontSize: 12, fontWeight: '700', color: '#334155'},
   tabTextActive: {color: '#fff'},
   emitButton: {margin: 16, backgroundColor: '#0F766E', borderRadius: 12, paddingVertical: 14, alignItems: 'center'},
+  mdfeButton: {marginHorizontal: 16, marginBottom: 16, backgroundColor: '#0369A1', borderRadius: 12, paddingVertical: 14, alignItems: 'center'},
+  mdfeButton: {marginHorizontal: 16, marginBottom: 16, backgroundColor: '#0369A1', borderRadius: 12, paddingVertical: 14, alignItems: 'center'},
   emitText: {color: '#fff', fontWeight: '800'},
   modalOverlay: {flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.44)', justifyContent: 'center', padding: 16},
   modalPanel: {maxHeight: '92%', backgroundColor: '#fff', borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: '#CBD5E1'},
