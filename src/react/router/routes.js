@@ -15,6 +15,7 @@ import DeliveryCourierPresenceHistoryPage from '@controleonline/ui-logistic/src/
 import CtePendingInvoicesPage from '@controleonline/ui-logistic/src/react/pages/cte/CtePendingInvoicesPage';
 import CteEmitPage from '@controleonline/ui-logistic/src/react/pages/cte/CteEmitPage';
 import CteDetailPage from '@controleonline/ui-logistic/src/react/pages/cte/CteDetailPage';
+import MdfeEmitPage from '@controleonline/ui-logistic/src/react/pages/cte/MdfeEmitPage';
 import {NfcePage, NfePage, NfsePage} from '@controleonline/ui-logistic/src/react/pages/fiscal/FiscalDocumentsPage';
 import NfceEmitPage from '@controleonline/ui-logistic/src/react/pages/fiscal/NfceEmitPage';
 import NfeEmitPage from '@controleonline/ui-logistic/src/react/pages/fiscal/NfeEmitPage';
@@ -251,6 +252,18 @@ const logisticRoutes = [
       title: 'Detalhe do CT-e',
     },
     path: 'cte/detail',
+  },
+  {
+    name: 'MdfeEmitPage',
+    component: MdfeEmitPage,
+    options: {
+      headerShown: true,
+      showBottomCart: false,
+      showBottomToolBar: true,
+      showCompanyFilter: false,
+      title: 'Emitir MDF-e',
+    },
+    path: 'cte/mdfe',
   },
   {
     name: 'FiscalDocumentDetailPage',
