@@ -1,3 +1,4 @@
+// fluxo: motoboy-cadastro | etapa: courier-presence | wiki: https://github.com/ControleOnline/app-community/wiki/Venda-Producao
 /*
  * Contract imported from MODOS_OPERACAO.md
  * - Courier presence is managed per company with automatic/manual state and reusable weekly schedules.

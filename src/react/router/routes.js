@@ -1,3 +1,4 @@
+// fluxo: motoboy-cadastro, transportador-cadastro | etapa: logistics-routes | wiki: https://github.com/ControleOnline/app-community/wiki/Venda-Producao
 import React from 'react';
 import OrderLogisticsPage from '@controleonline/ui-logistic/src/react/pages/orders/OrderLogisticsPage';
 import DeliveryOrdersPage from '@controleonline/ui-logistic/src/react/pages/orders/index';

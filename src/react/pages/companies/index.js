@@ -1,3 +1,4 @@
+// fluxo: transportador-cadastro | etapa: carrier-companies | wiki: https://github.com/ControleOnline/app-community/wiki/Venda-Producao
 /*
  * Contract imported from MODOS_OPERACAO.md
  * - The courier companies screen now shows presence state, mode and schedule summary per company.

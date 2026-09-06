@@ -1,3 +1,4 @@
+// fluxo: motoboy-cadastro | etapa: delivery-orders | wiki: https://github.com/ControleOnline/app-community/wiki/Venda-Producao
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {ActivityIndicator, Platform, Text, TouchableOpacity, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';

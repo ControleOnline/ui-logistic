@@ -1,5 +1,7 @@
 /*
- * fluxo: logistica-entrega
+ * fluxo: motoboy-cadastro
+ * etapa: own-delivery-charge
+ * wiki: https://github.com/ControleOnline/app-community/wiki/Venda-Producao
  * flowchartIds: [1]
  * https://admin.controleonline.com/admin/flowcharts/1
  *
