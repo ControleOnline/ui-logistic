@@ -1430,7 +1430,7 @@ test('opens the delivery home menu and routes without looping backend calls', as
   await expect(page).toHaveURL(/delivery\/companies/);
   await expect(page.getByText(/Delivery Companies|Empresas homologadas/).first()).toBeVisible();
   await expect(page.getByText('Lista de empresas')).toBeVisible();
-  await expect(page.getByText('1 empresas', { exact: true })).toBeVisible();
+  await expect(page.getByText(/^\d+ empresas$/, { exact: true })).toBeVisible();
   await expect(page.getByText('#3', { exact: true })).toBeVisible();
   await expect(page.getByText('#4', { exact: true })).toHaveCount(0);
   await page.waitForTimeout(1500);

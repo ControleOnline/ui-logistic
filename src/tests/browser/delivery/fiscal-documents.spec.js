@@ -1,5 +1,4 @@
 const {expect, test} = require('playwright/test');
-const {API_ORIGIN} = require('../../../../../../../src/tests/browser/apiOrigin');
 
 const documents = [
   {path: '/cte', key: 'cte', title: 'CT-e', queue: 'CteEmission'},
@@ -26,7 +25,13 @@ test.describe('fiscal documents real API smoke', () => {
     test(`${document.title} opens its tabs and configuration`, async ({page}) => {
       const apiRequests = [];
       page.on('request', request => {
-        if (request.url().startsWith(API_ORIGIN)) apiRequests.push(request.url());
+        try {
+          if (new URL(request.url()).pathname.replace(/\/+$/, '').endsWith('/integrations')) {
+            apiRequests.push(request.url());
+          }
+        } catch {
+          // Ignore non-URL browser requests.
+        }
       });
 
       await page.goto(document.path);
