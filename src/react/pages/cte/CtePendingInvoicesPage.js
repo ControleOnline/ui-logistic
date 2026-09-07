@@ -35,7 +35,11 @@ export default function CtePendingInvoicesPage() {
   const peopleStore = useStore('people');
   const currentCompany = peopleStore?.getters?.currentCompany || null;
   const defaultCompany = peopleStore?.getters?.defaultCompany || null;
-  const fiscalCompany = currentCompany?.id ? currentCompany : defaultCompany?.id ? defaultCompany : loadedCompany;
+  const fiscalCompany = resolveFiscalCompanyId(currentCompany)
+    ? currentCompany
+    : resolveFiscalCompanyId(defaultCompany)
+      ? defaultCompany
+      : loadedCompany;
   const peopleActions = peopleStore?.actions || {};
   const integrationActions = getAllStores().integration?.actions || {};
   const fiscalCompanyId = resolveFiscalCompanyId(fiscalCompany);
@@ -46,7 +50,9 @@ export default function CtePendingInvoicesPage() {
   useEffect(() => {
     if (currentCompany?.id || typeof peopleActions.myCompanies !== 'function') return;
     peopleActions.myCompanies().then(companies => {
-      const firstCompany = Array.isArray(companies) ? companies.find(company => company?.id) : null;
+      const firstCompany = Array.isArray(companies)
+        ? companies.find(company => resolveFiscalCompanyId(company))
+        : null;
       if (firstCompany) setLoadedCompany(firstCompany);
     }).catch(() => {});
   }, [currentCompany?.id, peopleActions.myCompanies]);
