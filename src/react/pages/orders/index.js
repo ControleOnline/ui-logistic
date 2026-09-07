@@ -253,12 +253,12 @@ export default function DeliveryOrdersPage() {
         ? `/delivery/run?${new URLSearchParams(nextParams).toString()}`
         : `/order-details?${new URLSearchParams(nextParams).toString()}`;
 
-    if (replaceWebLocation(nextHref)) {
+    if (typeof navigation.replace === 'function') {
+      navigation.replace(deliveryWorkflowRouteName, nextParams);
       return;
     }
 
-    if (typeof navigation.replace === 'function') {
-      navigation.replace(deliveryWorkflowRouteName, nextParams);
+    if (replaceWebLocation(nextHref)) {
       return;
     }
 

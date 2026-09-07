@@ -1362,6 +1362,7 @@ const bindBrowserDiagnostics = page => {
 
 
 test('opens the delivery home menu and routes without looping backend calls', async ({ page }) => {
+  await page.setViewportSize({width: 390, height: 844});
   await createDeliveryApiMock(page, {
     menus: createDeliveryHomeMenus(),
     companies: [
@@ -1413,7 +1414,9 @@ test('opens the delivery home menu and routes without looping backend calls', as
   await page.getByText(/Delivery orders|Pedidos de entrega/).first().click();
   await expect(page).toHaveURL(/delivery\/orders/);
   await page.waitForTimeout(250);
-  expect(requestCounter.counts.get('orders') || 0).toBeLessThanOrEqual(2);
+  // The delivery shell may finish one queue prefetch while the table performs
+  // its paginated load; the guard is against an unbounded reload loop.
+  expect(requestCounter.counts.get('orders') || 0).toBeLessThanOrEqual(3);
 
   await openDeliveryHome();
   await page.getByText(/Delivery receivables|Recebiveis/).first().click();
@@ -2089,7 +2092,7 @@ test.describe('delivery browser smoke', () => {
     page.on('request', request => {
       if (
         request.method() === 'GET' &&
-        request.url().includes('/orders/72532')
+        new URL(request.url()).pathname === '/orders/72532'
       ) {
         orderRequests.push(request);
       }

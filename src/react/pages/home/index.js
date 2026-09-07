@@ -5,6 +5,7 @@
  */
 
 import React, {useEffect, useMemo} from 'react';
+import {useIsFocused} from '@react-navigation/native';
 import {ActivityIndicator, ScrollView, Text as NativeText, TouchableOpacity, View} from 'react-native';
 import {Text} from 'react-native-animatable';
 import {SafeAreaView} from 'react-native-safe-area-context';
@@ -23,6 +24,7 @@ const normalizePeopleId = user =>
   normalizeEntityId(user?.people || user?.peopleId || user?.person || user?.personId || '');
 
 export default function DeliveryHomePage({navigation}) {
+  const isFocused = useIsFocused();
   const authStore = useStore('auth');
   const themeStore = useStore('theme');
   const peopleStore = useStore('people');
@@ -65,14 +67,14 @@ export default function DeliveryHomePage({navigation}) {
   );
 
   useEffect(() => {
-    if (!bootstrapReady || !currentPeopleIri || isCourierVehicleLoading || courierVehicleError) {
+    if (!isFocused || !bootstrapReady || !currentPeopleIri || isCourierVehicleLoading || courierVehicleError) {
       return;
     }
 
     if (!hasRegisteredVehicle) {
       navigation.replace('DeliveryVehicleSetupPage');
     }
-  }, [bootstrapReady, currentPeopleIri, courierVehicleError, hasRegisteredVehicle, isCourierVehicleLoading, navigation]);
+  }, [bootstrapReady, currentPeopleIri, courierVehicleError, hasRegisteredVehicle, isCourierVehicleLoading, isFocused, navigation]);
 
   if (!bootstrapReady) {
     return (
