@@ -216,9 +216,8 @@ export default function DeliveryReceivablesPage() {
             add={false}
             onRowPress={openInvoice}
             requestParams={requestParams}
-            searchProps={{
-              placeholder: 'Buscar recebível',
-            }}
+            showSearch
+            searchPlaceholder="Buscar recebível"
             showRowActions={false}
             sort={{
               direction: 'desc',

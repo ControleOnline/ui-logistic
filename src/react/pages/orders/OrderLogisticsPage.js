@@ -43,10 +43,12 @@ import DefaultAddress from '@controleonline/ui-default/src/react/components/addr
 import {normalizeEntityId, toEntityIri} from '@controleonline/ui-common/src/react/utils/commercialDocumentOrders';
 import {getOrderChannelLabel, getOrderChannelLogo} from '@assets/ppc/channels';
 import OrderStackedTopBar from '@controleonline/ui-orders/src/react/pages/orders/sales/components/OrderStackedTopBar';
+import {buildOrderDetailsRouteParams} from '@controleonline/ui-orders/src/react/utils/orderRoute';
 import useOrderDetailsVisuals from '@controleonline/ui-orders/src/react/pages/orders/sales/useOrderDetailsVisuals';
 import {
   DELIVERY_STATUS_AWAITING_ACCEPTANCE,
   includesDeliveryStatusKey,
+  resolveDeliveryAcceptanceQueueHead,
   resolveDeliveryRunPlan,
   resolveDeliveryStatusLabel,
   resolveDeliveryStatusTone,
@@ -2234,14 +2236,15 @@ const OrderLogisticsPage = ({navigation, route}) => {
         }
 
         if (isDeliveryRunMode && path.endsWith('/delivered')) {
-          await refreshDeliveryQueue();
+          const queueResponse = await refreshDeliveryQueue();
           showSuccess?.(successMessage);
-          return;
+          return queueResponse;
         }
 
         await refreshAll();
-        await refreshDeliveryQueue();
+        const queueResponse = await refreshDeliveryQueue();
         showSuccess?.(successMessage);
+        return queueResponse;
       } catch {
       }
     },
@@ -2256,9 +2259,27 @@ const OrderLogisticsPage = ({navigation, route}) => {
     ],
   );
 
-  const handleAcceptDelivery = useCallback(() => {
-    void runDeliveryAction(`/orders/${orderId}/confirm`, 'Entrega aceita com sucesso.');
-  }, [orderId, runDeliveryAction]);
+  const handleAcceptDelivery = useCallback(async () => {
+    const queueResponse = await runDeliveryAction(
+      `/orders/${orderId}/confirm`,
+      'Entrega aceita com sucesso.',
+    );
+    if (queueResponse == null) {
+      return;
+    }
+    const queueItems = extractCollectionItems(queueResponse);
+    const nextOrder = resolveDeliveryAcceptanceQueueHead(queueItems);
+
+    if (nextOrder?.id) {
+      navigation.replace('OrderDetails', buildOrderDetailsRouteParams(nextOrder, {store: 'orders'}));
+      return;
+    }
+
+    navigation.replace('DeliveryRunPage', {
+      store: 'orders',
+      showBottomToolBar: false,
+    });
+  }, [navigation, orderId, runDeliveryAction]);
 
   const handleCancelDelivery = useCallback(() => {
     void runDeliveryAction(`/orders/${orderId}/cancel`, 'Entrega cancelada com sucesso.');

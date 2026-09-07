@@ -33,7 +33,10 @@ export default function FiscalDocumentsPage({documentType}) {
   const [configVisible, setConfigVisible] = useState(false);
   const pendingStore = useStore('fiscal_orders_pending');
   const peopleStore = useStore('people');
-  const fiscalCompany = peopleStore?.getters?.currentCompany || null;
+  const currentCompany = peopleStore?.getters?.currentCompany || null;
+  const defaultCompany = peopleStore?.getters?.defaultCompany || null;
+  const fiscalCompany = currentCompany?.id ? currentCompany : defaultCompany;
+  const peopleActions = peopleStore?.actions || {};
   const fiscalCompanyId = resolveFiscalCompanyId(fiscalCompany);
   const currentCompanyIri = fiscalCompanyId ? `/people/${fiscalCompanyId}` : null;
   const current = TABS.find(item => item.key === tab) || TABS[0];
@@ -53,6 +56,11 @@ export default function FiscalDocumentsPage({documentType}) {
     : current.key === 'integrations'
       ? CteIntegrationActions
       : undefined;
+
+  useEffect(() => {
+    if (currentCompany?.id || typeof peopleActions.myCompanies !== 'function') return;
+    peopleActions.myCompanies().catch(() => {});
+  }, [currentCompany?.id, peopleActions.myCompanies]);
 
   if (!config) return null;
 

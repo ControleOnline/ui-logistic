@@ -1421,7 +1421,7 @@ test('opens the delivery home menu and routes without looping backend calls', as
   await openDeliveryHome();
   await page.getByText(/Delivery receivables|Recebiveis/).first().click();
   await expect(page).toHaveURL(/delivery\/receivables/);
-  await expect(page.getByPlaceholder('Buscar recebivel')).toBeVisible();
+  await expect(page.getByText('Recebíveis do motoboy')).toBeVisible();
   await page.waitForTimeout(1500);
   expect(requestCounter.counts.get('invoices') || 0).toBeLessThanOrEqual(1);
 

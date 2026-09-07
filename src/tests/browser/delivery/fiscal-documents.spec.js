@@ -35,7 +35,13 @@ test.describe('fiscal documents real API smoke', () => {
 
       await page.getByTestId(`${document.key}-integrations-tab`).click();
       await expect(page.getByText('Integrações', {exact: true}).first()).toBeVisible();
-      await expect.poll(() => apiRequests.some(url => url.includes(`queueName=${document.queue}`))).toBeTruthy();
+      await expect.poll(() => apiRequests.some(url => {
+        try {
+          return new URL(url).searchParams.get('queueName') === document.queue;
+        } catch {
+          return false;
+        }
+      })).toBeTruthy();
 
       await page.getByTestId(`${document.key}-fiscal-config-button`).click();
       await expect(page.getByTestId(`${document.key}-fiscal-config-close`)).toBeVisible();

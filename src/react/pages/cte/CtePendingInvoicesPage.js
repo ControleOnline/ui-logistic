@@ -1,4 +1,4 @@
-import React, {useMemo, useState} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {Modal, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
@@ -31,11 +31,19 @@ export default function CtePendingInvoicesPage() {
   const current = TABS.find(item => item.key === tab) || TABS[0];
   const invoiceStore = useStore('invoice_taxes');
   const peopleStore = useStore('people');
-  const fiscalCompany = peopleStore?.getters?.currentCompany || null;
+  const currentCompany = peopleStore?.getters?.currentCompany || null;
+  const defaultCompany = peopleStore?.getters?.defaultCompany || null;
+  const fiscalCompany = currentCompany?.id ? currentCompany : defaultCompany;
+  const peopleActions = peopleStore?.actions || {};
   const fiscalCompanyId = resolveFiscalCompanyId(fiscalCompany);
   const currentCompanyIri = fiscalCompanyId ? `/people/${fiscalCompanyId}` : null;
   const selectedIds = toInvoiceIds(invoiceStore?.getters?.selected);
   const showEmit = tab === 'pending' && selectedIds.length > 0;
+
+  useEffect(() => {
+    if (currentCompany?.id || typeof peopleActions.myCompanies !== 'function') return;
+    peopleActions.myCompanies().catch(() => {});
+  }, [currentCompany?.id, peopleActions.myCompanies]);
 
   const requestParams = useMemo(() => {
     if (!currentCompanyIri) return {};
@@ -71,7 +79,11 @@ export default function CtePendingInvoicesPage() {
         </View>
         <View style={styles.tabs}>
           {TABS.map(item => (
-            <Pressable key={item.key} onPress={() => setTab(item.key)} style={[styles.tab, tab === item.key && styles.tabActive]}>
+            <Pressable
+              key={item.key}
+              testID={`cte-${item.key}-tab`}
+              onPress={() => setTab(item.key)}
+              style={[styles.tab, tab === item.key && styles.tabActive]}>
               <Text style={[styles.tabText, tab === item.key && styles.tabTextActive]}>{item.label}</Text>
             </Pressable>
           ))}
