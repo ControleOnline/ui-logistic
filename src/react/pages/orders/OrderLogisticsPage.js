@@ -21,7 +21,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import {useFocusEffect} from '@react-navigation/native';
+import * as NavigationNative from '@react-navigation/native';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import {MaterialCommunityIcons} from '@expo/vector-icons';
 import {useStore} from '@store';
@@ -60,6 +60,10 @@ import OrderLogisticsQuotesList from './OrderLogisticsQuotesList';
 import useDeviceCoordinates from '../../hooks/useDeviceCoordinates';
 import resolveOrderLogisticsSnapshot from './orderLogisticsPresentation';
 import createStyles from './orderLogisticsPage.styles';
+
+// Some web exports omit the named hook from the navigation shim. Keep the
+// focus refresh behavior when available and use the equivalent effect on web.
+const useNavigationFocusEffect = NavigationNative.useFocusEffect || useEffect;
 
 export const buildOrderLogisticsSnapshotSource = (order, payload) => ({
   ...(payload || {}),
@@ -1281,7 +1285,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
     }
   }, [isDeliveryRunMode, loadPageData, orderId, refreshDeliveryQueue]);
 
-  useFocusEffect(
+  useNavigationFocusEffect(
     useCallback(() => {
       if (!orderId && !isDeliveryRunMode) {
         return undefined;
