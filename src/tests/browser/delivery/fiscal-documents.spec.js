@@ -26,8 +26,13 @@ test.describe('fiscal documents real API smoke', () => {
       const apiRequests = [];
       page.on('request', request => {
         try {
-          if (new URL(request.url()).pathname.replace(/\/+$/, '').endsWith('/integrations')) {
-            apiRequests.push(request.url());
+          const url = new URL(request.url());
+          if (
+            url.pathname.replace(/\/+$/, '').endsWith('/integrations') ||
+            url.searchParams.has('queueName') ||
+            url.searchParams.has('queueName[]')
+          ) {
+            apiRequests.push(url);
           }
         } catch {
           // Ignore non-URL browser requests.
@@ -40,13 +45,15 @@ test.describe('fiscal documents real API smoke', () => {
 
       await page.getByTestId(`${document.key}-integrations-tab`).click();
       await expect(page.getByText('Integrações', {exact: true}).first()).toBeVisible();
-      await expect.poll(() => apiRequests.some(url => {
-        try {
-          return new URL(url).searchParams.get('queueName') === document.queue;
-        } catch {
-          return false;
-        }
-      }), {timeout: 30000, intervals: [250]}).toBeTruthy();
+      await expect.poll(
+        () => apiRequests.some(url =>
+          [
+            ...url.searchParams.getAll('queueName'),
+            ...url.searchParams.getAll('queueName[]'),
+          ].includes(document.queue),
+        ),
+        {timeout: 30000, intervals: [250]},
+      ).toBeTruthy();
 
       await page.getByTestId(`${document.key}-fiscal-config-button`).click();
       await expect(page.getByTestId(`${document.key}-fiscal-config-close`)).toBeVisible();

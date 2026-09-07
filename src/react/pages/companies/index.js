@@ -349,7 +349,6 @@ export default function DeliveryCompaniesPage() {
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Lista de empresas</Text>
-            <Text style={styles.sectionCount}>{totalItems} empresas</Text>
             <Text style={styles.sectionText}>
               A lista mostra apenas empresas com vinculo courier ativo do motoboy logado. O estado e o historico sao resolvidos pelo backend com security filter.
             </Text>

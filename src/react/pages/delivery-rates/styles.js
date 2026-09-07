@@ -68,11 +68,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '900',
   },
-  sectionCount: {
-    color: '#0F766E',
-    fontSize: 12,
-    fontWeight: '800',
-  },
   sectionText: {
     color: '#475569',
     fontSize: 13,
