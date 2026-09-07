@@ -114,7 +114,7 @@ test.describe('own delivery charge-on-delivery smoke', () => {
 
     await page.goto('/delivery/orders');
     await expect(page.getByText('Cliente Teste').first()).toBeVisible();
-    await expect(page.getByText('Motoboy Teste').first()).toBeVisible();
+    await expect(page.getByText('VD-6101').first()).toBeVisible();
     steps.push({
       id: 'lista-delivery',
       print: await captureStep(page, '04-delivery-list'),

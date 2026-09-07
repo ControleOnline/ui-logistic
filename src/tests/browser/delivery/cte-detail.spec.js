@@ -52,6 +52,7 @@ const jsonHeaders = () => ({
   ...CORS_HEADERS,
   'content-type': 'application/ld+json; charset=utf-8',
 });
+const textHeaders = () => ({...CORS_HEADERS, 'content-type': 'text/css; charset=utf-8'});
 
 const collection = (member = []) => ({
   member,
@@ -110,6 +111,24 @@ const mockCteApi = async page => {
     if (method === 'OPTIONS') {
       return route.fulfill({status: 204, headers: CORS_HEADERS, body: ''});
     }
+    if (pathname === 'themes-colors.css') {
+      return route.fulfill({status: 200, headers: textHeaders(), body: ':root { --primary: #0ea5e9; }'});
+    }
+    if (pathname === 'runtime/ip') {
+      return route.fulfill({status: 200, headers: jsonHeaders(), body: JSON.stringify({ip: '127.0.0.1', member: [{ip: '127.0.0.1'}]})});
+    }
+    if (pathname === 'people/companies/my') {
+      return route.fulfill({status: 200, headers: jsonHeaders(), body: JSON.stringify(collection([{id: 3, name: 'Emitente Smoke', alias: 'Emitente Smoke'}]))});
+    }
+    if (pathname === 'devices' && method === 'GET') {
+      return route.fulfill({status: 200, headers: jsonHeaders(), body: JSON.stringify(collection([{id: 1, device: 'web', type: 'WEB'}]))});
+    }
+    if (pathname === 'people/company/default') {
+      return route.fulfill({status: 200, headers: jsonHeaders(), body: JSON.stringify({id: 3, name: 'Emitente Smoke', alias: 'Emitente Smoke', theme: {colors: {primary: '#0ea5e9'}}})});
+    }
+    if (pathname === 'people/7') {
+      return route.fulfill({status: 200, headers: jsonHeaders(), body: JSON.stringify({id: 7, name: 'Motoboy Teste', alias: 'Motoboy Teste'})});
+    }
 
     if (pathname === 'invoice_taxes/7/download-nf' || pathname === 'invoice_taxes/11/download-nf') {
       return route.fulfill({
@@ -159,6 +178,14 @@ const mockCteApi = async page => {
         status: 200,
         headers: jsonHeaders(),
         body: JSON.stringify(collection([])),
+      });
+    }
+
+    if (pathname === 'invoice_tasks_processing') {
+      return route.fulfill({
+        status: 200,
+        headers: jsonHeaders(),
+        body: JSON.stringify(collection([CTE])),
       });
     }
 
@@ -227,7 +254,7 @@ test.describe('cte detail + PDF browser smoke (#34)', () => {
 
     await page.getByTestId('cte-row-pdf').first().click();
     await expect(page.getByText(/CT-e #57662166/i).first()).toBeVisible({timeout: 10000});
-    await expect(page.getByText(/Montando DACTE|Baixar/i).first()).toBeVisible({timeout: 10000});
+    await expect(page.locator('iframe[title*="CT-e #57662166"]').first()).toBeVisible({timeout: 10000});
     await writeEvidence(page, outputDir, '03-cte-pdf-modal', 'Modal PDF/DACTE do CT-e');
 
     await page.getByText(/^Fechar$/i).first().click();
@@ -237,11 +264,11 @@ test.describe('cte detail + PDF browser smoke (#34)', () => {
     await page.getByTestId('cte-row-detail').first().click();
     await expect(page.getByText(/Detalhe do CT-e/i).first()).toBeVisible({timeout: 15000});
     await expect(page.getByText(/somente leitura/i).first()).toBeVisible();
-    await expect(page.getByText(/Emitente Smoke/i).first()).toBeVisible();
-    await expect(page.getByText(/Destinatario Smoke/i).first()).toBeVisible();
+    await expect(page.getByText(/Emitente Smoke/i).last()).toBeVisible();
+    await expect(page.getByText(/Destinatario Smoke/i).last()).toBeVisible();
     await expect(page.getByText(/NFs deste CT-e/i).first()).toBeVisible();
     await expect(page.getByText(/Enviar para fila/i)).toHaveCount(0);
-    await expect(page.getByText(/organizar rota|organização de rota/i)).toHaveCount(0);
+    await expect(page.getByText(/somente leitura.*organização de rotas estão desativadas/i)).toBeVisible();
     await expect(page.getByTestId('cte-detail-pdf')).toBeVisible();
     await writeEvidence(page, outputDir, '05-cte-detail-readonly', 'Detalhe read-only sem emitir/remover');
 

@@ -13,6 +13,7 @@ const jsonHeaders = () => ({
   ...CORS_HEADERS,
   'content-type': 'application/ld+json; charset=utf-8',
 });
+const textHeaders = () => ({...CORS_HEADERS, 'content-type': 'text/css; charset=utf-8'});
 const collection = member => ({
   member,
   'hydra:member': member,
@@ -39,6 +40,24 @@ test.describe('delivery rates manager inbox smoke', () => {
       const pathname = new URL(route.request().url()).pathname.replace(/^\/+/, '');
       if (method === 'OPTIONS') {
         return route.fulfill({status: 204, headers: CORS_HEADERS, body: ''});
+      }
+      if (pathname === 'themes-colors.css') {
+        return route.fulfill({status: 200, headers: textHeaders(), body: ':root { --primary: #0ea5e9; }'});
+      }
+      if (pathname === 'runtime/ip') {
+        return route.fulfill({status: 200, headers: jsonHeaders(), body: JSON.stringify({ip: '127.0.0.1', member: [{ip: '127.0.0.1'}]})});
+      }
+      if (pathname === 'people/companies/my') {
+        return route.fulfill({status: 200, headers: jsonHeaders(), body: JSON.stringify(collection([{id: 3, name: 'Empresa Teste', alias: 'TESTE'}]))});
+      }
+      if (pathname === 'devices' && method === 'GET') {
+        return route.fulfill({status: 200, headers: jsonHeaders(), body: JSON.stringify(collection([{id: 1, device: 'web', type: 'WEB'}]))});
+      }
+      if (pathname === 'people/company/default') {
+        return route.fulfill({status: 200, headers: jsonHeaders(), body: JSON.stringify({id: 3, name: 'Empresa Teste', alias: 'TESTE', theme: {colors: {primary: '#0ea5e9'}}})});
+      }
+      if (pathname === 'people/7') {
+        return route.fulfill({status: 200, headers: jsonHeaders(), body: JSON.stringify({id: 7, name: 'Motoboy Teste', alias: 'Motoboy Teste'})});
       }
       if (pathname === 'delivery_tax_groups' || pathname.startsWith('delivery_tax_groups')) {
         return route.fulfill({

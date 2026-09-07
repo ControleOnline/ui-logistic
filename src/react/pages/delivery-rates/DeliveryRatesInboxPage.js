@@ -135,12 +135,9 @@ export default function DeliveryRatesInboxPage() {
                 })
               }
               requestParams={requestParams}
-              searchProps={{
-                compact: true,
-                placeholder: 'Buscar tabela, código ou motoboy',
-                searchKey: 'search',
-                storeName: 'delivery_tax_groups',
-              }}
+              searchKey="search"
+              searchPlaceholder="Buscar tabela, código ou motoboy"
+              showSearch
               showColumnFiltersButton={false}
               showRowActions={false}
               storeName="delivery_tax_groups"

@@ -22,6 +22,11 @@ const jsonHeaders = () => ({
   'content-type': 'application/ld+json; charset=utf-8',
 });
 
+const textHeaders = () => ({
+  ...CORS_HEADERS,
+  'content-type': 'text/css; charset=utf-8',
+});
+
 const collection = (member = []) => ({
   member,
   'hydra:member': member,
@@ -89,6 +94,22 @@ async function installApiMocks(page, { userId = 7, companyId = 3 } = {}) {
       return route.fulfill({ status: 204, headers: CORS_HEADERS, body: '' });
     }
 
+    if (url.includes('/themes-colors.css')) {
+      return route.fulfill({
+        status: 200,
+        headers: textHeaders(),
+        body: ':root { --primary: #0ea5e9; --secondary: #f97316; }',
+      });
+    }
+
+    if (url.includes('/people/company/default')) {
+      return route.fulfill({
+        status: 200,
+        headers: jsonHeaders(),
+        body: JSON.stringify(createCompany(companyId)),
+      });
+    }
+
     if (url.includes('/configs') || url.includes('/config')) {
       return route.fulfill({
         status: 200,
@@ -133,6 +154,14 @@ async function installApiMocks(page, { userId = 7, companyId = 3 } = {}) {
       });
     }
 
+    if (url.match(/\/people\/7(?:\?.*)?$/) && method === 'GET') {
+      return route.fulfill({
+        status: 200,
+        headers: jsonHeaders(),
+        body: JSON.stringify({ id: userId, name: `Motoboy ${userId}`, alias: `Motoboy ${userId}` }),
+      });
+    }
+
     if (url.includes('/people/') && method === 'GET') {
       return route.fulfill({
         status: 200,
@@ -141,7 +170,7 @@ async function installApiMocks(page, { userId = 7, companyId = 3 } = {}) {
       });
     }
 
-    if (url.startsWith(API_ORIGIN) || url.includes('localhost') || url.includes('127.0.0.1')) {
+    if (url.startsWith(API_ORIGIN)) {
       return route.fulfill({
         status: 200,
         headers: jsonHeaders(),
@@ -159,6 +188,9 @@ async function seedSession(page, session) {
       try {
         window.localStorage.setItem('session', JSON.stringify(sessionPayload));
         window.localStorage.setItem('api_key', sessionPayload.api_key || '');
+        window.localStorage.setItem('config', JSON.stringify({language: 'pt-br'}));
+        window.localStorage.setItem('app-type', 'DELIVERY');
+        window.localStorage.setItem('device', JSON.stringify({id: 'web', device: 'web', type: 'WEB', appVersion: version, buildNumber: version}));
         window.localStorage.setItem('app_version', version);
       } catch (_e) {
         // ignore

@@ -20,6 +20,10 @@ const jsonHeaders = () => ({
   ...CORS_HEADERS,
   'content-type': 'application/ld+json; charset=utf-8',
 });
+const textHeaders = () => ({
+  ...CORS_HEADERS,
+  'content-type': 'text/css; charset=utf-8',
+});
 
 const collection = (member = []) => ({
   member,
@@ -104,6 +108,34 @@ const createOwnDeliveryChargeMock = async (page, initialState = {}) => {
 
     if (method === 'OPTIONS') {
       return route.fulfill({status: 204, headers: CORS_HEADERS, body: ''});
+    }
+
+    if (pathname === 'themes-colors.css') {
+      return route.fulfill({
+        status: 200,
+        headers: textHeaders(),
+        body: ':root { --primary: #0ea5e9; --secondary: #f97316; }',
+      });
+    }
+
+    if (pathname === 'runtime/ip') {
+      return fulfillJson(route, {ip: '127.0.0.1', member: [{ip: '127.0.0.1'}]});
+    }
+
+    if (pathname === 'people/companies/my') {
+      return fulfillJson(route, collection([company]));
+    }
+
+    if (pathname === 'people/company/default') {
+      return fulfillJson(route, company);
+    }
+
+    if (pathname === 'devices' && method === 'GET') {
+      return fulfillJson(route, collection([{id: 1, device: state.deviceId, type: 'WEB'}]));
+    }
+
+    if (pathname === 'configs/discovery-configs' && method === 'POST') {
+      return fulfillJson(route, {configs: {}});
     }
 
     let postBody = {};
