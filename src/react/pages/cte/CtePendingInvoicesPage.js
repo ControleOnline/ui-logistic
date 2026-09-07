@@ -31,11 +31,17 @@ export default function CtePendingInvoicesPage() {
   const [fiscalConfigVisible, setFiscalConfigVisible] = useState(false);
   const current = TABS.find(item => item.key === tab) || TABS[0];
   const invoiceStore = useStore('invoice_taxes');
+  const integrationStore = useStore('integration');
   const peopleStore = useStore('people');
   const currentCompany = peopleStore?.getters?.currentCompany || null;
   const defaultCompany = peopleStore?.getters?.defaultCompany || null;
   const fiscalCompany = currentCompany?.id ? currentCompany : defaultCompany?.id ? defaultCompany : loadedCompany;
   const peopleActions = peopleStore?.actions || {};
+  const integrationActions = integrationStore?.actions || {};
+  const integrationItems = Array.isArray(integrationStore?.getters?.items)
+    ? integrationStore.getters.items
+    : [];
+  const integrationTotalItems = integrationStore?.getters?.totalItems;
   const fiscalCompanyId = resolveFiscalCompanyId(fiscalCompany);
   const currentCompanyIri = fiscalCompanyId ? `/people/${fiscalCompanyId}` : null;
   const selectedIds = toInvoiceIds(invoiceStore?.getters?.selected);
@@ -48,6 +54,16 @@ export default function CtePendingInvoicesPage() {
       if (firstCompany) setLoadedCompany(firstCompany);
     }).catch(() => {});
   }, [currentCompany?.id, peopleActions.myCompanies]);
+
+  useEffect(() => {
+    if (
+      current.storeName !== 'integration' ||
+      !currentCompanyIri ||
+      typeof integrationActions.getItems !== 'function'
+    ) return;
+
+    integrationActions.getItems(requestParams).catch(() => {});
+  }, [current.storeName, currentCompanyIri, integrationActions.getItems, requestParams]);
 
   const requestParams = useMemo(() => {
     if (!currentCompanyIri) return {};
@@ -99,8 +115,10 @@ export default function CtePendingInvoicesPage() {
       {currentCompanyIri ? (
         <DefaultTable
           key={current.storeName}
+          data={current.storeName === 'integration' ? integrationItems : undefined}
           storeName={current.storeName}
           requestParams={requestParams}
+          totalItems={current.storeName === 'integration' ? integrationTotalItems : null}
           rowActionsComponent={rowActionsComponent}
           showRowActions={Boolean(rowActionsComponent)}
           rowActionsWidth={rowActionsComponent === CteCteActions ? 168 : rowActionsComponent ? 140 : undefined}

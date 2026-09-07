@@ -33,11 +33,17 @@ export default function FiscalDocumentsPage({documentType}) {
   const [tab, setTab] = useState('pending');
   const [configVisible, setConfigVisible] = useState(false);
   const pendingStore = useStore('fiscal_orders_pending');
+  const integrationStore = useStore('integration');
   const peopleStore = useStore('people');
   const currentCompany = peopleStore?.getters?.currentCompany || null;
   const defaultCompany = peopleStore?.getters?.defaultCompany || null;
   const fiscalCompany = currentCompany?.id ? currentCompany : defaultCompany?.id ? defaultCompany : loadedCompany;
   const peopleActions = peopleStore?.actions || {};
+  const integrationActions = integrationStore?.actions || {};
+  const integrationItems = Array.isArray(integrationStore?.getters?.items)
+    ? integrationStore.getters.items
+    : [];
+  const integrationTotalItems = integrationStore?.getters?.totalItems;
   const fiscalCompanyId = resolveFiscalCompanyId(fiscalCompany);
   const currentCompanyIri = fiscalCompanyId ? `/people/${fiscalCompanyId}` : null;
   const current = TABS.find(item => item.key === tab) || TABS[0];
@@ -65,6 +71,16 @@ export default function FiscalDocumentsPage({documentType}) {
       if (firstCompany) setLoadedCompany(firstCompany);
     }).catch(() => {});
   }, [currentCompany?.id, peopleActions.myCompanies]);
+
+  useEffect(() => {
+    if (
+      current.key !== 'integrations' ||
+      !currentCompanyIri ||
+      typeof integrationActions.getItems !== 'function'
+    ) return;
+
+    integrationActions.getItems(requestParams).catch(() => {});
+  }, [current.key, currentCompanyIri, integrationActions.getItems, requestParams]);
 
   if (!config) return null;
 
@@ -102,8 +118,10 @@ export default function FiscalDocumentsPage({documentType}) {
       {currentCompanyIri ? (
       <DefaultTable
           key={`${config.key}-${current.key}`}
+          data={current.key === 'integrations' ? integrationItems : undefined}
           storeName={current.storeName}
           requestParams={requestParams}
+          totalItems={current.key === 'integrations' ? integrationTotalItems : null}
           rowActionsComponent={rowActionsComponent}
           showRowActions={Boolean(rowActionsComponent)}
           rowActionsWidth={current.key === 'integrations' ? 140 : 140}
