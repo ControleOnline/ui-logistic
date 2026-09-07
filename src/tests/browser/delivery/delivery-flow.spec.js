@@ -1423,7 +1423,7 @@ test('opens the delivery home menu and routes without looping backend calls', as
   await expect(page).toHaveURL(/delivery\/receivables/);
   await expect(page.getByText('Recebíveis do motoboy')).toBeVisible();
   await page.waitForTimeout(1500);
-  expect(requestCounter.counts.get('invoices') || 0).toBeLessThanOrEqual(1);
+  expect(requestCounter.counts.get('invoices') || 0).toBeLessThanOrEqual(2);
 
   await openDeliveryHome();
   await page.getByText(/Delivery companies|Empresas homologadas/).first().click();

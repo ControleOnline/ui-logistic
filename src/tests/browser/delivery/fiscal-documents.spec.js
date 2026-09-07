@@ -41,7 +41,7 @@ test.describe('fiscal documents real API smoke', () => {
         } catch {
           return false;
         }
-      })).toBeTruthy();
+      }), {timeout: 30000, intervals: [250]}).toBeTruthy();
 
       await page.getByTestId(`${document.key}-fiscal-config-button`).click();
       await expect(page.getByTestId(`${document.key}-fiscal-config-close`)).toBeVisible();
