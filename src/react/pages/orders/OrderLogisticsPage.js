@@ -2309,7 +2309,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
       <OrderStackedTopBar
         navigation={navigation}
         order={deliveryRunDisplayOrder}
-        isKds
+        isKds={true}
         showActions={false}
       />
 
