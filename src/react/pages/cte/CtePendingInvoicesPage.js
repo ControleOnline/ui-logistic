@@ -25,6 +25,16 @@ const toInvoiceIds = value =>
     .map(item => String(item).replace(/\D+/g, ''))
     .filter(Boolean);
 
+const resolveStoredFiscalCompany = () => {
+  try {
+    const session = globalThis.localStorage?.getItem('session');
+    const myCompany = JSON.parse(session || '{}')?.mycompany;
+    return myCompany ? {id: myCompany} : null;
+  } catch {
+    return null;
+  }
+};
+
 export default function CtePendingInvoicesPage() {
   const navigation = useNavigation();
   const [loadedCompany, setLoadedCompany] = useState(null);
@@ -35,11 +45,12 @@ export default function CtePendingInvoicesPage() {
   const peopleStore = useStore('people');
   const currentCompany = peopleStore?.getters?.currentCompany || null;
   const defaultCompany = peopleStore?.getters?.defaultCompany || null;
+  const storedCompany = resolveStoredFiscalCompany();
   const fiscalCompany = resolveFiscalCompanyId(currentCompany)
     ? currentCompany
     : resolveFiscalCompanyId(defaultCompany)
       ? defaultCompany
-      : loadedCompany;
+      : loadedCompany || storedCompany;
   const peopleActions = peopleStore?.actions || {};
   const integrationActions = getAllStores().integration?.actions || {};
   const fiscalCompanyId = resolveFiscalCompanyId(fiscalCompany);
@@ -48,14 +59,14 @@ export default function CtePendingInvoicesPage() {
   const showEmit = tab === 'pending' && selectedIds.length > 0;
 
   useEffect(() => {
-    if (currentCompany?.id || typeof peopleActions.myCompanies !== 'function') return;
+    if (resolveFiscalCompanyId(currentCompany) || typeof peopleActions.myCompanies !== 'function') return;
     peopleActions.myCompanies().then(companies => {
       const firstCompany = Array.isArray(companies)
         ? companies.find(company => resolveFiscalCompanyId(company))
         : null;
       if (firstCompany) setLoadedCompany(firstCompany);
     }).catch(() => {});
-  }, [currentCompany?.id, peopleActions.myCompanies]);
+  }, [currentCompany, peopleActions.myCompanies]);
 
   const requestParams = useMemo(() => {
     if (!currentCompanyIri) return {};
