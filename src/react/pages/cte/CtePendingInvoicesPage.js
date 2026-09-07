@@ -26,6 +26,7 @@ const toInvoiceIds = value =>
 
 export default function CtePendingInvoicesPage() {
   const navigation = useNavigation();
+  const [loadedCompany, setLoadedCompany] = useState(null);
   const [tab, setTab] = useState('pending');
   const [fiscalConfigVisible, setFiscalConfigVisible] = useState(false);
   const current = TABS.find(item => item.key === tab) || TABS[0];
@@ -33,7 +34,7 @@ export default function CtePendingInvoicesPage() {
   const peopleStore = useStore('people');
   const currentCompany = peopleStore?.getters?.currentCompany || null;
   const defaultCompany = peopleStore?.getters?.defaultCompany || null;
-  const fiscalCompany = currentCompany?.id ? currentCompany : defaultCompany;
+  const fiscalCompany = currentCompany?.id ? currentCompany : defaultCompany?.id ? defaultCompany : loadedCompany;
   const peopleActions = peopleStore?.actions || {};
   const fiscalCompanyId = resolveFiscalCompanyId(fiscalCompany);
   const currentCompanyIri = fiscalCompanyId ? `/people/${fiscalCompanyId}` : null;
@@ -42,7 +43,10 @@ export default function CtePendingInvoicesPage() {
 
   useEffect(() => {
     if (currentCompany?.id || typeof peopleActions.myCompanies !== 'function') return;
-    peopleActions.myCompanies().catch(() => {});
+    peopleActions.myCompanies().then(companies => {
+      const firstCompany = Array.isArray(companies) ? companies.find(company => company?.id) : null;
+      if (firstCompany) setLoadedCompany(firstCompany);
+    }).catch(() => {});
   }, [currentCompany?.id, peopleActions.myCompanies]);
 
   const requestParams = useMemo(() => {
