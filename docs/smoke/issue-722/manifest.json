@@ -1,0 +1,13 @@
+{
+  "wikiPage": "https://github.com/ControleOnline/ui-logistic/wiki/NFC-e-Detalhe-e-PDF",
+  "fluxo": "outros",
+  "issue": "ControleOnline/app-community#722",
+  "result": "pending-runtime",
+  "steps": [
+    {"id": "nfce-list", "path": "/nfce", "expected": "NFC-e emitidas com ações Detalhe e PDF"},
+    {"id": "nfce-detail", "path": "/nfce/detail?id=<invoice-tax-id>", "expected": "ID, série, número, status e protocolo"},
+    {"id": "nfce-pdf", "path": "/nfce", "expected": "PDF NFC-E-SERIE-NUMERO.pdf e erro acionável"},
+    {"id": "nfce-invalid", "path": "/nfce", "expected": "ações indisponíveis sem documento válido"}
+  ],
+  "note": "Contrato publicado; runtime autenticado e prints por etapa devem ser gerados pelo smoke canônico do app-community."
+}
