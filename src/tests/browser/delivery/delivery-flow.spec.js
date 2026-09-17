@@ -1,3 +1,4 @@
+// fluxo: motoboy-cadastro | etapa: courier-delivery-flow | wiki: https://github.com/ControleOnline/app-community/wiki/Venda-Producao
 /*
  * Browser smoke for DELIVERY flows.
  * - Uses a fake session and mocked API responses so the suite stays open-source safe.
