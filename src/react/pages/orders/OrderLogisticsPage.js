@@ -1138,7 +1138,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
     : [];
   const peopleGetters = peopleStore?.getters || {};
   const currentCompany = peopleGetters.currentCompany || null;
-  const defaultCompany = peopleGetters.defaultCompany || null;
+  const mainCompany = peopleGetters.mainCompany || null;
   const currentCompanyId = normalizeText(currentCompany?.id);
   const orderLoadError = resolveSystemErrorMessage(ordersStore?.getters?.error);
   const logisticsPayload = orderLogisticsStore?.getters?.item || null;
@@ -1373,8 +1373,8 @@ const OrderLogisticsPage = ({navigation, route}) => {
     [localOrderAddress],
   );
   const orderCompanyIri = useMemo(
-    () => toEntityIri(logistics.order?.provider || currentCompany || defaultCompany, 'people'),
-    [currentCompany, defaultCompany, logistics.order?.provider],
+    () => toEntityIri(logistics.order?.provider || currentCompany || mainCompany, 'people'),
+    [currentCompany, mainCompany, logistics.order?.provider],
   );
   const clientSummaryLines = useMemo(() => {
     const summarySource =
@@ -1397,7 +1397,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
         throw new Error('Nao foi possivel identificar o pedido para atualizar.');
       }
 
-      const providerIri = toEntityIri(baseOrder?.provider || currentCompany || defaultCompany, 'people');
+      const providerIri = toEntityIri(baseOrder?.provider || currentCompany || mainCompany, 'people');
       const statusIri = toEntityIri(baseOrder?.status, 'statuses');
       const orderType = normalizeText(baseOrder?.orderType || order?.orderType);
 
@@ -1410,7 +1410,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
         ...changes,
       };
     },
-    [currentCompany, defaultCompany, logistics.order, order],
+    [currentCompany, mainCompany, logistics.order, order],
   );
 
   const updateCurrentOrder = useCallback(
@@ -2132,7 +2132,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
   );
   const mapConfig = useMemo(
     () => ({
-      ...parseConfigObject(currentCompany?.configs || defaultCompany?.configs || {}),
+      ...parseConfigObject(currentCompany?.configs || mainCompany?.configs || {}),
       addresses: {
         origin: showDeliveryRunProgress ? courierMapMarker || deliveryRunStopMarkers[0] || pickupMapMarker : pickupMapMarker,
         destination: showDeliveryRunProgress
@@ -2144,7 +2144,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
     [
       currentCompany?.configs,
       courierMapMarker,
-      defaultCompany?.configs,
+      mainCompany?.configs,
       deliveryMapMarkers,
       deliveryRunStopMarkers,
       dropoffMapMarker,

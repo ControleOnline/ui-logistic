@@ -11,10 +11,12 @@ import DefaultExternalFilters from '@controleonline/ui-default/src/react/compone
 import DefaultTable from '@controleonline/ui-default/src/react/components/table/DefaultTable';
 import CteIntegrationActions from './CteIntegrationActions';
 import CteCteActions from './CteCteActions';
+import MdfeActions from './MdfeActions';
 
 const TABS = [
   {key: 'pending', label: 'CTEs à emitir', storeName: 'invoice_taxes'},
   {key: 'cte', label: 'CTE', storeName: 'invoice_tasks_processing'},
+  {key: 'mdfe', label: 'MDF-e', storeName: 'invoice_tasks_processing'},
   {key: 'integrations', label: 'Integrações', storeName: 'integration'},
 ];
 
@@ -34,21 +36,26 @@ export default function CtePendingInvoicesPage() {
   const fiscalCompany = peopleStore?.getters?.currentCompany || null;
   const fiscalCompanyId = resolveFiscalCompanyId(fiscalCompany);
   const currentCompanyIri = fiscalCompanyId ? `/people/${fiscalCompanyId}` : null;
+  const cteStore = useStore('invoice_tasks_processing');
   const selectedIds = toInvoiceIds(invoiceStore?.getters?.selected);
+  const selectedCteIds = toInvoiceIds(cteStore?.getters?.selected);
   const showEmit = tab === 'pending' && selectedIds.length > 0;
+  const showMdfeEmit = tab === 'cte' && selectedCteIds.length > 0;
 
   const requestParams = useMemo(() => {
     if (!currentCompanyIri) return {};
+    if (current.key === 'mdfe') return {invoiceModel: 58, provider: currentCompanyIri};
     if (current.storeName === 'invoice_tasks_processing') return {invoiceModel: 57, provider: currentCompanyIri};
     if (current.storeName === 'integration') return {queueName: 'CteEmission', provider: currentCompanyIri};
     return {provider: currentCompanyIri};
-  }, [current.storeName, currentCompanyIri]);
+  }, [current.key, current.storeName, currentCompanyIri]);
 
   const rowActionsComponent = useMemo(() => {
     if (current.storeName === 'integration') return CteIntegrationActions;
+    if (current.key === 'mdfe') return MdfeActions;
     if (current.storeName === 'invoice_tasks_processing') return CteCteActions;
     return undefined;
-  }, [current.storeName]);
+  }, [current.key, current.storeName]);
 
   return (
     <SafeAreaView style={styles.screen} edges={['bottom']}>
@@ -78,16 +85,16 @@ export default function CtePendingInvoicesPage() {
         </View>
       </View>
       {tab === 'pending' ? <DefaultExternalFilters storeName="invoice_taxes" /> : null}
-      {tab === 'cte' ? <DefaultExternalFilters storeName="invoice_tasks_processing" /> : null}
+      {tab === 'cte' || tab === 'mdfe' ? <DefaultExternalFilters storeName="invoice_tasks_processing" /> : null}
       {tab === 'integrations' ? <DefaultExternalFilters storeName="integration" /> : null}
       {currentCompanyIri ? (
         <DefaultTable
-          key={current.storeName}
+          key={`${current.key}-${current.storeName}`}
           storeName={current.storeName}
           requestParams={requestParams}
           rowActionsComponent={rowActionsComponent}
           showRowActions={Boolean(rowActionsComponent)}
-          rowActionsWidth={rowActionsComponent === CteCteActions ? 168 : rowActionsComponent ? 140 : undefined}
+          rowActionsWidth={rowActionsComponent === CteCteActions ? 168 : rowActionsComponent === MdfeActions ? 188 : rowActionsComponent ? 140 : undefined}
           pinRowActions
         />
       ) : (
@@ -102,6 +109,16 @@ export default function CtePendingInvoicesPage() {
           onPress={() => navigation.navigate('CteEmitPage', {ids: selectedIds.join(',')})}>
           <Text style={styles.emitText}>
             Emitir CTE ({selectedIds.length} {selectedIds.length === 1 ? 'NF' : 'NFs'})
+          </Text>
+        </Pressable>
+      ) : null}
+      {showMdfeEmit ? (
+        <Pressable
+          testID="mdfe-emit-button"
+          style={styles.mdfeButton}
+          onPress={() => navigation.navigate('MdfeEmitPage', {ids: selectedCteIds.join(',')})}>
+          <Text style={styles.emitText}>
+            Emitir MDF-e ({selectedCteIds.length} CT-e)
           </Text>
         </Pressable>
       ) : null}
@@ -158,6 +175,7 @@ const styles = StyleSheet.create({
   tabText: {fontSize: 12, fontWeight: '700', color: '#334155'},
   tabTextActive: {color: '#fff'},
   emitButton: {margin: 16, backgroundColor: '#0F766E', borderRadius: 12, paddingVertical: 14, alignItems: 'center'},
+  mdfeButton: {margin: 16, backgroundColor: '#B45309', borderRadius: 12, paddingVertical: 14, alignItems: 'center'},
   emitText: {color: '#fff', fontWeight: '800'},
   modalOverlay: {flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.44)', justifyContent: 'center', padding: 16},
   modalPanel: {maxHeight: '92%', backgroundColor: '#fff', borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: '#CBD5E1'},
