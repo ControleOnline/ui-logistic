@@ -13,8 +13,8 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import {useIsFocused, useNavigation} from '@react-navigation/native';
 import DefaultTable from '@controleonline/ui-default/src/react/components/table/DefaultTable';
 import {useStore} from '@store';
-import {resolveThemePalette} from '@controleonline/../../src/styles/branding';
-import {colors} from '@controleonline/../../src/styles/colors';
+import {resolveThemePalette} from '@controleonline/ui-layout/src/styles/branding';
+import {colors} from '@controleonline/ui-layout/src/styles/colors';
 import {
   formatDateValue,
   normalizeText,
