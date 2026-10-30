@@ -9,8 +9,8 @@ import {ActivityIndicator, ScrollView, Text as NativeText, TouchableOpacity, Vie
 import {Text} from 'react-native-animatable';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useStore} from '@store';
-import {resolveThemePalette} from '@controleonline/../../src/styles/branding';
-import {colors} from '@controleonline/../../src/styles/colors';
+import {resolveThemePalette} from '@controleonline/ui-layout/src/styles/branding';
+import {colors} from '@controleonline/ui-layout/src/styles/colors';
 import AppMenuGrid from '@controleonline/ui-layout/src/react/components/AppMenuGrid';
 import {normalizeEntityId} from '@controleonline/ui-logistic/src/shared/deliveryTaxGroups';
 import {
