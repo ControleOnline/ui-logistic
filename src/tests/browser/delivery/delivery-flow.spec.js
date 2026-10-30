@@ -608,7 +608,7 @@ const createDeliveryApiMock = async (page, initialState = {}) => {
       createCompany(3, { name: 'Restaurante Centro', alias: 'Centro' }),
       createCompany(4, { name: 'Restaurante Noite', alias: 'Noite' }),
     ],
-    defaultCompany: initialState.defaultCompany || createCompany(3, { name: 'Restaurante Centro', alias: 'Centro' }),
+    mainCompany: initialState.mainCompany || createCompany(3, { name: 'Restaurante Centro', alias: 'Centro' }),
     groups: Array.isArray(initialState.groups) ? [...initialState.groups] : [],
     vehicles: Array.isArray(initialState.vehicles) ? [...initialState.vehicles] : [
       buildVehicleRow({
@@ -795,7 +795,7 @@ const createDeliveryApiMock = async (page, initialState = {}) => {
     }
 
     if (pathname === 'people/company/default') {
-      return fulfillJson(route, state.defaultCompany);
+      return fulfillJson(route, state.mainCompany);
     }
 
     if (pathname === 'statuses' && method === 'GET') {
