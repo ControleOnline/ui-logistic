@@ -269,7 +269,7 @@ export default function CteEmitPage() {
           forceCardsOnCompact
           compactBreakpoint={4000}
           showRowActions={false}
-          cardListProps={{numColumns: cardColumns, columnWrapperStyle: styles.cardRow}}
+          cardListProps={{key: `cte-emit-cols-${cardColumns}`, numColumns: cardColumns, columnWrapperStyle: styles.cardRow}}
           renderCard={({row}) => (
             <CteEmitNfCard row={row} onDownload={row => downloadFiscalPdf(row, 'nfe').catch(err => setError(err?.message || String(err)))} onRemove={removeNf} />
           )}

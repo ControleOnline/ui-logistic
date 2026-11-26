@@ -30,7 +30,7 @@ export default {
       showRowActions: true,
       viewMode: 'cards',
       forceCardsOnCompact: true,
-      cardListProps: {numColumns: 4},
+      cardListProps: {key: 'invoice-taxes-emit-cols-4', numColumns: 4},
       summaryLabels: {
         count: {invoices: 'NFs'},
         sum: {invoiceTotal: 'Valor', weight: 'Peso total (kg)'},
