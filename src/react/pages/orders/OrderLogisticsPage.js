@@ -1373,7 +1373,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
     [localOrderAddress],
   );
   const orderCompanyIri = useMemo(
-    () => toEntityIri(logistics.order?.provider || currentCompany || mainCompany, 'people'),
+    () => toEntityIri(logistics.order?.provider || currentCompany, 'people'),
     [currentCompany, mainCompany, logistics.order?.provider],
   );
   const clientSummaryLines = useMemo(() => {
@@ -1397,7 +1397,7 @@ const OrderLogisticsPage = ({navigation, route}) => {
         throw new Error('Nao foi possivel identificar o pedido para atualizar.');
       }
 
-      const providerIri = toEntityIri(baseOrder?.provider || currentCompany || mainCompany, 'people');
+      const providerIri = toEntityIri(baseOrder?.provider || currentCompany, 'people');
       const statusIri = toEntityIri(baseOrder?.status, 'statuses');
       const orderType = normalizeText(baseOrder?.orderType || order?.orderType);
 
