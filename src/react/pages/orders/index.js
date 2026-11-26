@@ -14,8 +14,8 @@ import {
   resolveDeliveryWorkflowRouteName,
 } from '@controleonline/ui-logistic/src/react/utils/deliveryAcceptanceQueue';
 import {filterDeliveryStatusItems} from '@controleonline/ui-logistic/src/react/utils/deliveryStatusFilters';
-import {resolveThemePalette} from '@controleonline/../../src/styles/branding';
-import {colors} from '@controleonline/../../src/styles/colors';
+import {resolveThemePalette} from '@controleonline/ui-layout/src/styles/branding';
+import {colors} from '@controleonline/ui-layout/src/styles/colors';
 import styles from './index.styles';
 
 const DELIVERY_ORDER_TYPE = 'delivery';

@@ -13,8 +13,8 @@ import {useIsFocused, useNavigation} from '@react-navigation/native';
 import {useMessage} from '@controleonline/ui-common/src/react/components/MessageService';
 import DefaultTable from '@controleonline/ui-default/src/react/components/table/DefaultTable';
 import {useStore} from '@store';
-import {resolveThemePalette} from '@controleonline/../../src/styles/branding';
-import {colors} from '@controleonline/../../src/styles/colors';
+import {resolveThemePalette} from '@controleonline/ui-layout/src/styles/branding';
+import {colors} from '@controleonline/ui-layout/src/styles/colors';
 import {
   formatWeekdayLabel,
   normalizeText,

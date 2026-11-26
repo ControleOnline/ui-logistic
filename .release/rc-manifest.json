@@ -1,0 +1,20 @@
+{
+  "version": "1.0.44",
+  "rc": 1,
+  "branch": "rc/1.0.44-rc.1",
+  "baseMaster": "89a2d436a927721aeb34f267d0c41c97205e088b",
+  "baseTag": "v1.0.43",
+  "tasks": [
+    1761
+  ],
+  "taskRepository": "ControleOnline/app-community",
+  "frozen": true,
+  "repositories": {
+    "ControleOnline/ui-logistic": "c2c54e0765241e1332b2ef3d67eef80d1c8f4bed"
+  },
+  "sources": {
+    "versão de produção v1.0.42": "fee34feb0ab9fe97b2b8e7ee4adaf9a28aa69a4e",
+    "staging": "1303fa631353b36be922fe8cd038890e2faddfec",
+    "dev": "b9fbfc0ce54dcc24709d72e0289b029f25edb73e"
+  }
+}
